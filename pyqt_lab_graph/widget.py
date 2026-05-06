@@ -4,7 +4,7 @@ from typing import Callable
 
 import pyqtgraph as pg
 from PySide6.QtCore import QObject, QRectF, Qt
-from PySide6.QtGui import QColor, QPen
+from PySide6.QtGui import QPen
 from PySide6.QtWidgets import (
     QFrame,
     QVBoxLayout,
@@ -15,6 +15,12 @@ from .axis import AxisMode, SmartAxisItem
 from .dialogs import show_customize_dialog
 from .legend import PyQtLabGraphLegend
 from .models import CurveState
+from .styles import (
+    DEFAULT_CURVE_COLOR_BY_THEME,
+    DEFAULT_CURVE_COLORS,
+    default_curve_style,
+)
+from .theme import PyQtLabGraphTheme, frame_style, theme_for_dark_mode
 from .toolbar import PyQtLabGraphToolbar
 
 
@@ -50,18 +56,6 @@ class PyQtLabGraphWidget(QObject):
 
         self.curves: dict[str, CurveState] = {}
         self.curve_order: list[str] = []
-        self.default_curve_color_by_theme = {
-            False: "#1f77b4",
-            True: "#4db6ff",
-        }
-        self.default_curve_colors = [
-            "#1f77b4",
-            "#ff7f0e",
-            "#2ca02c",
-            "#d62728",
-            "#9467bd",
-            "#8c564b",
-        ]
 
         self.autoscale_x_enabled = True
         self.autoscale_y_enabled = True
@@ -74,7 +68,7 @@ class PyQtLabGraphWidget(QObject):
         self.y_label_units: str | None = "deg C"
         self.x_axis_mode = AxisMode.AUTO
         self.y_axis_mode = AxisMode.AUTO
-        self.axis_text_color = "#202124"
+        self.axis_text_color = theme_for_dark_mode(False).text
 
         self._setup_plot()
 
@@ -119,7 +113,7 @@ class PyQtLabGraphWidget(QObject):
     ) -> None:
         if key in self.curves:
             raise ValueError(f'Curve "{key}" already exists.')
-        color = color or self.default_curve_colors[len(self.curve_order) % len(self.default_curve_colors)]
+        color = color or DEFAULT_CURVE_COLORS[len(self.curve_order) % len(DEFAULT_CURVE_COLORS)]
         curve_style = self._default_curve_style(color)
         if style is not None:
             curve_style.update(style)
@@ -166,7 +160,7 @@ class PyQtLabGraphWidget(QObject):
         curve.style.update(style)
         curve.using_theme_color = bool(style.get("use_theme_color", False))
         if curve.using_theme_color:
-            curve.style["line_color"] = self.default_curve_color_by_theme[self.dark_mode_enabled]
+            curve.style["line_color"] = DEFAULT_CURVE_COLOR_BY_THEME[self.dark_mode_enabled]
         self._apply_curve_style(curve)
 
     def curve_style(self, key: str) -> dict[str, object]:
@@ -250,45 +244,16 @@ class PyQtLabGraphWidget(QObject):
 
     def set_dark_mode_enabled(self, enabled: bool) -> None:
         self.dark_mode_enabled = enabled
-        if enabled:
-            colors = {
-                "outer": "#1f2329",
-                "plot": "#181c20",
-                "axis": "#d8dee9",
-                "text": "#d8dee9",
-                "grid": QColor(216, 222, 233, 38),
-                "button": "#272c33",
-                "button_hover": "#343b44",
-                "button_disabled": "#1b1f24",
-                "button_disabled_text": "#6b7280",
-                "border": "#3a4048",
-                "highlight": "#4b5563",
-                "frame": "#1f2329",
-            }
-        else:
-            colors = {
-                "outer": "#f3f4f6",
-                "plot": "#ffffff",
-                "axis": "#000000",
-                "text": "#202124",
-                "grid": QColor(156, 163, 175, 70),
-                "button": "#f8fafc",
-                "button_hover": "#e5e7eb",
-                "button_disabled": "#e5e7eb",
-                "button_disabled_text": "#9ca3af",
-                "border": "#c8ced6",
-                "highlight": "#ffffff",
-                "frame": "#f3f4f6",
-            }
+        theme = theme_for_dark_mode(enabled)
 
-        self.axis_text_color = colors["text"]
-        self.plot_widget.setBackground(colors["outer"])
-        self.plot_widget.setStyleSheet(f"background-color: {colors['outer']};")
-        self.view_box.setBackgroundColor(colors["plot"])
-        self.grid_item.setPen(pg.mkPen(colors["grid"], width=1))
+        self.axis_text_color = theme.text
+        self.plot_widget.setBackground(theme.outer)
+        self.plot_widget.setStyleSheet(f"background-color: {theme.outer};")
+        self.view_box.setBackgroundColor(theme.plot)
+        self.grid_item.setPen(pg.mkPen(theme.grid, width=1))
         for curve in self.curves.values():
             if curve.using_theme_color:
-                curve.style["line_color"] = self.default_curve_color_by_theme[enabled]
+                curve.style["line_color"] = DEFAULT_CURVE_COLOR_BY_THEME[enabled]
             self._apply_curve_style(curve)
         self._style_legend()
         self._set_axis_labels(
@@ -298,15 +263,15 @@ class PyQtLabGraphWidget(QObject):
             self.y_label_units,
         )
 
-        axis_pen = pg.mkPen(colors["axis"], width=1)
-        tick_pen = pg.mkPen(colors["axis"], width=1)
-        text_pen = pg.mkPen(colors["text"])
+        axis_pen = pg.mkPen(theme.axis, width=1)
+        tick_pen = pg.mkPen(theme.axis, width=1)
+        text_pen = pg.mkPen(theme.text)
         for axis_name in ("bottom", "left", "top", "right"):
             axis = self.plot_item.getAxis(axis_name)
             axis.setPen(axis_pen)
             axis.setTextPen(text_pen)
             axis.setTickPen(tick_pen)
-        self._apply_container_theme(colors)
+        self._apply_container_theme(theme)
         if self.toolbar is not None:
             self.toolbar.set_dark_mode_enabled(enabled)
 
@@ -326,7 +291,7 @@ class PyQtLabGraphWidget(QObject):
         self.plot_widget.setAntialiasing(True)
         self._set_axis_labels("Messzeit", "Temperatur", "s", "deg C")
         self.grid_item = pg.GridItem(
-            pen=pg.mkPen(QColor(156, 163, 175, 70), width=1),
+            pen=pg.mkPen(theme_for_dark_mode(False).grid, width=1),
             textPen=None,
         )
         self.grid_item.setZValue(-10)
@@ -365,15 +330,7 @@ class PyQtLabGraphWidget(QObject):
             raise KeyError(f'Curve "{key}" does not exist.') from exc
 
     def _default_curve_style(self, color: str) -> dict[str, object]:
-        return {
-            "line_enabled": True,
-            "line_color": color,
-            "line_width": 1.2,
-            "marker_symbol": "o",
-            "marker_size": 5,
-            "marker_enabled": True,
-            "marker_filled": True,
-        }
+        return default_curve_style(color)
 
     def _apply_curve_style(self, curve: CurveState) -> None:
         style = curve.style
@@ -492,51 +449,8 @@ class PyQtLabGraphWidget(QObject):
         if self.toolbar is not None:
             self.toolbar.mark_manual_navigation_started()
 
-    def _apply_container_theme(self, colors: dict[str, object]) -> None:
-        style = f"""
-            QFrame#plotFrame,
-            QFrame#toolbarFrame,
-            QFrame#legendFrame {{
-                background-color: {colors['frame']};
-                border: 1px solid {colors['border']};
-                border-top-color: {colors['highlight']};
-                border-left-color: {colors['highlight']};
-                border-radius: 6px;
-            }}
-            QToolBar {{
-                background-color: {colors['frame']};
-                border: none;
-                spacing: 2px;
-            }}
-            QToolButton,
-            QPushButton {{
-                background-color: {colors['button']};
-                color: {colors['text']};
-                border: 1px solid {colors['border']};
-                border-radius: 4px;
-                padding: 4px 8px;
-            }}
-            QToolButton:hover,
-            QPushButton:hover {{
-                background-color: {colors['button_hover']};
-            }}
-            QToolButton:checked {{
-                background-color: {colors['button_hover']};
-                border-color: {colors['highlight']};
-            }}
-            QPushButton:disabled {{
-                background-color: {colors['button_disabled']};
-                color: {colors['button_disabled_text']};
-            }}
-            QMenu {{
-                background-color: {colors['frame']};
-                color: {colors['text']};
-                border: 1px solid {colors['border']};
-            }}
-            QMenu::item:selected {{
-                background-color: {colors['button_hover']};
-            }}
-        """
+    def _apply_container_theme(self, theme: PyQtLabGraphTheme) -> None:
+        style = frame_style(theme)
         self.plot_frame.setStyleSheet(style)
         if self.toolbar_container is not None:
             self.toolbar_container.setStyleSheet(style)
@@ -578,5 +492,3 @@ class PyQtLabGraphWidget(QObject):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         layout.addWidget(widget)
-
-

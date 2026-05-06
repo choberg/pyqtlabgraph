@@ -5,6 +5,8 @@ from PySide6.QtGui import QBrush, QColor, QPainter, QPen
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 from pyqtgraph.graphicsItems.ScatterPlotItem import renderSymbol
 
+from .theme import legend_style, theme_for_dark_mode
+
 
 class PyQtLabGraphLegend(QWidget):
     """Qt legend panel for PyQtLabGraphWidget curves."""
@@ -47,24 +49,7 @@ class PyQtLabGraphLegend(QWidget):
             item.refresh()
 
     def apply_theme(self, dark_mode_enabled: bool) -> None:
-        if dark_mode_enabled:
-            self.setStyleSheet(
-                """
-                QWidget#livePlotLegend {
-                    background-color: #1f2329;
-                    color: #d8dee9;
-                }
-                """
-            )
-        else:
-            self.setStyleSheet(
-                """
-                QWidget#livePlotLegend {
-                    background-color: #f3f4f6;
-                    color: #202124;
-                }
-                """
-            )
+        self.setStyleSheet(legend_style(theme_for_dark_mode(dark_mode_enabled)))
         for item in self.items_by_key.values():
             item.refresh()
 
@@ -97,7 +82,7 @@ class PyQtLabGraphLegendItem(QWidget):
             text_color = self.plot.axis_text_color
             opacity = "1.0"
         else:
-            text_color = "#6b7280" if self.plot.dark_mode_enabled else "#9ca3af"
+            text_color = theme_for_dark_mode(self.plot.dark_mode_enabled).legend_disabled_text
             opacity = "0.55"
         self.setStyleSheet(
             f"""
@@ -175,5 +160,4 @@ class CurveSampleWidget(QWidget):
             y = int((self.height() - symbol_image.height()) / 2)
             painter.drawImage(x, y, symbol_image)
         painter.end()
-
 

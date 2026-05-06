@@ -19,6 +19,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from .styles import AXIS_ZOOM_COLOR_BY_AXIS
+from .theme import theme_for_dark_mode
+
 
 class AxisSpanZoomFilter(QObject):
     """Rubber-band span selection for one-shot X/Y zoom actions."""
@@ -347,7 +350,8 @@ class PyQtLabGraphToolbar(QToolBar):
     def _themed_icon(self, filename: str, fallback_icon: QIcon | None = None) -> QIcon:
         if not filename:
             return fallback_icon or QIcon()
-        icon = self._recolored_png_icon(filename, QColor("#e5e7eb")) if self.dark_mode_enabled else self._png_icon(filename)
+        icon_color = QColor(theme_for_dark_mode(True).toolbar_icon)
+        icon = self._recolored_png_icon(filename, icon_color) if self.dark_mode_enabled else self._png_icon(filename)
         if icon.isNull() and fallback_icon is not None:
             return fallback_icon
         return icon
@@ -379,8 +383,8 @@ class PyQtLabGraphToolbar(QToolBar):
         pixmap.fill(Qt.GlobalColor.transparent)
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        frame_pen = QPen(QColor("#5f6368"), 1.4)
-        accent_color = QColor("#1f77b4") if axis == "x" else QColor("#ff7f0e")
+        frame_pen = QPen(QColor(theme_for_dark_mode(True).legend_disabled_text), 1.4)
+        accent_color = QColor(AXIS_ZOOM_COLOR_BY_AXIS[axis])
         accent_pen = QPen(accent_color, 2.0)
         marker_pen = QPen(accent_color, 1.2)
         painter.setPen(frame_pen)

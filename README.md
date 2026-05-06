@@ -88,6 +88,8 @@ pip install -e .
 - `pyqt_lab_graph/legend.py`: Externe Qt-Legende mit Kurven-Sichtbarkeit und Stilzugriff.
 - `pyqt_lab_graph/axis.py`: `SmartAxisItem` und Achsenmodi.
 - `pyqt_lab_graph/models.py`: Interne Datenmodelle.
+- `pyqt_lab_graph/styles.py`: Default-Kurvenfarben und Curve-Style-Helfer.
+- `pyqt_lab_graph/theme.py`: Helle/dunkle Theme-Farben und Stylesheets.
 - `pyqt_lab_graph/assets/`: Toolbar-Icons, die mit dem Package ausgeliefert werden.
 - `demo.py`: Demo-Anwendung mit simulierten Thermostatdaten.
 - `maingui.ui`: Qt-Designer-Datei für die Demo.
