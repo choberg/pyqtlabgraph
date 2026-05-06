@@ -70,7 +70,7 @@ self.plot.add_point("sensor_1", x_value, y_value)
 Schneller Syntax-Check:
 
 ```bash
-python3 -m py_compile pyqt_lab_graph/__init__.py demo.py
+python3 -m py_compile pyqt_lab_graph/*.py demo.py
 ```
 
 Lokale Paketinstallation im bearbeitbaren Modus:
@@ -82,6 +82,11 @@ pip install -e .
 ## Projektstruktur
 
 - `pyqt_lab_graph/`: Installierbares Python-Package.
+- `pyqt_lab_graph/widget.py`: Hauptwidget und öffentliche Plot-API.
+- `pyqt_lab_graph/toolbar.py`: Toolbar, Navigation, Export und Rolling-Window-Steuerung.
+- `pyqt_lab_graph/legend.py`: Externe Qt-Legende mit Kurven-Sichtbarkeit und Stilzugriff.
+- `pyqt_lab_graph/axis.py`: `SmartAxisItem` und Achsenmodi.
+- `pyqt_lab_graph/models.py`: Interne Datenmodelle.
 - `pyqt_lab_graph/assets/`: Toolbar-Icons, die mit dem Package ausgeliefert werden.
 - `demo.py`: Demo-Anwendung mit simulierten Thermostatdaten.
 - `maingui.ui`: Qt-Designer-Datei für die Demo.
