@@ -83,6 +83,7 @@ pip install -e .
 
 - `pyqt_lab_graph/`: Installierbares Python-Package.
 - `pyqt_lab_graph/widget.py`: Hauptwidget und öffentliche Plot-API.
+- `pyqt_lab_graph/dialogs.py`: Konfigurationsdialoge für Achsen, Raster und Kurvenstile.
 - `pyqt_lab_graph/toolbar.py`: Toolbar, Navigation, Export und Rolling-Window-Steuerung.
 - `pyqt_lab_graph/legend.py`: Externe Qt-Legende mit Kurven-Sichtbarkeit und Stilzugriff.
 - `pyqt_lab_graph/axis.py`: `SmartAxisItem` und Achsenmodi.
