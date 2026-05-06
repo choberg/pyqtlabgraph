@@ -15,7 +15,7 @@ Ein leistungsstarkes und interaktives Live-Plotting-Widget für PySide6/Qt6, bas
 - **Integrierte Toolbar**:
   - Zoom & Pan (Rechteck-Zoom, X-Zoom, Y-Zoom).
   - Rolling Window (Gleitendes Zeitfenster: Aktuell, 5 min, 30 min, Custom).
-  - Home-Button & Export-Funktion (Save as PNG/SVG).
+  - Home-Button & Export-Funktion (Save as PNG).
 - **Vollständig anpassbar**: Customize-Dialog für Farben, Linienstile, Marker (gefüllt/offen) und Achseneinstellungen.
 - **Dark Mode Support**: Nahtlose Integration von dunklen und hellen Themes.
 
@@ -93,9 +93,6 @@ pip install -e .
 - `pyqt_lab_graph/assets/`: Toolbar-Icons, die mit dem Package ausgeliefert werden.
 - `demo.py`: Demo-Anwendung mit simulierten Thermostatdaten.
 - `maingui.ui`: Qt-Designer-Datei für die Demo.
-- `archive/`: Lokale, nicht versionierte Ablage für alte Exporte oder Quellen.
-- `bak/`: Lokale, nicht versionierte Backups.
-
 ## Lizenz
 
 Dieses Projekt steht unter der MIT-Lizenz. Sie erlaubt Nutzung, Veränderung und Weiterverbreitung, solange der Copyright- und Lizenzhinweis erhalten bleibt.

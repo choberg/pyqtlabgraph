@@ -14,7 +14,7 @@ dependencies = [
     "pyqtgraph>=0.13",
 ]
 authors = [
-    { name = "PyQtLabGraph contributors" },
+    { name = "Claudius Hoberg" },
 ]
 keywords = ["pyside6", "qt", "pyqtgraph", "plotting", "scientific-visualization"]
 classifiers = [
