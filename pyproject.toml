@@ -28,8 +28,21 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Visualization",
 ]
 
+[tool.setuptools]
+include-package-data = false
+
 [tool.setuptools.packages.find]
 include = ["pyqt_lab_graph*"]
 
 [tool.setuptools.package-data]
-pyqt_lab_graph = ["assets/*.png"]
+pyqt_lab_graph = [
+    "assets/autox.png",
+    "assets/autoy.png",
+    "assets/edit_params.png",
+    "assets/reset_zoom.png",
+    "assets/rolling.png",
+    "assets/saveplot.png",
+    "assets/x-zoom.png",
+    "assets/y-zoom.png",
+    "assets/zoom_area.png",
+]

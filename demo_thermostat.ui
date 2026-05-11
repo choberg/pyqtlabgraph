@@ -1,35 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>MainWindow</class>
- <widget class="QMainWindow" name="MainWindow">
+ <class>ThermostatDemoMainWindow</class>
+ <widget class="QMainWindow" name="ThermostatDemoMainWindow">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1241</width>
+    <width>1240</width>
     <height>890</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Autoplotter</string>
+   <string>PyQtLabGraph Thermostat Demo</string>
   </property>
-  <widget class="QWidget" name="centralwidget">
-   <layout class="QVBoxLayout" name="verticalLayout">
+  <widget class="QWidget" name="centralWidget">
+   <layout class="QVBoxLayout" name="mainLayout">
     <item>
-     <widget class="QGroupBox" name="groupBox">
+     <widget class="QGroupBox" name="plotGroupBox">
       <property name="title">
        <string>Plot</string>
       </property>
-      <layout class="QVBoxLayout" name="verticalLayout_2">
+      <layout class="QVBoxLayout" name="plotGroupLayout">
        <item>
-        <layout class="QHBoxLayout" name="plotAndLegendLayout">
-         <item>
-          <widget class="QWidget" name="matplotlibContainer" native="true"/>
-         </item>
-        </layout>
+        <widget class="QWidget" name="plotContainer" native="true"/>
        </item>
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_2">
+        <layout class="QHBoxLayout" name="toolbarAndLegendLayout">
          <item>
           <widget class="QWidget" name="toolbarContainer" native="true">
            <property name="maximumSize">
@@ -62,7 +58,7 @@
      </widget>
     </item>
     <item>
-     <widget class="QGroupBox" name="groupBox_2">
+     <widget class="QGroupBox" name="controlsGroupBox">
       <property name="maximumSize">
        <size>
         <width>16777215</width>
@@ -72,11 +68,11 @@
       <property name="title">
        <string>Controls</string>
       </property>
-      <layout class="QHBoxLayout" name="horizontalLayout_3">
+      <layout class="QHBoxLayout" name="controlsGroupLayout">
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout">
+        <layout class="QHBoxLayout" name="controlsLayout">
          <item>
-          <spacer name="horizontalSpacer">
+          <spacer name="controlsSpacer">
            <property name="orientation">
             <enum>Qt::Orientation::Horizontal</enum>
            </property>
@@ -89,23 +85,23 @@
           </spacer>
          </item>
          <item>
-          <widget class="QPushButton" name="StopButton">
+          <widget class="QPushButton" name="stopButton">
            <property name="text">
             <string>Stop</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="StartButton">
+          <widget class="QPushButton" name="startButton">
            <property name="text">
             <string>Start</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QCheckBox" name="DarkModeCheckBox">
+          <widget class="QPushButton" name="addPointsButton">
            <property name="text">
-            <string>Dark Mode</string>
+            <string>+10000 points</string>
            </property>
           </widget>
          </item>
@@ -116,17 +112,17 @@
     </item>
    </layout>
   </widget>
-  <widget class="QMenuBar" name="menubar">
+  <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1241</width>
+     <width>1240</width>
      <height>22</height>
     </rect>
    </property>
   </widget>
-  <widget class="QStatusBar" name="statusbar"/>
+  <widget class="QStatusBar" name="statusBar"/>
  </widget>
  <resources/>
  <connections/>

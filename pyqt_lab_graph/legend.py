@@ -5,7 +5,23 @@ from PySide6.QtGui import QBrush, QColor, QPainter, QPen
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 from pyqtgraph.graphicsItems.ScatterPlotItem import renderSymbol
 
-from .theme import legend_style, theme_for_dark_mode
+
+_LEGEND_LAYOUT_MARGINS = (4, 4, 4, 4)
+_LEGEND_LAYOUT_SPACING = 4
+_LEGEND_VERTICAL_STRETCH = 1
+
+_LEGEND_ITEM_CLICK_DELAY_MS = 220
+_LEGEND_ITEM_MARGINS = (6, 3, 6, 3)
+_LEGEND_ITEM_SPACING = 6
+_LEGEND_ITEM_VISIBLE_OPACITY = 1.0
+_LEGEND_ITEM_HIDDEN_OPACITY = 0.55
+
+_SAMPLE_WIDTH = 42
+_SAMPLE_HEIGHT = 22
+_SAMPLE_MIN_MARKER_SIZE = 11
+_SAMPLE_LINE_INSET = 3.0
+_SAMPLE_CENTER_DIVISOR = 2.0
+_SAMPLE_FILLED_MARKER_OUTLINE_WIDTH = 0.0
 
 
 class PyQtLabGraphLegend(QWidget):
@@ -21,13 +37,15 @@ class PyQtLabGraphLegend(QWidget):
         self.plot = plot
         self.orientation = orientation
         self.items_by_key: dict[str, PyQtLabGraphLegendItem] = {}
-        self.setObjectName("livePlotLegend")
-        self.layout = QVBoxLayout(self) if orientation == Qt.Orientation.Vertical else QHBoxLayout(self)
-        self.layout.setContentsMargins(4, 4, 4, 4)
-        self.layout.setSpacing(4)
+        self.setObjectName("pyqtLabGraphLegend")
         if orientation == Qt.Orientation.Vertical:
-            self.layout.addStretch(1)
-        self.apply_theme(False)
+            self.layout = QVBoxLayout(self)
+        else:
+            self.layout = QHBoxLayout(self)
+        self.layout.setContentsMargins(*_LEGEND_LAYOUT_MARGINS)
+        self.layout.setSpacing(_LEGEND_LAYOUT_SPACING)
+        if orientation == Qt.Orientation.Vertical:
+            self.layout.addStretch(_LEGEND_VERTICAL_STRETCH)
 
     def refresh(self) -> None:
         while self.layout.count():
@@ -41,15 +59,14 @@ class PyQtLabGraphLegend(QWidget):
             self.items_by_key[key] = legend_item
             self.layout.addWidget(legend_item)
         if self.orientation == Qt.Orientation.Vertical:
-            self.layout.addStretch(1)
+            self.layout.addStretch(_LEGEND_VERTICAL_STRETCH)
 
     def update_curve(self, key: str) -> None:
         item = self.items_by_key.get(key)
         if item is not None:
             item.refresh()
 
-    def apply_theme(self, dark_mode_enabled: bool) -> None:
-        self.setStyleSheet(legend_style(theme_for_dark_mode(dark_mode_enabled)))
+    def refresh_palette(self) -> None:
         for item in self.items_by_key.values():
             item.refresh()
 
@@ -65,11 +82,11 @@ class PyQtLabGraphLegendItem(QWidget):
         self.label = QLabel(self)
         self._click_timer = QTimer(self)
         self._click_timer.setSingleShot(True)
-        self._click_timer.setInterval(220)
+        self._click_timer.setInterval(_LEGEND_ITEM_CLICK_DELAY_MS)
         self._click_timer.timeout.connect(self._toggle_curve_visibility)
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(6, 3, 6, 3)
-        layout.setSpacing(6)
+        layout.setContentsMargins(*_LEGEND_ITEM_MARGINS)
+        layout.setSpacing(_LEGEND_ITEM_SPACING)
         layout.addWidget(self.sample)
         layout.addWidget(self.label)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -79,26 +96,12 @@ class PyQtLabGraphLegendItem(QWidget):
         curve = self.plot.curves[self.curve_key]
         self.label.setText(curve.label)
         if curve.visible:
-            text_color = self.plot.axis_text_color
-            opacity = "1.0"
+            opacity = _LEGEND_ITEM_VISIBLE_OPACITY
         else:
-            text_color = theme_for_dark_mode(self.plot.dark_mode_enabled).legend_disabled_text
-            opacity = "0.55"
-        self.setStyleSheet(
-            f"""
-            PyQtLabGraphLegendItem {{
-                border-radius: 4px;
-            }}
-            PyQtLabGraphLegendItem:hover {{
-                background-color: rgba(148, 163, 184, 45);
-            }}
-            QLabel {{
-                color: {text_color};
-            }}
-            """
-        )
+            opacity = _LEGEND_ITEM_HIDDEN_OPACITY
+        self.label.setEnabled(curve.visible)
         self.setToolTip("Click to show/hide. Double-click to edit style.")
-        self.sample.opacity = float(opacity)
+        self.sample.opacity = opacity
         self.sample.update()
 
     def mousePressEvent(self, event: QEvent) -> None:
@@ -130,34 +133,40 @@ class CurveSampleWidget(QWidget):
         super().__init__(parent)
         self.plot = plot
         self.curve_key = curve_key
-        self.opacity = 1.0
-        self.setFixedSize(42, 22)
+        self.opacity = _LEGEND_ITEM_VISIBLE_OPACITY
+        self.setFixedSize(_SAMPLE_WIDTH, _SAMPLE_HEIGHT)
 
     def paintEvent(self, _event: QEvent) -> None:
         curve = self.plot.curves[self.curve_key]
         style = curve.style
-        color = QColor(str(style["line_color"]))
+        color = QColor(style.line_color)
         color.setAlphaF(color.alphaF() * self.opacity)
-        line_enabled = bool(style["line_enabled"])
-        marker_enabled = bool(style["marker_enabled"])
-        marker_filled = bool(style["marker_filled"])
-        marker_symbol = str(style["marker_symbol"])
-        marker_size = max(int(style["marker_size"]), 11)
-        line_width = float(style["line_width"])
+        line_enabled = style.line_enabled
+        marker_enabled = style.marker_enabled
+        marker_filled = style.marker_filled
+        marker_symbol = style.marker_symbol
+        marker_size = max(style.marker_size, _SAMPLE_MIN_MARKER_SIZE)
+        marker_outline_width = style.marker_outline_width
+        line_width = style.line_width
 
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        center_y = self.height() / 2.0
+        center_y = self.height() / _SAMPLE_CENTER_DIVISOR
         if line_enabled:
             painter.setPen(QPen(color, line_width))
-            painter.drawLine(QPointF(3.0, center_y), QPointF(self.width() - 3.0, center_y))
+            painter.drawLine(
+                QPointF(_SAMPLE_LINE_INSET, center_y),
+                QPointF(self.width() - _SAMPLE_LINE_INSET, center_y),
+            )
         if marker_enabled:
-            pen = QPen(color, 1.0 if marker_filled else 1.1)
+            pen = QPen(
+                color,
+                _SAMPLE_FILLED_MARKER_OUTLINE_WIDTH if marker_filled else marker_outline_width,
+            )
             pen.setCosmetic(True)
             brush = QBrush(color) if marker_filled else QBrush(Qt.BrushStyle.NoBrush)
             symbol_image = renderSymbol(marker_symbol, marker_size, pen, brush)
-            x = int((self.width() - symbol_image.width()) / 2)
-            y = int((self.height() - symbol_image.height()) / 2)
+            x = int((self.width() - symbol_image.width()) / _SAMPLE_CENTER_DIVISOR)
+            y = int((self.height() - symbol_image.height()) / _SAMPLE_CENTER_DIVISOR)
             painter.drawImage(x, y, symbol_image)
         painter.end()
-

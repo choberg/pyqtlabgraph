@@ -7,9 +7,11 @@ from pathlib import Path
 from random import uniform
 from typing import TypeVar
 
+import numpy as np
+import qdarktheme
 from PySide6.QtCore import QFile, QObject, Qt, QTimer
 from PySide6.QtUiTools import QUiLoader
-from PySide6.QtWidgets import QApplication, QCheckBox, QMainWindow, QPushButton, QWidget
+from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton, QWidget
 
 from pyqt_lab_graph import PyQtLabGraphWidget
 
@@ -18,39 +20,35 @@ WidgetType = TypeVar("WidgetType", bound=QWidget)
 
 
 class ThermostatDemoWindow(QObject):
-    """Loads the Qt Designer UI and demonstrates the reusable PyQtGraph live plot."""
+    """Loads the Qt Designer UI and demonstrates a reusable thermostat live plot."""
 
     def __init__(self, ui_path: Path) -> None:
         super().__init__()
         self.window = self._load_ui(ui_path)
-        self.plot_container = self._find_required_widget("matplotlibContainer")
+        self.plot_container = self._find_required_widget("plotContainer")
         self.toolbar_container = self._find_required_widget("toolbarContainer")
         self.legend_container = self._find_required_widget("legendContainer")
-        self.start_button = self._find_required_widget("StartButton", QPushButton)
-        self.stop_button = self._find_required_widget("StopButton", QPushButton)
-        self.dark_mode_checkbox = self._find_required_widget("DarkModeCheckBox", QCheckBox)
+        self.start_button = self._find_required_widget("startButton", QPushButton)
+        self.stop_button = self._find_required_widget("stopButton", QPushButton)
+        self.add_points_button = self._find_required_widget("addPointsButton", QPushButton)
 
         self.live_plot = PyQtLabGraphWidget(
             self.plot_container,
             self.toolbar_container,
             self.legend_container,
+            plot_identifier="thermostat-live-qdarktheme",
+            layout_path=Path.cwd() / "demo_thermostat_qdarktheme.layout.json",
             show_toolbar=True,
-            rolling_window_seconds=300.0,
+            rolling_window_size=300.0,
             legend_orientation=Qt.Orientation.Horizontal,
+            theme="dark",
+            plot_style="dark",
         )
-        self.live_plot.set_axis_labels("Messzeit", "Temperatur", "s", "deg C", x_mode="time", y_mode="linear")
-        self.live_plot.add_curve(
-            "process_temperature",
-            label="Prozesstemperatur",
-            color="#1f77b4",
-            style={"marker_symbol": "o", "marker_size": 5},
-        )
-        self.live_plot.add_curve(
-            "bath_temperature",
-            label="Badtemperatur",
-            color="#ff7f0e",
-            style={"marker_symbol": "s", "marker_size": 5, "marker_filled": False},
-        )
+        self.window.setWindowTitle("PyQtLabGraph Thermostat Demo - PyQtDarkTheme")
+        self.live_plot.set_axis_labels("Elapsed time", "Temperature", "s", "deg C", x_mode="time", y_mode="linear")
+        self.live_plot.add_curve("process_temperature", label="Process temperature")
+        self.live_plot.add_curve("bath_temperature", label="Bath temperature")
+        self.live_plot.load_layout()
 
         self.accumulated_elapsed_seconds = 0.0
         self.acquisition_start_time: float | None = None
@@ -60,8 +58,7 @@ class ThermostatDemoWindow(QObject):
         self.live_timer.timeout.connect(self.add_simulated_measurements)
         self.start_button.clicked.connect(self.start_acquisition)
         self.stop_button.clicked.connect(self.stop_acquisition)
-        self.dark_mode_checkbox.toggled.connect(self.set_dark_mode_enabled)
-        self.set_dark_mode_enabled(False)
+        self.add_points_button.clicked.connect(self.add_bulk_test_points)
         self._set_acquisition_running(False)
 
     def show(self) -> None:
@@ -90,85 +87,61 @@ class ThermostatDemoWindow(QObject):
 
     def add_simulated_measurements(self) -> None:
         elapsed = self.get_current_elapsed_seconds()
+        process_temperature, bath_temperature = self._simulated_temperatures(elapsed)
+        self.live_plot.add_point("process_temperature", elapsed, process_temperature)
+        self.live_plot.add_point("bath_temperature", elapsed, bath_temperature)
+
+    def add_bulk_test_points(self) -> None:
+        point_count = 10_000
+        start_elapsed = self._latest_plotted_elapsed_seconds()
+        process_x = []
+        process_y = []
+        bath_x = []
+        bath_y = []
+
+        for offset in range(1, point_count + 1):
+            elapsed = start_elapsed + float(offset)
+            process_temperature, bath_temperature = self._simulated_temperatures(elapsed)
+            process_x.append(elapsed)
+            process_y.append(process_temperature)
+            bath_x.append(elapsed)
+            bath_y.append(bath_temperature)
+
+        current_process_x, current_process_y = self.live_plot.curve_data("process_temperature")
+        current_bath_x, current_bath_y = self.live_plot.curve_data("bath_temperature")
+        self.live_plot.set_data(
+            "process_temperature",
+            np.concatenate((current_process_x, np.array(process_x))),
+            np.concatenate((current_process_y, np.array(process_y))),
+        )
+        self.live_plot.set_data(
+            "bath_temperature",
+            np.concatenate((current_bath_x, np.array(bath_x))),
+            np.concatenate((current_bath_y, np.array(bath_y))),
+        )
+        self.accumulated_elapsed_seconds = start_elapsed + float(point_count)
+        self.acquisition_start_time = time.monotonic() if self.live_timer.isActive() else None
+
+    def _latest_plotted_elapsed_seconds(self) -> float:
+        latest_values = []
+        for curve_key in ("process_temperature", "bath_temperature"):
+            x_values, _y_values = self.live_plot.curve_data(curve_key)
+            if len(x_values) > 0:
+                latest_values.append(float(np.max(x_values)))
+        if latest_values:
+            return max(latest_values)
+        return self.get_current_elapsed_seconds()
+
+    def _simulated_temperatures(self, elapsed: float) -> tuple[float, float]:
         process_temperature = 22.0 + 0.8 * sin(elapsed / 35.0)
         process_temperature += 0.2 * sin(elapsed / 7.0) + uniform(-0.05, 0.05)
         bath_temperature = 21.5 + 0.45 * sin((elapsed + 18.0) / 48.0)
         bath_temperature += 0.12 * sin(elapsed / 11.0) + uniform(-0.035, 0.035)
-        self.live_plot.add_point("process_temperature", elapsed, process_temperature)
-        self.live_plot.add_point("bath_temperature", elapsed, bath_temperature)
+        return process_temperature, bath_temperature
 
     def _set_acquisition_running(self, running: bool) -> None:
         self.start_button.setEnabled(not running)
         self.stop_button.setEnabled(running)
-
-    def set_dark_mode_enabled(self, enabled: bool) -> None:
-        self.live_plot.set_dark_mode_enabled(enabled)
-        if enabled:
-            colors = {
-                "window": "#1b1f24",
-                "panel": "#1f2329",
-                "border": "#3a4048",
-                "text": "#d8dee9",
-                "button": "#272c33",
-                "button_hover": "#343b44",
-                "button_disabled": "#1b1f24",
-                "button_disabled_text": "#6b7280",
-            }
-        else:
-            colors = {
-                "window": "#f3f4f6",
-                "panel": "#f3f4f6",
-                "border": "#c8ced6",
-                "text": "#202124",
-                "button": "#f8fafc",
-                "button_hover": "#e5e7eb",
-                "button_disabled": "#e5e7eb",
-                "button_disabled_text": "#9ca3af",
-            }
-
-        self.window.setStyleSheet(
-            f"""
-            QMainWindow,
-            QWidget#centralwidget {{
-                background-color: {colors['window']};
-                color: {colors['text']};
-            }}
-            QGroupBox {{
-                background-color: {colors['panel']};
-                color: {colors['text']};
-                border: 1px solid {colors['border']};
-                border-radius: 6px;
-                margin-top: 8px;
-            }}
-            QGroupBox::title {{
-                subcontrol-origin: margin;
-                left: 8px;
-                padding: 0 4px;
-            }}
-            QPushButton,
-            QCheckBox {{
-                color: {colors['text']};
-            }}
-            QPushButton {{
-                background-color: {colors['button']};
-                border: 1px solid {colors['border']};
-                border-radius: 4px;
-                padding: 4px 10px;
-            }}
-            QPushButton:hover {{
-                background-color: {colors['button_hover']};
-            }}
-            QPushButton:disabled {{
-                background-color: {colors['button_disabled']};
-                color: {colors['button_disabled_text']};
-            }}
-            QMenuBar,
-            QStatusBar {{
-                background-color: {colors['window']};
-                color: {colors['text']};
-            }}
-            """
-        )
 
     def _load_ui(self, ui_path: Path) -> QMainWindow:
         if not ui_path.exists():
@@ -200,18 +173,16 @@ class ThermostatDemoWindow(QObject):
         widget = self.window.findChild(widget_type, object_name)
         if widget is None:
             raise RuntimeError(
-                f'Required {widget_type.__name__} "{object_name}" was not found in maingui.ui. '
+                f'Required {widget_type.__name__} "{object_name}" was not found in demo_thermostat.ui. '
                 "Please check the objectName in Qt Designer."
             )
         return widget
 
 
-AutoPlotterWindow = ThermostatDemoWindow
-
-
 def main() -> int:
     app = QApplication(sys.argv)
-    ui_path = Path(__file__).resolve().parent / "maingui.ui"
+    app.setStyleSheet(qdarktheme.load_stylesheet("dark"))
+    ui_path = Path(__file__).resolve().parent / "demo_thermostat.ui"
     window = ThermostatDemoWindow(ui_path)
     window.show()
     return app.exec()

@@ -1,22 +1,45 @@
 from __future__ import annotations
 
-import pyqtgraph as pg
+from importlib.metadata import PackageNotFoundError, version
+from pathlib import Path
+import re
 
-from .axis import AxisMode, SmartAxisItem
-from .legend import PyQtLabGraphLegend
-from .toolbar import PyQtLabGraphToolbar
+from .axis import AxisMode
+from .layouts import LayoutFileError
+from .styles import (
+    BUILTIN_PLOT_STYLES,
+    CurveStyle,
+    PyQtLabGraphPlotStyle,
+)
+from .themes import (
+    BUILTIN_THEMES,
+    PyQtLabGraphTheme,
+)
 from .widget import PyQtLabGraphWidget
 
 
-pg.setConfigOptions(antialias=True)
+def _source_tree_version() -> str:
+    pyproject_path = Path(__file__).resolve().parents[1] / "pyproject.toml"
+    project_metadata = pyproject_path.read_text(encoding="utf-8")
+    match = re.search(r'(?m)^version\s*=\s*"([^"]+)"\s*$', project_metadata)
+    if match is None:
+        raise RuntimeError("Could not read project version from pyproject.toml")
+    return match.group(1)
 
-__version__ = "0.1.0"
+
+try:
+    __version__ = version("pyqt-lab-graph")
+except PackageNotFoundError:
+    __version__ = _source_tree_version()
 
 __all__ = [
     "AxisMode",
-    "PyQtLabGraphLegend",
-    "PyQtLabGraphToolbar",
+    "BUILTIN_PLOT_STYLES",
+    "BUILTIN_THEMES",
+    "CurveStyle",
+    "LayoutFileError",
+    "PyQtLabGraphPlotStyle",
+    "PyQtLabGraphTheme",
     "PyQtLabGraphWidget",
-    "SmartAxisItem",
     "__version__",
 ]

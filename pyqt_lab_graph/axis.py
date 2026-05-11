@@ -1,12 +1,37 @@
 from __future__ import annotations
 
+from enum import Enum
+
 import pyqtgraph as pg
 
 
-class AxisMode:
+_SECONDS_PER_MINUTE = 60
+_SECONDS_PER_HOUR = 60 * _SECONDS_PER_MINUTE
+_SECONDS_PER_DAY = 24 * _SECONDS_PER_HOUR
+
+_SUBSECOND_SPACING = 1.0
+_CENTISECOND_SPACING = 0.01
+_MILLISECOND_SPACING = 0.001
+
+
+class AxisMode(str, Enum):
     AUTO = "auto"
     LINEAR = "linear"
     TIME = "time"
+
+
+def resolve_axis_mode(mode: str | AxisMode) -> AxisMode:
+    if isinstance(mode, AxisMode):
+        return mode
+
+    try:
+        return AxisMode(mode)
+    except ValueError as exc:
+        available = ", ".join(axis_mode.value for axis_mode in AxisMode)
+        raise ValueError(
+            f'Unknown PyQtLabGraph axis mode "{mode}". '
+            f"Available axis modes: {available}."
+        ) from exc
 
 
 class SmartAxisItem(pg.AxisItem):
@@ -17,11 +42,11 @@ class SmartAxisItem(pg.AxisItem):
         self._custom_units = ""
         super().__init__(orientation, *args, **kwargs)
 
-    def set_mode(self, mode: str) -> None:
-        self._mode = mode
-        if mode == AxisMode.LINEAR:
+    def set_mode(self, mode: str | AxisMode) -> None:
+        self._mode = resolve_axis_mode(mode)
+        if self._mode == AxisMode.LINEAR:
             self.enableAutoSIPrefix(False)
-        elif mode == AxisMode.TIME:
+        elif self._mode == AxisMode.TIME:
             self.enableAutoSIPrefix(False)
         else:
             self.enableAutoSIPrefix(True)
@@ -51,11 +76,7 @@ class SmartAxisItem(pg.AxisItem):
         if self._mode != AxisMode.TIME:
             return super().tickStrings(values, scale, spacing)
 
-        # Time formatting logic
-        result = []
-        for v in values:
-            result.append(self._format_time(v, spacing))
-        return result
+        return [self._format_time(value, spacing) for value in values]
 
     def _format_time(self, seconds: float, spacing: float) -> str:
         if seconds < 0:
@@ -64,10 +85,10 @@ class SmartAxisItem(pg.AxisItem):
         s = int(seconds)
         ms = seconds - s
         
-        days = s // 86400
-        hours = (s % 86400) // 3600
-        minutes = (s % 3600) // 60
-        secs = s % 60
+        days = s // _SECONDS_PER_DAY
+        hours = (s % _SECONDS_PER_DAY) // _SECONDS_PER_HOUR
+        minutes = (s % _SECONDS_PER_HOUR) // _SECONDS_PER_MINUTE
+        secs = s % _SECONDS_PER_MINUTE
 
         parts = []
         if days > 0:
@@ -77,13 +98,10 @@ class SmartAxisItem(pg.AxisItem):
         if minutes > 0:
             parts.append(f"{minutes} min")
         
-        # Determine if we should show seconds or sub-seconds
-        # If spacing is small enough, show decimals
-        if spacing < 1.0:
-            # How many decimals?
-            if spacing < 0.001:
+        if spacing < _SUBSECOND_SPACING:
+            if spacing < _MILLISECOND_SPACING:
                 fmt = f"{secs + ms:.3f}"
-            elif spacing < 0.01:
+            elif spacing < _CENTISECOND_SPACING:
                 fmt = f"{secs + ms:.2f}"
             else:
                 fmt = f"{secs + ms:.1f}"
@@ -92,5 +110,3 @@ class SmartAxisItem(pg.AxisItem):
             parts.append(f"{secs} s")
 
         return " ".join(parts)
-
-
