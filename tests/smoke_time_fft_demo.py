@@ -35,6 +35,31 @@ def main() -> None:
     assert window.fft_plot.toolbar_frame is None
     assert window.fft_plot.legend_frame is None
 
+    window.show()
+    app.processEvents()
+    time_section = window.window.findChild(QWidget, "timePlotSection")
+    fft_section = window.window.findChild(QWidget, "fftPlotSection")
+    assert time_section.sizePolicy().verticalStretch() == 1
+    assert fft_section.sizePolicy().verticalStretch() == 1
+    initial_time_height = time_section.height()
+    initial_fft_height = fft_section.height()
+
+    window.time_plot.show_customize_dialog()
+    app.processEvents()
+    time_dialog = getattr(window.time_plot, "_pyqt_lab_graph_customize_dialogs")[0]
+    time_dialog.reject()
+    app.processEvents()
+    assert time_section.height() == initial_time_height
+    assert fft_section.height() == initial_fft_height
+
+    window.fft_plot.show_customize_dialog()
+    app.processEvents()
+    fft_dialog = getattr(window.fft_plot, "_pyqt_lab_graph_customize_dialogs")[0]
+    fft_dialog.accept()
+    app.processEvents()
+    assert time_section.height() == initial_time_height
+    assert fft_section.height() == initial_fft_height
+
     initial_count = len(window.time_values)
     window.append_samples(5_000)
     assert len(window.time_values) == initial_count + 5_000

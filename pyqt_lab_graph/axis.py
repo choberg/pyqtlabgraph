@@ -3,6 +3,7 @@ from __future__ import annotations
 from enum import Enum
 
 import pyqtgraph as pg
+from PySide6.QtCore import QPointF, Qt, Signal
 
 
 _SECONDS_PER_MINUTE = 60
@@ -36,6 +37,8 @@ def resolve_axis_mode(mode: str | AxisMode) -> AxisMode:
 
 class SmartAxisItem(pg.AxisItem):
     """Axis item with support for relative time formatting and raw linear units."""
+
+    double_clicked = Signal(str, QPointF)
 
     def __init__(self, orientation: str, *args: object, **kwargs: object) -> None:
         self._mode = AxisMode.AUTO
@@ -77,6 +80,13 @@ class SmartAxisItem(pg.AxisItem):
             return super().tickStrings(values, scale, spacing)
 
         return [self._format_time(value, spacing) for value in values]
+
+    def mouseDoubleClickEvent(self, event: object) -> None:
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.double_clicked.emit(self.orientation, event.scenePos())
+            event.accept()
+            return
+        super().mouseDoubleClickEvent(event)
 
     def _format_time(self, seconds: float, spacing: float) -> str:
         if seconds < 0:
