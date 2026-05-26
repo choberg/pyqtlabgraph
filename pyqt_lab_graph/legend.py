@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QEvent, QPointF, Qt, QTimer
-from PySide6.QtGui import QBrush, QColor, QPainter, QPen
+from PySide6.QtGui import QBrush, QColor, QPainter, QPen, QMouseEvent, QPaintEvent
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 from pyqtgraph.graphicsItems.ScatterPlotItem import renderSymbol
 
@@ -39,27 +39,27 @@ class PyQtLabGraphLegend(QWidget):
         self.items_by_key: dict[str, PyQtLabGraphLegendItem] = {}
         self.setObjectName("pyqtLabGraphLegend")
         if orientation == Qt.Orientation.Vertical:
-            self.layout = QVBoxLayout(self)
+            self._layout = QVBoxLayout(self)
         else:
-            self.layout = QHBoxLayout(self)
-        self.layout.setContentsMargins(*_LEGEND_LAYOUT_MARGINS)
-        self.layout.setSpacing(_LEGEND_LAYOUT_SPACING)
+            self._layout = QHBoxLayout(self)
+        self._layout.setContentsMargins(*_LEGEND_LAYOUT_MARGINS)
+        self._layout.setSpacing(_LEGEND_LAYOUT_SPACING)
         if orientation == Qt.Orientation.Vertical:
-            self.layout.addStretch(_LEGEND_VERTICAL_STRETCH)
+            self._layout.addStretch(_LEGEND_VERTICAL_STRETCH)
 
     def refresh(self) -> None:
-        while self.layout.count():
-            item = self.layout.takeAt(0)
+        while self._layout.count():
+            item = self._layout.takeAt(0)
             widget = item.widget()
             if widget is not None:
                 widget.deleteLater()
         self.items_by_key.clear()
-        for key in self.plot.curve_order:
+        for key in self.plot.curve_manager.curve_order:
             legend_item = PyQtLabGraphLegendItem(self.plot, key, self)
             self.items_by_key[key] = legend_item
-            self.layout.addWidget(legend_item)
+            self._layout.addWidget(legend_item)
         if self.orientation == Qt.Orientation.Vertical:
-            self.layout.addStretch(_LEGEND_VERTICAL_STRETCH)
+            self._layout.addStretch(_LEGEND_VERTICAL_STRETCH)
 
     def update_curve(self, key: str) -> None:
         item = self.items_by_key.get(key)
@@ -93,7 +93,9 @@ class PyQtLabGraphLegendItem(QWidget):
         self.refresh()
 
     def refresh(self) -> None:
-        curve = self.plot.curves[self.curve_key]
+        if self.curve_key not in self.plot.curve_manager.curves:
+            return
+        curve = self.plot.curve_manager.curves[self.curve_key]
         self.label.setText(curve.label)
         if curve.visible:
             opacity = _LEGEND_ITEM_VISIBLE_OPACITY
@@ -104,14 +106,14 @@ class PyQtLabGraphLegendItem(QWidget):
         self.sample.opacity = opacity
         self.sample.update()
 
-    def mousePressEvent(self, event: QEvent) -> None:
+    def mousePressEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
             self._click_timer.start()
             event.accept()
             return
         super().mousePressEvent(event)
 
-    def mouseDoubleClickEvent(self, event: QEvent) -> None:
+    def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
             self._click_timer.stop()
             self.plot.show_customize_dialog(self.curve_key)
@@ -120,9 +122,11 @@ class PyQtLabGraphLegendItem(QWidget):
         super().mouseDoubleClickEvent(event)
 
     def _toggle_curve_visibility(self) -> None:
+        if self.curve_key not in self.plot.curve_manager.curves:
+            return
         self.plot.set_curve_visible(
             self.curve_key,
-            not self.plot.curves[self.curve_key].visible,
+            not self.plot.curve_manager.curves[self.curve_key].visible,
         )
 
 
@@ -136,8 +140,10 @@ class CurveSampleWidget(QWidget):
         self.opacity = _LEGEND_ITEM_VISIBLE_OPACITY
         self.setFixedSize(_SAMPLE_WIDTH, _SAMPLE_HEIGHT)
 
-    def paintEvent(self, _event: QEvent) -> None:
-        curve = self.plot.curves[self.curve_key]
+    def paintEvent(self, _event: QPaintEvent) -> None:
+        if self.curve_key not in self.plot.curve_manager.curves:
+            return
+        curve = self.plot.curve_manager.curves[self.curve_key]
         style = curve.style
         color = QColor(style.line_color)
         color.setAlphaF(color.alphaF() * self.opacity)

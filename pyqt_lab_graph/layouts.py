@@ -64,16 +64,16 @@ class PlotLayoutState:
             x_mode=plot.x_axis_mode.value,
             y_mode=plot.y_axis_mode.value,
             grid_visible=plot.grid_item.isVisible(),
-            antialiasing=plot.antialiasing_enabled,
-            downsampling=plot.downsampling_enabled,
-            clip_to_view=plot.clip_to_view_enabled,
-            adaptive_performance=plot.adaptive_performance_enabled,
+            antialiasing=plot.render_optimizer.antialiasing_enabled,
+            downsampling=plot.render_optimizer.downsampling_enabled,
+            clip_to_view=plot.render_optimizer.clip_to_view_enabled,
+            adaptive_performance=plot.render_optimizer.enabled,
             curves={
                 key: {
-                    "visible": plot.curves[key].visible,
-                    "style": _curve_style_to_layout(plot.curves[key].style),
+                    "visible": plot.curve_manager.curves[key].visible,
+                    "style": _curve_style_to_layout(plot.curve_manager.curves[key].style),
                 }
-                for key in plot.curve_order
+                for key in plot.curve_manager.curve_order
             },
             ranges=ranges,
             interaction_state=InteractionState(
@@ -88,35 +88,67 @@ class PlotLayoutState:
     @classmethod
     def from_layout(cls, layout: dict[str, Any], plot: PyQtLabGraphWidget) -> PlotLayoutState:
         if not isinstance(layout, dict):
-            raise RuntimeError("PyQtLabGraph plot layout must be an object.")
+            raise LayoutFileError("PyQtLabGraph plot layout must be an object.")
 
-        axes = _optional_layout_object(layout, "axes")
-        x_axis = _optional_layout_object(axes, "x")
-        y_axis = _optional_layout_object(axes, "y")
-        rendering = _optional_layout_object(layout, "rendering")
-        interaction = _optional_layout_object(layout, "interaction")
+        try:
+            axes = _optional_layout_object(layout, "axes")
+            x_axis = _optional_layout_object(axes, "x")
+            y_axis = _optional_layout_object(axes, "y")
+            rendering = _optional_layout_object(layout, "rendering")
+            interaction = _optional_layout_object(layout, "interaction")
 
-        return cls(
-            theme=str(layout.get("theme", plot.theme.name)),
-            plot_style=str(layout.get("plot_style", plot.plot_style.name)),
-            x_label=str(x_axis.get("label", plot.x_label_text)),
-            y_label=str(y_axis.get("label", plot.y_label_text)),
-            x_units=_layout_optional_string(x_axis.get("units", plot.x_label_units)),
-            y_units=_layout_optional_string(y_axis.get("units", plot.y_label_units)),
-            x_mode=str(x_axis.get("mode", plot.x_axis_mode.value)),
-            y_mode=str(y_axis.get("mode", plot.y_axis_mode.value)),
-            grid_visible=bool(layout.get("grid_visible", plot.grid_item.isVisible())),
-            antialiasing=bool(rendering.get("antialiasing", plot.antialiasing_enabled)),
-            downsampling=bool(rendering.get("downsampling", plot.downsampling_enabled)),
-            clip_to_view=bool(rendering.get("clip_to_view", plot.clip_to_view_enabled)),
-            adaptive_performance=bool(
-                rendering.get("adaptive_performance", plot.adaptive_performance_enabled)
-            ),
-            curves=_curves_from_layout(_optional_layout_object(layout, "curves"), plot),
-            ranges=_ranges_from_layout(_optional_layout_object(layout, "ranges")),
-            interaction_state=_interaction_from_layout(interaction, plot.interaction_state),
-            restore_view_state_on_load=bool(layout.get("restore_view_state_on_load", True)),
-        )
+            theme_str = str(layout.get("theme", plot.theme.name))
+            plot_style_str = str(layout.get("plot_style", plot.plot_style.name))
+            
+            # Fail fast on invalid theme or plot style names
+            from .themes import resolve_theme
+            from .styles import resolve_plot_style
+            try:
+                resolve_theme(theme_str)
+            except ValueError as exc:
+                raise LayoutFileError(f"Invalid theme '{theme_str}' in layout file.") from exc
+            try:
+                resolve_plot_style(plot_style_str)
+            except ValueError as exc:
+                raise LayoutFileError(f"Invalid plot style '{plot_style_str}' in layout file.") from exc
+
+            x_mode_str = str(x_axis.get("mode", plot.x_axis_mode.value))
+            y_mode_str = str(y_axis.get("mode", plot.y_axis_mode.value))
+            from .axis import resolve_axis_mode
+            try:
+                resolve_axis_mode(x_mode_str)
+            except ValueError as exc:
+                raise LayoutFileError(f"Invalid X axis mode '{x_mode_str}' in layout file.") from exc
+            try:
+                resolve_axis_mode(y_mode_str)
+            except ValueError as exc:
+                raise LayoutFileError(f"Invalid Y axis mode '{y_mode_str}' in layout file.") from exc
+
+            return cls(
+                theme=theme_str,
+                plot_style=plot_style_str,
+                x_label=str(x_axis.get("label", plot.x_label_text)),
+                y_label=str(y_axis.get("label", plot.y_label_text)),
+                x_units=_layout_optional_string(x_axis.get("units", plot.x_label_units)),
+                y_units=_layout_optional_string(y_axis.get("units", plot.y_label_units)),
+                x_mode=x_mode_str,
+                y_mode=y_mode_str,
+                grid_visible=bool(layout.get("grid_visible", plot.grid_item.isVisible())),
+                antialiasing=bool(rendering.get("antialiasing", plot.render_optimizer.antialiasing_enabled)),
+                downsampling=bool(rendering.get("downsampling", plot.render_optimizer.downsampling_enabled)),
+                clip_to_view=bool(rendering.get("clip_to_view", plot.render_optimizer.clip_to_view_enabled)),
+                adaptive_performance=bool(
+                    rendering.get("adaptive_performance", plot.render_optimizer.enabled)
+                ),
+                curves=_curves_from_layout(_optional_layout_object(layout, "curves"), plot),
+                ranges=_ranges_from_layout(_optional_layout_object(layout, "ranges")),
+                interaction_state=_interaction_from_layout(interaction, plot.interaction_state),
+                restore_view_state_on_load=bool(layout.get("restore_view_state_on_load", True)),
+            )
+        except LayoutFileError:
+            raise
+        except Exception as exc:
+            raise LayoutFileError(f"Malformed layout data: {exc}") from exc
 
     def to_layout(self) -> dict[str, Any]:
         return {
@@ -178,7 +210,7 @@ class PlotLayoutState:
         plot.set_plot_style(self.plot_style)
 
         for key, curve_layout in self.curves.items():
-            if key not in plot.curves:
+            if key not in plot.curve_manager.curves:
                 continue
             if "visible" in curve_layout:
                 plot.set_curve_visible(key, bool(curve_layout["visible"]))
@@ -189,24 +221,24 @@ class PlotLayoutState:
             self.restore_view_state_on_load if restore_view_state is None else restore_view_state
         )
         if should_restore_view:
-            plot.interaction_state = InteractionState(
-                autoscale_x=self.interaction_state.autoscale_x,
-                autoscale_y=self.interaction_state.autoscale_y,
-                rolling_x=self.interaction_state.rolling_x,
-                active_tool=self.interaction_state.active_tool,
+            plot.apply_interaction_state(
+                InteractionState(
+                    autoscale_x=self.interaction_state.autoscale_x,
+                    autoscale_y=self.interaction_state.autoscale_y,
+                    rolling_x=self.interaction_state.rolling_x,
+                    active_tool=self.interaction_state.active_tool,
+                )
             )
-            plot._apply_interaction_behavior()
-            plot._sync_toolbar_state()
             if (
                 "x" in self.ranges
                 and not plot.interaction_state.autoscale_x
                 and not plot.interaction_state.rolling_x
             ):
                 xmin, xmax = self.ranges["x"]
-                plot._set_x_range(xmin, xmax)
+                plot.range_controller.set_x_range(xmin, xmax)
             if "y" in self.ranges and not plot.interaction_state.autoscale_y:
                 ymin, ymax = self.ranges["y"]
-                plot._set_y_range(ymin, ymax)
+                plot.range_controller.set_y_range(ymin, ymax)
             plot.apply_axis_scaling()
 
 
@@ -237,14 +269,26 @@ def save_plot_layout(
     else:
         document = {"version": LAYOUT_SCHEMA_VERSION, "plots": {}}
 
+    import os
+    import tempfile
+
     document["plots"][plot_identifier] = plot_layout
     layout_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    tmp_path = None
     try:
-        layout_path.write_text(
-            json.dumps(document, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
-    except OSError as exc:
+        fd, path_str = tempfile.mkstemp(dir=str(layout_path.parent), suffix=".tmp")
+        tmp_path = Path(path_str)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(document, f, indent=2, sort_keys=True)
+            f.write("\n")
+        os.replace(path_str, str(layout_path))
+    except Exception as exc:
+        if tmp_path is not None and tmp_path.exists():
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
         raise LayoutFileError(f"Could not write PyQtLabGraph layout file {layout_path}: {exc}") from exc
 
 
@@ -276,7 +320,7 @@ def _curve_style_from_layout(
     plot: PyQtLabGraphWidget,
 ) -> CurveStyle:
     if not isinstance(raw_style, dict):
-        raise RuntimeError(f'PyQtLabGraph layout style for curve "{key}" must be an object.')
+        raise LayoutFileError(f'PyQtLabGraph layout style for curve "{key}" must be an object.')
     current_style = plot.curve_style(key)
     return CurveStyle(
         line_enabled=bool(raw_style.get("line_enabled", current_style.line_enabled)),
@@ -311,10 +355,10 @@ def _curves_from_layout(
 ) -> dict[str, dict[str, object]]:
     parsed: dict[str, dict[str, object]] = {}
     for key, curve_layout in curves.items():
-        if key not in plot.curves:
+        if key not in plot.curve_manager.curves:
             continue
         if not isinstance(curve_layout, dict):
-            raise RuntimeError(f'PyQtLabGraph layout for curve "{key}" must be an object.')
+            raise LayoutFileError(f'PyQtLabGraph layout for curve "{key}" must be an object.')
         parsed[key] = dict(curve_layout)
     return parsed
 
@@ -349,18 +393,18 @@ def _optional_layout_object(layout: dict[str, Any], key: str) -> dict[str, Any]:
     if raw_value is None:
         return {}
     if not isinstance(raw_value, dict):
-        raise RuntimeError(f'PyQtLabGraph layout field "{key}" must be an object.')
+        raise LayoutFileError(f'PyQtLabGraph layout field "{key}" must be an object.')
     return raw_value
 
 
 def _range_from_layout(raw_range: object, axis_name: str) -> tuple[float, float]:
     if not isinstance(raw_range, list | tuple) or len(raw_range) != 2:
-        raise RuntimeError(f'PyQtLabGraph layout range "{axis_name}" must contain two numbers.')
+        raise LayoutFileError(f'PyQtLabGraph layout range "{axis_name}" must contain two numbers.')
     try:
         first = float(raw_range[0])
         second = float(raw_range[1])
     except (TypeError, ValueError) as exc:
-        raise RuntimeError(
+        raise LayoutFileError(
             f'PyQtLabGraph layout range "{axis_name}" must contain two numbers.'
         ) from exc
     return min(first, second), max(first, second)

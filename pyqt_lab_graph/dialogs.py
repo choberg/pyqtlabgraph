@@ -130,12 +130,16 @@ class _GlobalControls:
 
 
 def show_customize_dialog(plot: PyQtLabGraphWidget, curve_key: str | None = None) -> None:
+    if plot._customize_dialogs:
+        dialog = plot._customize_dialogs[0]
+        if curve_key is not None:
+            dialog._select_initial_curve_tab(curve_key)
+        dialog.raise_()
+        dialog.activateWindow()
+        return
+
     dialog = _CustomizeDialog(plot, curve_key)
-    open_dialogs = getattr(plot, "_pyqt_lab_graph_customize_dialogs", None)
-    if open_dialogs is None:
-        open_dialogs = []
-        setattr(plot, "_pyqt_lab_graph_customize_dialogs", open_dialogs)
-    open_dialogs.append(dialog)
+    plot._customize_dialogs.append(dialog)
     dialog.finished.connect(lambda _result: _forget_dialog(plot, dialog))
     dialog.show()
 
@@ -173,6 +177,15 @@ class _CustomizeDialog(QDialog):
         self._install_range_return_handlers()
         self._preview_enabled = True
 
+    def showEvent(self, event: QEvent) -> None:
+        if not event.spontaneous():
+            self.original_state = PlotLayoutState.from_widget(
+                self.plot,
+                include_x_range=True,
+                include_y_range=True,
+            )
+        super().showEvent(event)
+
     def _build_global_tab(self) -> _GlobalControls:
         x_label = QLineEdit(self.plot.x_label_text, self)
         x_label.setObjectName("pyqtLabGraphXLabelEdit")
@@ -195,22 +208,22 @@ class _CustomizeDialog(QDialog):
 
         antialiasing = QCheckBox(self)
         antialiasing.setObjectName("pyqtLabGraphAntialiasingCheckbox")
-        antialiasing.setChecked(self.plot.antialiasing_enabled)
+        antialiasing.setChecked(self.plot.render_optimizer.antialiasing_enabled)
         antialiasing.setToolTip("Smooths plotted lines and markers at the cost of rendering speed.")
 
         downsampling = QCheckBox(self)
         downsampling.setObjectName("pyqtLabGraphDownsamplingCheckbox")
-        downsampling.setChecked(self.plot.downsampling_enabled)
+        downsampling.setChecked(self.plot.render_optimizer.downsampling_enabled)
         downsampling.setToolTip("Lets pyqtgraph reduce dense visible data before drawing.")
 
         clip_to_view = QCheckBox(self)
         clip_to_view.setObjectName("pyqtLabGraphClipToViewCheckbox")
-        clip_to_view.setChecked(self.plot.clip_to_view_enabled)
+        clip_to_view.setChecked(self.plot.render_optimizer.clip_to_view_enabled)
         clip_to_view.setToolTip("Draws only the data that intersects the current visible X range.")
 
         adaptive_performance = QCheckBox(self)
         adaptive_performance.setObjectName("pyqtLabGraphAdaptivePerformanceCheckbox")
-        adaptive_performance.setChecked(self.plot.adaptive_performance_enabled)
+        adaptive_performance.setChecked(self.plot.render_optimizer.enabled)
         adaptive_performance.setToolTip(
             "Temporarily hides markers and disables anti-aliasing when many points are visible."
         )
@@ -293,11 +306,11 @@ class _CustomizeDialog(QDialog):
         )
 
     def _build_curve_tabs(self) -> None:
-        for key in self.plot.curve_order:
+        for key in self.plot.curve_manager.curve_order:
             self._add_curve_tab(key)
 
     def _add_curve_tab(self, key: str) -> None:
-        curve = self.plot.curves[key]
+        curve = self.plot.curve_manager.curves[key]
         style = curve.style
 
         tab = QWidget(self)
@@ -436,8 +449,8 @@ class _CustomizeDialog(QDialog):
             widget.installEventFilter(self)
 
     def _select_initial_curve_tab(self, curve_key: str | None) -> None:
-        if curve_key in self.plot.curves:
-            self.tabs.setCurrentIndex(self.plot.curve_order.index(str(curve_key)) + 1)
+        if curve_key in self.plot.curve_manager.curves:
+            self.tabs.setCurrentIndex(self.plot.curve_manager.curve_order.index(str(curve_key)) + 1)
 
     def _preview_axes(self) -> None:
         if not self._preview_enabled:
@@ -464,7 +477,7 @@ class _CustomizeDialog(QDialog):
             return
         plot_style = BUILTIN_PLOT_STYLES[str(self.global_controls.plot_style.currentData())]
         self.plot.apply_plot_style(plot_style)
-        for index, key in enumerate(self.plot.curve_order):
+        for index, key in enumerate(self.plot.curve_manager.curve_order):
             editor = self.curve_editors[key]
             style = plot_style.curve_style(index)
             editor.line_enabled.setChecked(style.line_enabled)
@@ -511,7 +524,7 @@ class _CustomizeDialog(QDialog):
 
     def _choose_line_color(self, key: str) -> None:
         editor = self.curve_editors[key]
-        curve = self.plot.curves[key]
+        curve = self.plot.curve_manager.curves[key]
         selected = QColorDialog.getColor(
             QColor(editor.line_color),
             self,
@@ -591,9 +604,8 @@ class _CustomizeDialog(QDialog):
 
 
 def _forget_dialog(plot: PyQtLabGraphWidget, dialog: QDialog) -> None:
-    open_dialogs = getattr(plot, "_pyqt_lab_graph_customize_dialogs", [])
-    if dialog in open_dialogs:
-        open_dialogs.remove(dialog)
+    if dialog in plot._customize_dialogs:
+        plot._customize_dialogs.remove(dialog)
 
 
 def _axis_mode_combo(parent: QWidget, current_mode: AxisMode) -> QComboBox:

@@ -41,23 +41,23 @@ def main() -> None:
     assert "sensor" in graph.legend.items_by_key
 
     legend_item = graph.legend.items_by_key["sensor"]
-    assert graph.curves["sensor"].visible is True
-    assert graph.curves["sensor"].item.isVisible() is True
+    assert graph.curve_manager.curves["sensor"].visible is True
+    assert graph.curve_manager.curves["sensor"].item.isVisible() is True
 
     QTest.mouseClick(legend_item, Qt.MouseButton.LeftButton)
     QTest.qWait(LEGEND_CLICK_DELAY_MS + 50)
     app.processEvents()
 
-    assert graph.curves["sensor"].visible is False
-    assert graph.curves["sensor"].item.isVisible() is False
+    assert graph.curve_manager.curves["sensor"].visible is False
+    assert graph.curve_manager.curves["sensor"].item.isVisible() is False
     assert legend_item.sample.opacity < 1.0
 
     QTest.mouseClick(legend_item, Qt.MouseButton.LeftButton)
     QTest.qWait(LEGEND_CLICK_DELAY_MS + 50)
     app.processEvents()
 
-    assert graph.curves["sensor"].visible is True
-    assert graph.curves["sensor"].item.isVisible() is True
+    assert graph.curve_manager.curves["sensor"].visible is True
+    assert graph.curve_manager.curves["sensor"].item.isVisible() is True
     assert legend_item.sample.opacity == 1.0
 
     customize_requests: list[str | None] = []
@@ -75,8 +75,8 @@ def main() -> None:
     app.processEvents()
 
     assert customize_requests == ["sensor"]
-    assert graph.curves["sensor"].visible is True
-    assert graph.curves["sensor"].item.isVisible() is True
+    assert graph.curve_manager.curves["sensor"].visible is True
+    assert graph.curve_manager.curves["sensor"].item.isVisible() is True
 
     print("legend interaction smoke ok")
 

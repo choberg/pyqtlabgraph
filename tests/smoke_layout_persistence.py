@@ -131,13 +131,13 @@ def main() -> None:
         assert target.x_label_units == "s"
         assert target.y_label_units == "V"
         assert target.grid_item.isVisible() is False
-        assert target.antialiasing_enabled is False
-        assert target.downsampling_enabled is False
-        assert target.clip_to_view_enabled is False
-        assert target.adaptive_performance_enabled is False
+        assert target.render_optimizer.antialiasing_enabled is False
+        assert target.render_optimizer.downsampling_enabled is False
+        assert target.render_optimizer.clip_to_view_enabled is False
+        assert target.render_optimizer.enabled is False
         assert target.theme.name == "dark"
         assert target.plot_style.name == "dark"
-        assert target.curves["sensor"].visible is False
+        assert target.curve_manager.curves["sensor"].visible is False
         assert target.curve_style("sensor").line_color == "#abcdef"
         assert target.curve_style("sensor").line_enabled is False
         assert target.curve_style("sensor").marker_symbol == "d"

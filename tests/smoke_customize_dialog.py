@@ -89,10 +89,10 @@ def main() -> None:
         _child(dialog, QCheckBox, "pyqtLabGraphClipToViewCheckbox").setChecked(False)
         _child(dialog, QCheckBox, "pyqtLabGraphAdaptivePerformanceCheckbox").setChecked(False)
         assert graph.grid_item.isVisible() is False
-        assert graph.antialiasing_enabled is False
-        assert graph.downsampling_enabled is False
-        assert graph.clip_to_view_enabled is False
-        assert graph.adaptive_performance_enabled is False
+        assert graph.render_optimizer.antialiasing_enabled is False
+        assert graph.render_optimizer.downsampling_enabled is False
+        assert graph.render_optimizer.clip_to_view_enabled is False
+        assert graph.render_optimizer.enabled is False
 
         _set_combo_data(_child(dialog, QComboBox, "pyqtLabGraphPlotBackgroundCombo"), "dark")
         assert graph.theme.name == "dark"
@@ -109,7 +109,7 @@ def main() -> None:
         _set_combo_data(_child(dialog, QComboBox, "pyqtLabGraphCurveMarkerSymbol_sensor"), "d")
         _child(dialog, QSpinBox, "pyqtLabGraphCurveMarkerSize_sensor").setValue(11)
         _child(dialog, QDoubleSpinBox, "pyqtLabGraphCurveMarkerOutlineWidth_sensor").setValue(2.5)
-        assert graph.curves["sensor"].visible is False
+        assert graph.curve_manager.curves["sensor"].visible is False
         assert graph.curve_style("sensor").line_enabled is False
         assert graph.curve_style("sensor").marker_symbol == "d"
 
@@ -148,15 +148,15 @@ def main() -> None:
     assert graph.x_axis_mode == AxisMode.TIME
     assert graph.y_axis_mode == AxisMode.LINEAR
     assert graph.grid_item.isVisible() is False
-    assert graph.antialiasing_enabled is False
-    assert graph.downsampling_enabled is False
-    assert graph.clip_to_view_enabled is False
-    assert graph.adaptive_performance_enabled is False
+    assert graph.render_optimizer.antialiasing_enabled is False
+    assert graph.render_optimizer.downsampling_enabled is False
+    assert graph.render_optimizer.clip_to_view_enabled is False
+    assert graph.render_optimizer.enabled is False
 
     assert graph.theme.name == "dark"
     assert graph.plot_style.name == "dark"
-    assert graph.curves["sensor"].visible is False
-    assert graph.curves["sensor"].item.isVisible() is False
+    assert graph.curve_manager.curves["sensor"].visible is False
+    assert graph.curve_manager.curves["sensor"].item.isVisible() is False
 
     sensor_style = graph.curve_style("sensor")
     assert sensor_style.line_enabled is False
@@ -274,7 +274,7 @@ def main() -> None:
     assert restore_graph.x_label_units == "s"
     assert restore_graph.y_label_units == "V"
     assert restore_graph.grid_item.isVisible() is True
-    assert restore_graph.antialiasing_enabled is True
+    assert restore_graph.render_optimizer.antialiasing_enabled is True
     assert restore_graph.get_x_range() == (-1.0, 3.0)
     assert restore_graph.get_y_range() == (-2.0, 4.0)
     assert restore_graph.curve_style("sensor") == original_style

@@ -70,14 +70,14 @@ def main() -> None:
     assert graph.native_plot_widget.frameShape() == QFrame.Shape.NoFrame
     sensor_item = graph.curve_item("sensor")
     assert isinstance(sensor_item, pg.PlotDataItem)
-    assert sensor_item is graph.curves["sensor"].item
+    assert sensor_item is graph.curve_manager.curves["sensor"].item
     sensor_item.setData([10.0, 11.0], [12.0, 13.0])
     sensor_x, sensor_y = graph.curve_data("sensor")
     assert sensor_x.tolist() == [10.0, 11.0]
     assert sensor_y.tolist() == [12.0, 13.0]
 
     graph.add_curve("dense")
-    graph._set_x_range(0.0, 10.0)
+    graph.range_controller._set_x_range(0.0, 10.0)
     graph.set_data(
         "dense",
         np.arange(1.0, 10_001.0),
@@ -122,7 +122,7 @@ def main() -> None:
     assert after_dark_style == before_style
     assert after_light_solarized_style == before_style
     assert after_dark_solarized_style == before_style
-    assert graph.curves["sensor"].item.opts["pen"].color().name().lower() == "#123456"
+    assert graph.curve_manager.curves["sensor"].item.opts["pen"].color().name().lower() == "#123456"
 
     app.processEvents()
     print("public api cleanup smoke ok")

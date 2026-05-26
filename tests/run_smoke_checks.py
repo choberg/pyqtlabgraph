@@ -12,6 +12,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 PACKAGE_FILES = sorted((REPO_ROOT / "pyqt_lab_graph").glob("*.py"))
 DEMO_FILES = [
     REPO_ROOT / "demo_thermostat.py",
+    REPO_ROOT / "demo_thermostat_qdarktheme.py",
     REPO_ROOT / "demo_time_fft.py",
     REPO_ROOT / "demo_minimal.py",
 ]
