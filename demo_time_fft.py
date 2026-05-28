@@ -10,7 +10,7 @@ from PySide6.QtCore import QFile, QObject, Qt, QTimer
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton, QWidget
 
-from pyqt_lab_graph import PyQtLabGraphWidget
+from pyqtlabgraph import PyQtLabGraphWidget
 
 
 WidgetType = TypeVar("WidgetType", bound=QWidget)

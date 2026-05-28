@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QVBoxLayout, QWidget
 
-from pyqt_lab_graph import CurveStyle, PyQtLabGraphWidget
+from pyqtlabgraph import CurveStyle, PyQtLabGraphWidget
 
 
 def main() -> None:

@@ -18,13 +18,13 @@ except ImportError:
 
 from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout
 from PySide6.QtGui import QColor
-from pyqt_lab_graph import (
+from pyqtlabgraph import (
     PyQtLabGraphWidget,
     CurveStyle,
     PyQtLabGraphTheme,
 )
-from pyqt_lab_graph.themes import resolve_theme
-from pyqt_lab_graph.styles import resolve_plot_style
+from pyqtlabgraph.themes import resolve_theme
+from pyqtlabgraph.styles import resolve_plot_style
 
 
 @pytest.fixture(scope="session")
@@ -38,7 +38,7 @@ def qapp() -> QApplication:
 
 
 def test_version() -> None:
-    from pyqt_lab_graph import __version__
+    from pyqtlabgraph import __version__
     assert __version__ != ""
 
 

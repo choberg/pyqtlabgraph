@@ -7,7 +7,7 @@ from pathlib import Path
 from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget
 from PySide6.QtCore import Qt
 
-from pyqt_lab_graph import PyQtLabGraphWidget
+from pyqtlabgraph import PyQtLabGraphWidget
 
 
 def create_window() -> QMainWindow:

@@ -12,7 +12,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QVBoxLayout, QWidget
 
-from pyqt_lab_graph import PyQtLabGraphWidget
+from pyqtlabgraph import PyQtLabGraphWidget
 
 
 LEGEND_CLICK_DELAY_MS = 220

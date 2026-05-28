@@ -9,8 +9,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from PySide6.QtWidgets import QApplication
 
-from pyqt_lab_graph import AxisMode
-from pyqt_lab_graph.axis import SmartAxisItem, resolve_axis_mode
+from pyqtlabgraph import AxisMode
+from pyqtlabgraph.axis import SmartAxisItem, resolve_axis_mode
 
 
 def main() -> None:

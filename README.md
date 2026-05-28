@@ -1,7 +1,7 @@
 # PyQtLabGraph
 
-[![PyPI version](https://img.shields.io/pypi/v/pyqt-lab-graph.svg)](https://pypi.org/project/pyqt-lab-graph/)
-[![Supported Python versions](https://img.shields.io/pypi/pyversions/pyqt-lab-graph.svg)](https://pypi.org/project/pyqt-lab-graph/)
+[![PyPI version](https://img.shields.io/pypi/v/pyqtlabgraph.svg)](https://pypi.org/project/pyqtlabgraph/)
+[![Supported Python versions](https://img.shields.io/pypi/pyversions/pyqtlabgraph.svg)](https://pypi.org/project/pyqtlabgraph/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A powerful, interactive, and premium live plotting library for **PySide6/Qt6**, based on **PyQtGraph**.
@@ -76,7 +76,7 @@ PyQtLabGraph introduces advanced viewport mouse controls on top of the standard 
 Install PyQtLabGraph from PyPI:
 
 ```bash
-pip install pyqt-lab-graph
+pip install pyqtlabgraph
 ```
 
 Or install it directly from the repository source:
@@ -128,7 +128,7 @@ Initialize the widget, typically inside a host `QMainWindow` or custom container
 ```python
 from pathlib import Path
 from PySide6.QtCore import Qt
-from pyqt_lab_graph import PyQtLabGraphWidget
+from pyqtlabgraph import PyQtLabGraphWidget
 
 self.plot = PyQtLabGraphWidget(
     plot_container=self.ui.plotContainer,       # Anchor QWidget for the main plot
@@ -287,7 +287,7 @@ For dense, high-frequency datasets, PyQtLabGraph provides several levels of perf
 ## Project Structure
 
 ```
-├── pyqt_lab_graph/          # Main library package
+├── pyqtlabgraph/            # Main library package
 │   ├── __init__.py          # Public exports & versioning
 │   ├── widget.py            # Main PyQtLabGraphWidget and API wrapping
 │   ├── dialogs.py           # Modeless Customize dialog & popups

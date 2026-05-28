@@ -8,7 +8,7 @@ import sys
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
-import pyqt_lab_graph
+import pyqtlabgraph
 
 
 def main() -> int:
@@ -16,7 +16,7 @@ def main() -> int:
     match = re.search(r'(?m)^version\s*=\s*"([^"]+)"\s*$', pyproject)
     assert match is not None
     expected_version = match.group(1)
-    assert pyqt_lab_graph.__version__ == expected_version
+    assert pyqtlabgraph.__version__ == expected_version
 
     print("version metadata smoke ok")
     return 0

@@ -7,8 +7,8 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-TOOLBAR_PATH = REPO_ROOT / "pyqt_lab_graph" / "toolbar.py"
-ASSETS_PATH = REPO_ROOT / "pyqt_lab_graph" / "assets"
+TOOLBAR_PATH = REPO_ROOT / "pyqtlabgraph" / "toolbar.py"
+ASSETS_PATH = REPO_ROOT / "pyqtlabgraph" / "assets"
 PYPROJECT_PATH = REPO_ROOT / "pyproject.toml"
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
@@ -35,7 +35,7 @@ def _toolbar_icon_filenames() -> set[str]:
 
 def _package_data_assets() -> set[str]:
     pyproject = tomllib.loads(PYPROJECT_PATH.read_text(encoding="utf-8"))
-    package_data = pyproject["tool"]["setuptools"]["package-data"]["pyqt_lab_graph"]
+    package_data = pyproject["tool"]["setuptools"]["package-data"]["pyqtlabgraph"]
     return {str(item) for item in package_data}
 
 

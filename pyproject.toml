@@ -3,7 +3,7 @@ requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pyqt-lab-graph"
+name = "pyqtlabgraph"
 version = "0.1.0"
 description = "Reusable PySide6/PyQtGraph live plotting widget with toolbar, legend, and smart axis formatting."
 readme = "README.md"
@@ -39,10 +39,10 @@ Repository = "https://github.com/claudiush/PyQtLabGraph"
 include-package-data = false
 
 [tool.setuptools.packages.find]
-include = ["pyqt_lab_graph*"]
+include = ["pyqtlabgraph*"]
 
 [tool.setuptools.package-data]
-pyqt_lab_graph = [
+pyqtlabgraph = [
     "py.typed",
     "assets/autox.png",
     "assets/autoy.png",

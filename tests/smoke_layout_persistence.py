@@ -21,8 +21,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from pyqt_lab_graph import CurveStyle, LayoutFileError, PyQtLabGraphWidget
-from pyqt_lab_graph import dialogs
+from pyqtlabgraph import CurveStyle, LayoutFileError, PyQtLabGraphWidget
+from pyqtlabgraph import dialogs
 
 
 def _container() -> QWidget:

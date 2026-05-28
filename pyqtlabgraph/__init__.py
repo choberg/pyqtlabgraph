@@ -33,7 +33,7 @@ def _source_tree_version() -> str:
 
 
 try:
-    __version__ = version("pyqt-lab-graph")
+    __version__ = version("pyqtlabgraph")
 except PackageNotFoundError:
     __version__ = _source_tree_version()
 

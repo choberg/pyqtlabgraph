@@ -13,8 +13,8 @@ from PySide6.QtGui import QColor, QPalette
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QLineEdit, QVBoxLayout, QWidget
 
-from pyqt_lab_graph import PyQtLabGraphWidget
-from pyqt_lab_graph.models import InteractionTool
+from pyqtlabgraph import PyQtLabGraphWidget
+from pyqtlabgraph.models import InteractionTool
 
 
 class WheelEventStub:

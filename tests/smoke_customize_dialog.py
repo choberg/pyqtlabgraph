@@ -22,9 +22,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from pyqt_lab_graph import AxisMode, CurveStyle, PyQtLabGraphWidget
-from pyqt_lab_graph import dialogs
-from pyqt_lab_graph.styles import BUILTIN_PLOT_STYLES
+from pyqtlabgraph import AxisMode, CurveStyle, PyQtLabGraphWidget
+from pyqtlabgraph import dialogs
+from pyqtlabgraph.styles import BUILTIN_PLOT_STYLES
 
 
 def _child(dialog: QDialog, widget_type: type, name: str):

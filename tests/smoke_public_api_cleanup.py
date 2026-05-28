@@ -17,7 +17,7 @@ def main() -> None:
     pg.setConfigOptions(antialias=False)
     assert pg.getConfigOption("antialias") is False
 
-    from pyqt_lab_graph import CurveStyle, PyQtLabGraphWidget
+    from pyqtlabgraph import CurveStyle, PyQtLabGraphWidget
 
     assert pg.getConfigOption("antialias") is False
 
