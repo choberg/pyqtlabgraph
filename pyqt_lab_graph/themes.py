@@ -18,6 +18,14 @@ class PyQtLabGraphTheme:
     grid: QColor
     border: str
 
+    def __post_init__(self) -> None:
+        if not QColor(self.plot_background).isValid():
+            raise ValueError(f"Invalid plot_background color: {self.plot_background}")
+        if not self.grid.isValid():
+            raise ValueError("Invalid grid color")
+        if not QColor(self.border).isValid():
+            raise ValueError(f"Invalid border color: {self.border}")
+
 
 LIGHT_THEME = PyQtLabGraphTheme(
     name="light",

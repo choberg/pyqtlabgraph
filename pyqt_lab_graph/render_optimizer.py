@@ -5,6 +5,7 @@ import numpy as np
 
 if TYPE_CHECKING:
     from .widget import PyQtLabGraphWidget
+    from .models import CurveState
 
 from .constants import (
     _ADAPTIVE_PERFORMANCE_THRESHOLD,
@@ -54,7 +55,7 @@ class RenderOptimizer:
         self.active = active
         self._widget.plot_widget.setAntialiasing(self.effective_antialiasing_enabled())
         for curve in self._widget.curve_manager.curves.values():
-            self._apply_curve_rendering_options(curve)
+            self.apply_curve_rendering_options(curve)
             self._widget.style_controller.apply_curve_style(curve)
 
     def _visible_data_point_count(self) -> int:
@@ -71,19 +72,19 @@ class RenderOptimizer:
         self.antialiasing_enabled = enabled
         self._widget.plot_widget.setAntialiasing(self.effective_antialiasing_enabled())
         for curve in self._widget.curve_manager.curves.values():
-            self._apply_curve_rendering_options(curve)
+            self.apply_curve_rendering_options(curve)
 
     def set_downsampling_enabled(self, enabled: bool) -> None:
         self.downsampling_enabled = enabled
         for curve in self._widget.curve_manager.curves.values():
-            self._apply_curve_rendering_options(curve)
+            self.apply_curve_rendering_options(curve)
 
     def set_clip_to_view_enabled(self, enabled: bool) -> None:
         self.clip_to_view_enabled = enabled
         for curve in self._widget.curve_manager.curves.values():
-            self._apply_curve_rendering_options(curve)
+            self.apply_curve_rendering_options(curve)
 
-    def _apply_curve_rendering_options(self, curve) -> None:
+    def apply_curve_rendering_options(self, curve: CurveState) -> None:
         antialias = self.effective_antialiasing_enabled()
         curve.item.setClipToView(self.clip_to_view_enabled)
         curve.item.setDownsampling(auto=self.downsampling_enabled, method="peak")

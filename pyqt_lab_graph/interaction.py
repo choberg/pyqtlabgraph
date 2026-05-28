@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import Any, Callable, Literal
 
 import pyqtgraph as pg
 from PySide6.QtCore import QEvent, QObject, QPoint, QRect, Qt
@@ -20,9 +20,13 @@ class _PyQtLabGraphViewBox(pg.ViewBox):
     """ViewBox with PyQtLabGraph mouse-wheel interaction extensions."""
 
     def wheelEvent(self, ev: Any, axis: int | None = None) -> None:
-        if axis is None and ev.modifiers() & Qt.KeyboardModifier.ShiftModifier:
-            super().wheelEvent(ev, axis=0)
-            return
+        if axis is None:
+            if ev.modifiers() & Qt.KeyboardModifier.ShiftModifier:
+                super().wheelEvent(ev, axis=0)
+                return
+            elif ev.modifiers() & Qt.KeyboardModifier.ControlModifier:
+                super().wheelEvent(ev, axis=1)
+                return
         super().wheelEvent(ev, axis=axis)
 
 
@@ -32,11 +36,13 @@ class _AxisSpanZoomFilter(QObject):
     def __init__(
         self,
         plot_widget: pg.PlotWidget,
-        direction: str,
+        direction: Literal["x", "y"],
         on_selected: Callable[[float, float], None],
         parent: QObject,
     ) -> None:
         super().__init__(parent)
+        if direction not in ("x", "y"):
+            raise ValueError(f"direction must be 'x' or 'y', got '{direction}'")
         self.plot_widget = plot_widget
         self.viewport_widget = plot_widget.viewport()
         self.direction = direction

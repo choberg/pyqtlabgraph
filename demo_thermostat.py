@@ -21,7 +21,15 @@ WidgetType = TypeVar("WidgetType", bound=QWidget)
 class ThermostatDemoWindow(QObject):
     """Loads the Qt Designer UI and demonstrates a reusable thermostat live plot."""
 
-    def __init__(self, ui_path: Path) -> None:
+    def __init__(
+        self,
+        ui_path: Path,
+        plot_identifier: str = "thermostat-live",
+        layout_path: Path | None = None,
+        theme: str = "light",
+        plot_style: str = "light",
+        window_title: str = "PyQtLabGraph Thermostat Demo",
+    ) -> None:
         super().__init__()
         self.window = self._load_ui(ui_path)
         self.plot_container = self._find_required_widget("plotContainer")
@@ -31,19 +39,21 @@ class ThermostatDemoWindow(QObject):
         self.stop_button = self._find_required_widget("stopButton", QPushButton)
         self.add_points_button = self._find_required_widget("addPointsButton", QPushButton)
 
+        actual_layout_path = layout_path or Path.cwd() / "demo_thermostat.layout.json"
+
         self.live_plot = PyQtLabGraphWidget(
             self.plot_container,
             self.toolbar_container,
             self.legend_container,
-            plot_identifier="thermostat-live",
-            layout_path=Path.cwd() / "demo_thermostat.layout.json",
+            plot_identifier=plot_identifier,
+            layout_path=actual_layout_path,
             show_toolbar=True,
             rolling_window_size=300.0,
             legend_orientation=Qt.Orientation.Horizontal,
-            theme="light",
-            plot_style="light",
+            theme=theme,
+            plot_style=plot_style,
         )
-        self.window.setWindowTitle("PyQtLabGraph Thermostat Demo")
+        self.window.setWindowTitle(window_title)
         self.live_plot.set_axis_labels("Elapsed time", "Temperature", "s", "deg C", x_mode="time", y_mode="linear")
         self.live_plot.add_curve("process_temperature", label="Process temperature")
         self.live_plot.add_curve("bath_temperature", label="Bath temperature")

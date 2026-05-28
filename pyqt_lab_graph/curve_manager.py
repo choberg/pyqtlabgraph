@@ -48,7 +48,7 @@ class CurveManager:
         curve = CurveState(key=key, label=label or key, item=item, style=curve_style)
         
         try:
-            self._widget.render_optimizer._apply_curve_rendering_options(curve)
+            self._widget.render_optimizer.apply_curve_rendering_options(curve)
             self._widget.style_controller.apply_curve_style(curve)
             
             self.curves[key] = curve
@@ -94,7 +94,7 @@ class CurveManager:
 
         curve = self.get_curve(key)
         curve.item.setData(*args, **kwargs)
-        self._widget.render_optimizer._apply_curve_rendering_options(curve)
+        self._widget.render_optimizer.apply_curve_rendering_options(curve)
         self._widget.style_controller.apply_curve_style(curve)
         self._widget.apply_axis_scaling()
 

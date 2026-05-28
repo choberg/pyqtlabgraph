@@ -1,269 +1,330 @@
 # PyQtLabGraph
 
-A powerful interactive live plotting widget for PySide6/Qt6, based on PyQtGraph.
+[![PyPI version](https://img.shields.io/pypi/v/pyqt-lab-graph.svg)](https://pypi.org/project/pyqt-lab-graph/)
+[![Supported Python versions](https://img.shields.io/pypi/pyversions/pyqt-lab-graph.svg)](https://pypi.org/project/pyqt-lab-graph/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-`PyQtLabGraph` is designed for real-time scientific data visualization, with a focus on usability, performance, and smart axis formatting.
+A powerful, interactive, and premium live plotting library for **PySide6/Qt6**, based on **PyQtGraph**.
+
+`PyQtLabGraph` is built specifically for real-time scientific data visualization, providing an embeddable plot widget, dedicated toolbars, external legend layouts, smart axis formatting, layout persistence, and modern, explicit visual themes.
+
+---
+
+## Table of Contents
+
+- [Features](#features)
+- [Interactive Controls](#interactive-controls)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [API Reference](#api-reference)
+  - [PyQtLabGraphWidget Constructor](#pyqtlabgraphwidget-constructor)
+  - [Core Plotting Methods](#core-plotting-methods)
+  - [Layout & Customization Methods](#layout--customization-methods)
+- [Advanced pyqtgraph Access](#advanced-pyqtgraph-access)
+- [Visual Styling & Themes](#visual-styling--themes)
+  - [Themes](#themes)
+  - [Plot Styles](#plot-styles)
+  - [Host Application Styling](#host-application-styling)
+- [Performance Optimization](#performance-optimization)
+- [Project Structure](#project-structure)
+- [Development & Verification](#development--verification)
+- [License](#license)
+
+---
 
 ## Features
 
-- **Real-time plotting**: Optimized for live data streams such as sensor data.
-- **Smart axes (`SmartAxisItem`)**:
-  - **Auto**: Standard SI-prefix scaling (`k`, `M`, `m`).
-  - **Linear**: Raw values with units, useful for quantities such as wavenumbers or temperatures.
-  - **Time**: Adaptive formatting of seconds as `d h min s` while zooming.
-- **Interactive legend**: Click curves to show or hide them, or double-click to edit curve styles directly.
-- **Integrated toolbar**:
-  - Mouse panning as the default interaction, plus rectangle zoom, X-zoom, and Y-zoom tools.
-  - Rolling window support using the current X range, fixed X units, or a custom width.
-  - Show All button and PNG export.
-- **Fully configurable**: Modeless customize dialog for plot background, plot style, colors, line styles, markers, ranges, rendering flags, grid, and axis settings. Most changes are previewed immediately and restored on Cancel.
-- **Layout persistence**: Save and load customize dialog settings from an explicit JSON layout file, with one entry per code-defined plot identifier and optional restoration of saved view state such as zoom, autoscale, and rolling mode.
-- **Adaptive rendering**: Optional automatic simplification for dense views; when many points are visible, PyQtLabGraph temporarily disables markers and antialiasing, then restores them when fewer points are visible again.
-- **Configurable themes**: Built-in `light`, `dark`, `light-solarized`, and `dark-solarized` themes for PyQtLabGraph-owned plot data area and grid.
-- **Configurable plot styles**: Built-in `light`, `dark`, and `solarized` plot styles for curve colors, line widths, and markers.
+- **Real-Time Plotting**: High-performance rendering optimized for rapid updates, live sensor streams, or fast oscilloscope-style displays.
+- **Smart Axis Formatting (`SmartAxisItem`)**:
+  - `AUTO`: Automatic SI-prefix scaling (e.g., scaling raw Hertz to `kHz` / `MHz` / `GHz`).
+  - `LINEAR`: Explicit raw values with user-defined units, bypassing auto-scaling.
+  - `TIME`: Adaptive relative time formatting displaying seconds formatted elegantly as `d h min s` depending on zoom level.
+- **Dedicated External Legend (`PyQtLabGraphLegend`)**:
+  - Displays curve symbols, colors, and labels.
+  - Interactive: Double-click a curve's legend item to open the Customize dialog immediately focused on that curve. Single-click to toggle curve visibility.
+  - Configurable orientation: Can be placed **vertically** (default) or **horizontally**.
+- **Integrated Toolbar**:
+  - Action buttons for Show All, rectangle zoom, X-zoom, and Y-zoom.
+  - Quick autoscale toggle for X and Y axes individually.
+  - Rolling X-range display with custom size configuration.
+  - Live PNG export and instant Customize dialog access.
+- **Modeless Customize Dialog**:
+  - Adjust titles, labels, units, and axis formatting modes.
+  - Toggle grids, global anti-aliasing, downsampling, clip-to-view, and adaptive performance.
+  - Manage individual curves: toggling visibility, line width, line colors, marker styles (circle, square, cross, diamond, etc.), size, and borders.
+  - **Live Preview**: All configuration edits preview immediately in the plot in real-time, and revert instantly if the user clicks *Cancel*.
+- **Layout Persistence**: Save/Load all layout configurations (visual properties, themes, active ranges, curve states) to a shared versioned JSON file.
+- **Adaptive Performance**: Automatic visual simplification when rendering very dense datasets to avoid UI lag.
+
+---
+
+## Interactive Controls
+
+PyQtLabGraph introduces advanced viewport mouse controls on top of the standard PyQtGraph mouse interactions:
+
+- **Mouse Drag (Left Click)**: Pans the view in the selected tool mode.
+- **Mouse Drag (Right Click)**: Zooms X and Y scale dynamically (drag left/right for X, up/down for Y).
+- **Mouse Wheel**: Zooms both X and Y axes centered on the cursor position.
+- **Shift + Mouse Wheel**: Zooms **X-axis only**, preserving the Y-axis range.
+- **Ctrl + Mouse Wheel**: Zooms **Y-axis only**, preserving the X-axis range.
+- **Double Click Axis**: Opens a quick manual range pop-up directly underneath the cursor for entering exact values.
+
+---
 
 ## Installation
 
-Install directly from this repository:
+Install PyQtLabGraph from PyPI:
+
+```bash
+pip install pyqt-lab-graph
+```
+
+Or install it directly from the repository source:
 
 ```bash
 pip install .
 ```
 
-For local development, dependencies can also be installed directly:
+For development installations, make sure you have the runtime dependencies installed:
 
 ```bash
 pip install PySide6 pyqtgraph
 ```
 
+---
+
 ## Quick Start
 
-Run the minimal working example with one plot, toolbar, legend, and 100 random points:
+You can check out how to use the library using the packaged demo files:
 
-```bash
-python demo_minimal.py
-```
+1. **Minimal Example** (One random walk curve, basic legend, and toolbar):
+   ```bash
+   python demo_minimal.py
+   ```
 
-Run the larger thermostat demo from the repository root to explore more features:
+2. **Thermostat Simulation Demo** (Realistic simulated heating/cooling loop, horizontal legend, showing toolbar states and custom styling integration):
+   ```bash
+   python demo_thermostat.py
+   ```
 
-```bash
-python demo_thermostat.py
-```
+3. **Time Domain & FFT Demo** (Two independent synchronized plots with separate controls):
+   ```bash
+   python demo_time_fft.py
+   ```
 
-This demo loads `demo_thermostat.ui` and uses the `plotContainer`,
-`toolbarContainer`, and `legendContainer` widgets as anchors for the plot,
-toolbar, and legend. PyQtLabGraph themes are scoped to the plot content;
-dialogs, plot frame chrome, toolbar chrome, legend chrome, and the rest of the
-demo UI keep the normal Qt/platform styling.
+4. **Host Application Styling Comparison** (Integrates with dark mode styling packages like `qdarktheme`):
+   ```bash
+   python demo_thermostat_qdarktheme.py
+   ```
 
-Run the time-domain and FFT demo to see two independent plots with their own
-toolbars and legends:
+---
 
-```bash
-python demo_time_fft.py
-```
+## API Reference
 
-This demo loads `demo_time_fft.ui` and shows a Qt Designer layout with two
-framed plot sections. Each section provides normal Qt mountpoint widgets for
-the plot, legend, and toolbar while PyQtLabGraph's internal component frames
-are disabled.
+### PyQtLabGraphWidget Constructor
 
-Plot background and plot style selection live in the customize dialog rather
-than in the demo main window. The dialog is modeless, so the main window remains
-usable while it is open.
-
-An optional qdarktheme comparison demo is also available when PyQtDarkTheme is
-installed in the environment:
-
-```bash
-python demo_thermostat_qdarktheme.py
-```
-
-## Library Usage
+Initialize the widget, typically inside a host `QMainWindow` or custom container layout.
 
 ```python
 from pathlib import Path
+from PySide6.QtCore import Qt
+from pyqt_lab_graph import PyQtLabGraphWidget
 
-from pyqt_lab_graph import AxisMode, CurveStyle, PyQtLabGraphWidget
-
-# Initialize the widget, for example inside a QMainWindow.
 self.plot = PyQtLabGraphWidget(
-    plot_container=self.ui.plotContainer,
-    toolbar_container=self.ui.toolbarContainer,
-    legend_container=self.ui.legendContainer,
-    plot_identifier="main-plot",
-    layout_path=Path("my_app_plot_layout.json"),
-    rolling_window_size=300.0,
-    theme="light",
-    plot_style="light",
-    show_component_frames=True,
+    plot_container=self.ui.plotContainer,       # Anchor QWidget for the main plot
+    toolbar_container=self.ui.toolbarContainer, # Anchor QWidget for the toolbar (optional)
+    legend_container=self.ui.legendContainer,   # Anchor QWidget for the legend (optional)
+    plot_identifier="my-unique-plot-id",        # Identifier key for layout persistence
+    layout_path=Path("plot_layouts.json"),       # Target layout file (optional)
+    show_toolbar=True,                           # Show toolbar (default: True)
+    show_legend=True,                            # Show legend (default: True if container present)
+    legend_orientation=Qt.Orientation.Horizontal,# Horizontal or Vertical legend
+    rolling_window_size=300.0,                   # Initial rolling X window size (default: 300.0)
+    theme="dark",                                # Initial theme (default: neutral/light)
+    plot_style="dark",                           # Initial curve style palette (default: light)
+    show_component_frames=True,                  # Draw fallback border frames if no stylesheet exists
 )
-
-# Configure axes.
-# PyQtLabGraph starts with neutral X/Y labels; set domain labels explicitly.
-self.plot.set_axis_labels("Time", "Voltage", "s", "V", x_mode=AxisMode.TIME)
-
-# Plot data using pyqtgraph-style data arguments.
-self.plot.plot("sensor_1", x_values, y_values, label="Temperature sensor")
-self.plot.plot("sensor_2", y_values, label="Reference", style=CurveStyle(line_color="#D55E00"))
-self.plot.load_layout()
-
-# Replace data on an existing curve using the same argument forms as
-# pyqtgraph.PlotDataItem.setData(...).
-self.plot.set_data("sensor_1", x=new_x_values, y=new_y_values)
-
-# Update a curve style.
-self.plot.set_curve_style(
-    "sensor_1",
-    CurveStyle(line_color="#0072B2", line_width=1.5, marker_symbol="o"),
-)
-
-# Add data.
-self.plot.add_point("sensor_1", x_value, y_value)
-
-# Read original curve data from the underlying pyqtgraph PlotDataItem.
-x_values, y_values = self.plot.curve_data("sensor_1")
-
-# Advanced pyqtgraph access remains available when needed.
-self.plot.native_plot_item.addItem(custom_item)
-sensor_item = self.plot.curve_item("sensor_1")
-
-# Change the plot theme.
-self.plot.set_theme("dark")
-
-# Change the plot style for new curves or explicitly apply it to existing curves.
-self.plot.set_plot_style("dark")
-self.plot.apply_plot_style("dark")
-
-# Save or reload the current plot layout explicitly.
-self.plot.save_layout()
-self.plot.load_layout()
 ```
 
-The top-level package exports the main public embedding API: `PyQtLabGraphWidget`,
-`CurveStyle`, plot/theme data types, built-in plot styles/themes, `AxisMode`,
-and `LayoutFileError`.
-Advanced implementation components such as the toolbar, legend, axis item, and
-style/theme resolvers remain available from their specific submodules when
-needed.
-Application code should use the widget methods such as `add_curve`,
-`plot`, `set_data`, `curve_data`, `add_point`, `curve_item`, `curve_style`, and
-`set_curve_style`; direct access to widget internals such as `.curves` is not
-part of the recommended API. Curve data is owned by the underlying pyqtgraph
-`PlotDataItem`; PyQtLabGraph reads it back when autoscale, rolling ranges, or
-adaptive rendering need it.
-Each `PyQtLabGraphWidget` needs a stable `plot_identifier` set by application
-code. When `layout_path` is provided, the Customize dialog's `Apply + Save`
-button writes this plot's layout into that shared JSON file without touching
-other plot identifiers in the same file. Call `load_layout()` after adding the
-curves that should receive saved visibility and style settings.
-Axis modes can be passed as `AxisMode` values or as the strings `"auto"`,
-`"linear"`, and `"time"`.
+#### Constructor Parameters:
+| Parameter | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `plot_container` | `QWidget` | *Required* | Host widget that will contain the embedded Pyqtgraph canvas. |
+| `toolbar_container` | `QWidget` | `None` | Host widget where the custom toolbar will be injected. |
+| `legend_container` | `QWidget` | `None` | Host widget where the legend will be injected. |
+| `plot_identifier` | `str` | *Required* | Stable, unique key for the plot. Crucial for JSON layout file mapping. |
+| `layout_path` | `str` \| `Path` | `None` | Path to the layout save file. Activates auto layout features. |
+| `show_toolbar` | `bool` | `True` | If `False`, disables creation of the toolbar even if a container is supplied. |
+| `show_legend` | `bool` | `None` | Overrides legend display. Defaults to `True` if `legend_container` is given. |
+| `legend_orientation` | `Qt.Orientation` | `Qt.Orientation.Vertical` | Orientation of legend items: `Qt.Orientation.Vertical` or `Qt.Orientation.Horizontal`. |
+| `rolling_window_size` | `float` | `300.0` | Initial width of the rolling X-window. |
+| `theme` | `str` \| `PyQtLabGraphTheme` | `None` | Active background/grid theme name (`"light"`, `"dark"`, `"light-solarized"`, `"dark-solarized"`). |
+| `plot_style` | `str` \| `PyQtLabGraphPlotStyle` | `None` | Active curve styling palette name (`"light"`, `"dark"`, `"solarized"`). |
+| `show_component_frames` | `bool` | `True` | Draw palette-aware layout frames around containers in the absence of a global stylesheet. |
+
+---
+
+### Core Plotting Methods
+
+Use these methods to manage curves and feed data into the widget:
+
+- **`plot(key: str, x: ArrayLike, y: ArrayLike = None, label: str = None, style: CurveStyle = None)`**  
+  Primary entry point. Creates or updates a curve identified by `key`. If `x` is the only array passed, it's treated as Y-data with X generated as indices.
+- **`add_curve(key: str, label: str = None, style: CurveStyle = None)`**  
+  Registers a new curve key without passing data. Used to initialize legend entries early.
+- **`set_data(key: str, x: ArrayLike = None, y: ArrayLike = None, **kwargs)`**  
+  Updates coordinates of an existing curve `key`. Safe to pass `x` and `y` separately. Supports keyword parameters mapping to `pyqtgraph.PlotDataItem.setData(...)`.
+- **`add_point(key: str, x: float, y: float)`**  
+  Appends a single data point to the curve. Extremely useful for real-time live sensor updates.
+- **`curve_data(key: str) -> tuple[np.ndarray, np.ndarray]`**  
+  Retrieves current coordinates stored in the underlying PyQtGraph `PlotDataItem` for the curve.
+- **`curve_style(key: str) -> CurveStyle`**  
+  Returns the current curve style object.
+- **`set_curve_style(key: str, style: CurveStyle)`**  
+  Applies a new `CurveStyle` to the given curve.
+- **`set_curve_visible(key: str, visible: bool)`**  
+  Toggles rendering of the curve in the canvas and marks its checkbox state in the legend.
+
+---
+
+### Layout & Customization Methods
+
+Configure views, axes, limits, and serialize settings:
+
+- **`set_axis_labels(x_label: str, y_label: str, x_units: str = None, y_units: str = None, x_mode: AxisMode = None, y_mode: AxisMode = None)`**  
+  Updates axis titles, units, and tick representation modes (`AxisMode.AUTO`, `AxisMode.LINEAR`, `AxisMode.TIME`).
+- **`get_x_range() -> tuple[float, float]`** / **`get_y_range() -> tuple[float, float]`**  
+  Gets active viewport limits.
+- **`apply_manual_x_limits(xmin: float, xmax: float)`** / **`apply_manual_y_limits(ymin: float, ymax: float)`**  
+  Manually sets limits, deactivating automatic scaling or rolling window modes.
+- **`request_rolling_x(enabled: bool)`**  
+  Enables/disables the rolling X-window.
+- **`set_rolling_window_size(size: float)`**  
+  Updates the rolling window size.
+- **`request_autoscale_x()`** / **`request_autoscale_y()`**  
+  Instantly scales the corresponding axis to fit the current visible data bounds.
+- **`request_show_all()`**  
+  Rescales both axes to fit all data.
+- **`set_theme(theme: str | PyQtLabGraphTheme)`**  
+  Applies a background/grid theme.
+- **`set_plot_style(style: str | PyQtLabGraphPlotStyle)`**  
+  Sets the active plot style palette for new curves.
+- **`apply_plot_style(style: str | PyQtLabGraphPlotStyle)`**  
+  Updates all existing curves to use the color palette of the target plot style.
+- **`save_layout()`** / **`load_layout()`**  
+  Manually writes/restores layout state to/from the file set in `layout_path`.
+- **`show_customize_dialog(curve_key: str = None)`**  
+  Launches the modeless Customize dialog. If `curve_key` is supplied, it opens directly on the tab editing that curve.
+
+---
 
 ## Advanced pyqtgraph Access
 
-PyQtLabGraph intentionally keeps escape hatches for advanced pyqtgraph users.
-Use `native_plot_widget`, `native_plot_item`, and `native_view_box` when a
-configuration is not covered by the PyQtLabGraph API. Use `curve_item(key)` when
-you need the underlying `pyqtgraph.PlotDataItem` for a registered curve.
+PyQtLabGraph stays out of the way when advanced customization is required. You can bypass our high-level wrappers and talk directly to the underlying PyQtGraph library components:
 
 ```python
-graph.native_view_box.setLimits(xMin=0.0)
-graph.native_plot_item.addItem(custom_item)
-graph.curve_item("sensor_1").setClickable(True)
+# Access native pyqtgraph objects
+native_widget = self.plot.native_plot_widget  # pg.PlotWidget
+native_item = self.plot.native_plot_item      # pg.PlotItem
+native_view = self.plot.native_view_box       # pg.ViewBox
+
+# Add native items to the canvas
+native_item.addItem(my_custom_infinite_line)
+
+# Retrieve raw PlotDataItem references
+raw_curve_item = self.plot.curve_item("sensor_1") # pg.PlotDataItem
+raw_curve_item.setClickable(True)
 ```
 
-PyQtLabGraph still owns plot content theme application, plot-style application,
-axis label text, grid styling, autoscale/rolling range behavior, and adaptive rendering.
-Axis label color, tick label color, axis lines, and tick marks follow the host
-Qt palette.
-Direct pyqtgraph changes in those areas may be overwritten when PyQtLabGraph
-reapplies its state.
+---
 
-## Host Application Styling
+## Visual Styling & Themes
 
-The customize dialog, plot frame chrome, toolbar chrome, legend chrome, and
-toolbar menus use the active Qt application style instead of PyQtLabGraph-specific
-color stylesheets. Host applications can style them through normal Qt mechanisms
-such as an application stylesheet, qdarktheme, or qt-material. When no host
-stylesheet is present, PyQtLabGraph applies a small palette-based fallback frame
-around the plot, toolbar, and legend containers.
-Pass `show_component_frames=False` when the host application should provide one
-shared outer frame around a custom layout containing plot, toolbar, and legend.
+### Themes
+A theme governs the plot data canvas, background, and gridlines:
+- `light`: Neutral light background with grey gridlines.
+- `dark`: High-contrast dark grey/black background.
+- `light-solarized`: Classic solarized-cream aesthetic.
+- `dark-solarized`: Deep blue-green solarized aesthetic.
 
-Only the pyqtgraph `ViewBox` data area receives the selected plot background.
-The surrounding plot widget stays transparent so the host-styled outer frame
-remains visible. PyQtLabGraph slightly extends the `ViewBox` background to cover
-pyqtgraph's right and bottom edge pixels without painting the full widget.
+```python
+self.plot.set_theme("dark-solarized")
+```
 
-Toolbar icons are packaged PNG masks that PyQtLabGraph recolors from the
-toolbar's current Qt palette. When the application style or palette changes,
-the toolbar regenerates its icons so they match the host application's dark or
-light mode. Legend curve samples remain PyQtLabGraph-owned because they show
-the configured curve styles.
+### Plot Styles
+A plot style determines the palette (line colors, markers, widths) mapped to curves:
+- `light`: Highly visible color cycle optimized for light background themes.
+- `dark`: Vibrant color cycle optimized for dark background themes.
+- `solarized`: Palette adhering to the solarized styling standard.
 
-## Rendering Performance
+```python
+self.plot.set_plot_style("solarized")
+```
 
-PyQtLabGraph uses PyQtGraph's built-in rendering features such as downsampling
-and clip-to-view. These can be toggled in the customize dialog.
+### Host Application Styling
+PyQtLabGraph widgets are transparent outside the `ViewBox` canvas. All surrounding chrome (toolbar buttons, external legend container, customize dialog, pop-up menus) inherits the host Qt application's styling. You can apply modern styling frameworks to your host application (like `qdarktheme` or `QCommonStyle`), and PyQtLabGraph's chrome will adapt automatically:
 
-Adaptive rendering is a PyQtLabGraph layer on top of that. It is enabled by
-default and watches the number of visible points. When a dense view crosses the
-internal activation threshold, PyQtLabGraph temporarily disables markers and
-antialiasing because those are expensive visual details. When the visible point
-count drops below the restore threshold, the configured marker and antialiasing
-settings are applied again.
+```python
+# Example: Recoloring toolbar icons based on host application style change
+import qdarktheme
+app.setStyleSheet(qdarktheme.load_stylesheet("dark"))
+```
+The toolbar's packaged PNG masks will automatically adapt to match light/dark icon palettes of the active Qt window style.
 
-This feature does not require sorted X values and does not change curve data.
-Scatter-style data with arbitrary X ordering remains supported.
+---
 
-## Development
+## Performance Optimization
 
-Run the development smoke checks:
+For dense, high-frequency datasets, PyQtLabGraph provides several levels of performance optimization:
+
+1. **Downsampling**: Dynamically reduces the number of points drawn by grouping dense data points (activated via customize dialog).
+2. **Clip to View**: Cuts off calculations for data coordinates lying outside the current visible X range (activated via customize dialog).
+3. **Adaptive Rendering (Adaptive Performance)**:  
+   When the number of visible points on the screen exceeds a high threshold (e.g., 20,000 points), PyQtLabGraph temporarily disables antialiasing and markers to maintain smooth panning and zooming. When you zoom back in and the point count falls below a lower threshold (e.g., 10,000 points), these detailed styling properties are automatically restored.
+
+---
+
+## Project Structure
+
+```
+├── pyqt_lab_graph/          # Main library package
+│   ├── __init__.py          # Public exports & versioning
+│   ├── widget.py            # Main PyQtLabGraphWidget and API wrapping
+│   ├── dialogs.py           # Modeless Customize dialog & popups
+│   ├── layouts.py           # JSON Layout save/load mechanics
+│   ├── toolbar.py           # Toolbar buttons, export, and mode controllers
+│   ├── legend.py            # External interactive PyQtLabGraphLegend
+│   ├── axis.py              # SmartAxisItem tick formatting implementation
+│   ├── models.py            # Core dataclasses (CurveState, InteractionState)
+│   ├── styles.py            # Curve style configurations and palettes
+│   ├── themes.py            # Background themes and color registries
+│   ├── qt_styles.py         # Standard fallback borders and QSS wrappers
+│   └── assets/              # PNG icon assets used by the toolbar
+├── tests/                   # Standalone smoke test suite
+├── demo_minimal.py          # Getting started minimal walkthrough
+├── demo_thermostat.py       # Main thermostat feature demo
+├── demo_time_fft.py         # Grid/dual plot designer layout demo
+└── pyproject.toml           # Build system and package metadata
+```
+
+---
+
+## Development & Verification
+
+Tests are located in the `tests/` directory and can be executed via a unified test runner. Run this command after any code changes to verify syntax, assets, and UI state:
 
 ```bash
 python3 tests/run_smoke_checks.py
 ```
 
-The runner performs the package/demo/test syntax check without writing bytecode
-cache files and executes the standalone smoke tests. Individual smoke tests
-remain directly executable, for example:
+To run a specific smoke check, execute it directly with Qt configured in offscreen mode (useful for headless CI environments):
 
 ```bash
-QT_QPA_PLATFORM=offscreen python3 tests/smoke_adaptive_performance.py
+QT_QPA_PLATFORM=offscreen python3 tests/smoke_customize_dialog.py
 ```
 
-Install the package locally in editable mode:
-
-```bash
-pip install -e .
-```
-
-## Project Structure
-
-- `pyqt_lab_graph/`: Installable Python package.
-- `pyqt_lab_graph/widget.py`: Main widget and public plotting API.
-- `pyqt_lab_graph/dialogs.py`: Modeless customize dialog for plot background, plot style, axes, grid, ranges, rendering flags, and curve styles.
-- `pyqt_lab_graph/layouts.py`: Versioned JSON layout helpers and internal plot state snapshots.
-- `pyqt_lab_graph/toolbar.py`: Toolbar, navigation, export, and rolling-window controls.
-- `pyqt_lab_graph/legend.py`: External Qt legend with curve visibility and style access.
-- `pyqt_lab_graph/axis.py`: `SmartAxisItem` and axis modes.
-- `pyqt_lab_graph/models.py`: Internal data models.
-- `pyqt_lab_graph/themes.py`: Theme data model, built-in themes, and theme registry.
-- `pyqt_lab_graph/qt_styles.py`: Minimal Qt stylesheet helpers for fallback frames and transparent plot-widget chrome.
-- `pyqt_lab_graph/styles.py`: Plot style data model, built-in plot styles, and curve-related style constants.
-- `pyqt_lab_graph/assets/`: Runtime PNG toolbar icons shipped with the package.
-- `original_icons/`: Source/original icon assets that are not packaged as runtime assets.
-- `tests/`: Standalone smoke tests and the lightweight development smoke runner.
-- `demo_minimal.py`: Minimal working example with one random plot.
-- `demo_thermostat.py`: Demo application with simulated thermostat data.
-- `demo_time_fft.py`: Demo application with a time-domain signal and its FFT in two plots.
-- `demo_time_fft.ui`: Qt Designer file for the time-domain and FFT demo layout.
-- `demo_thermostat_qdarktheme.py`: Demo application variant using qdarktheme as the host application style.
-- `demo_thermostat.ui`: Qt Designer file for the thermostat demo.
-- `bak/`: Backups of replaced or moved files.
-- `pyproject.toml`: Package metadata and explicit runtime asset package data.
+---
 
 ## License
 
-This project is licensed under the MIT License. It permits use, modification, and redistribution as long as the copyright and license notice are preserved.
+This project is licensed under the MIT License - see the `LICENSE` file for details.

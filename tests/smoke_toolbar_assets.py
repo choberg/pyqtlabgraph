@@ -57,6 +57,8 @@ def main() -> None:
         )
 
     package_assets = _package_data_assets()
+    assert "py.typed" in package_assets, "py.typed must be in package-data"
+    package_assets = package_assets - {"py.typed"}
     expected_package_assets = {f"assets/{filename}" for filename in toolbar_icons}
     assert package_assets == expected_package_assets
     assert all(path.startswith("assets/") for path in package_assets)

@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget
+from PySide6.QtCore import Qt
 
 from pyqt_lab_graph import PyQtLabGraphWidget
 
@@ -31,6 +32,7 @@ def create_window() -> QMainWindow:
         plot_container=plot_container,
         toolbar_container=toolbar_container,
         legend_container=legend_container,
+        legend_orientation=Qt.Orientation.Horizontal,
         plot_identifier="minimal-main",
         layout_path=Path.cwd() / "demo_minimal.layout.json",
         theme="light",
@@ -43,7 +45,9 @@ def create_window() -> QMainWindow:
     rng = random.Random(42)
     x_values = list(range(100))
     y_values = [rng.random() for _ in x_values]
-    graph.plot("random_values", x_values, y_values, label="Random Values")
+    y_values2 = [rng.random() for _ in x_values]
+    graph.plot("random_values", x_values, y_values, label="Random Values 1")
+    graph.plot("random_values2", x_values, y_values2, label="Random Values 2")
     graph.load_layout()
 
     # Keep a reference to the graph for the lifetime of the window.

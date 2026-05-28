@@ -206,6 +206,19 @@ def main() -> None:
 
     graph.apply_manual_x_limits(0.0, 10.0)
     graph.apply_manual_y_limits(0.0, 20.0)
+    x_before = graph.get_x_range()
+    y_before = graph.get_y_range()
+    ctrl_wheel_event = WheelEventStub(modifiers=Qt.KeyboardModifier.ControlModifier)
+    graph.view_box.wheelEvent(ctrl_wheel_event)
+    assert ctrl_wheel_event.accepted is True
+    assert graph.get_x_range() == x_before
+    assert ranges_differ(y_before, graph.get_y_range())
+    assert graph.interaction_state.autoscale_x is False
+    assert graph.interaction_state.autoscale_y is False
+    assert graph.interaction_state.rolling_x is False
+
+    graph.apply_manual_x_limits(0.0, 10.0)
+    graph.apply_manual_y_limits(0.0, 20.0)
     axis_event = AxisDoubleClickEventStub(QPointF(10.0, 10.0))
     graph.bottom_axis.mouseDoubleClickEvent(axis_event)
     app.processEvents()

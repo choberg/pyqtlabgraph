@@ -151,6 +151,8 @@ class PyQtLabGraphWidget(QObject):
             self.plot_widget,
             self._create_plot_frame,
         )
+        if self.plot_frame is not None:
+            self.plot_frame.installEventFilter(self.style_controller)
 
         if show_toolbar and toolbar_container is not None:
             self.toolbar = PyQtLabGraphToolbar(
@@ -411,7 +413,7 @@ class PyQtLabGraphWidget(QObject):
 
             exporter = exporters.ImageExporter(self.plot_item)
             exporter.export(filename)
-        except Exception as exc:
+        except (OSError, ValueError) as exc:
             raise RuntimeError(f"Could not save PyQtGraph plot to {filename}: {exc}") from exc
 
     def set_plot_style(

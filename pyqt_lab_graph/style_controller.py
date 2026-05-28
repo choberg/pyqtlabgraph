@@ -136,8 +136,13 @@ class StyleController(QObject):
         return self.host_axis_color().name(QColor.NameFormat.HexRgb)
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
-        watched_widgets = {self._widget.plot_widget}
-        if self._widget.plot_frame is not None:
+        try:
+            plot_widget = self._widget.plot_widget
+        except AttributeError:
+            return super().eventFilter(watched, event)
+
+        watched_widgets = {plot_widget}
+        if getattr(self._widget, "plot_frame", None) is not None:
             watched_widgets.add(self._widget.plot_frame)
         if watched in watched_widgets and event.type() in {
             QEvent.Type.ApplicationPaletteChange,

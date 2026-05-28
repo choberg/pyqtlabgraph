@@ -28,6 +28,7 @@ SMOKE_FILES = [
     REPO_ROOT / "tests" / "smoke_toolbar_assets.py",
     REPO_ROOT / "tests" / "smoke_toolbar_interaction.py",
     REPO_ROOT / "tests" / "smoke_version_metadata.py",
+    REPO_ROOT / "tests" / "test_basic.py",
     REPO_ROOT / "tests" / "run_smoke_checks.py",
 ]
 
@@ -112,6 +113,11 @@ def main() -> int:
         SmokeCommand(
             "version metadata",
             [sys.executable, "tests/smoke_version_metadata.py"],
+        ),
+        SmokeCommand(
+            "basic package tests",
+            [sys.executable, "tests/test_basic.py"],
+            qt_offscreen=True,
         ),
     ]
 

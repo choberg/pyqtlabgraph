@@ -279,6 +279,21 @@ def main() -> None:
     assert restore_graph.get_y_range() == (-2.0, 4.0)
     assert restore_graph.curve_style("sensor") == original_style
 
+    # Verify that rolling X-range remains enabled after opening customize and clicking accept (if unchanged)
+    restore_graph.request_rolling_x(True)
+    assert restore_graph.interaction_state.rolling_x is True
+
+    def accept_without_changes(dialog: QDialog) -> None:
+        dialog.accept()
+
+    dialogs.QDialog.show = accept_without_changes
+    try:
+        dialogs.show_customize_dialog(restore_graph)
+    finally:
+        dialogs.QDialog.show = original_show
+
+    assert restore_graph.interaction_state.rolling_x is True
+
     app.processEvents()
     print("customize dialog smoke ok")
 

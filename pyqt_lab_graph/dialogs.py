@@ -555,8 +555,12 @@ class _CustomizeDialog(QDialog):
         for key, editor in self.curve_editors.items():
             self.plot.set_curve_visible(key, editor.visible.isChecked())
             self.plot.set_curve_style(key, self._curve_style_from_editor(editor))
-        self.plot.apply_manual_x_limits(controls.x_min.value(), controls.x_max.value())
-        self.plot.apply_manual_y_limits(controls.y_min.value(), controls.y_max.value())
+        orig_x = self.original_state.ranges.get("x")
+        if orig_x is None or abs(controls.x_min.value() - orig_x[0]) > 1e-9 or abs(controls.x_max.value() - orig_x[1]) > 1e-9:
+            self.plot.apply_manual_x_limits(controls.x_min.value(), controls.x_max.value())
+        orig_y = self.original_state.ranges.get("y")
+        if orig_y is None or abs(controls.y_min.value() - orig_y[0]) > 1e-9 or abs(controls.y_max.value() - orig_y[1]) > 1e-9:
+            self.plot.apply_manual_y_limits(controls.y_min.value(), controls.y_max.value())
 
     def _apply_and_save_layout(self) -> None:
         controls = self.global_controls

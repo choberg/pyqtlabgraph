@@ -19,12 +19,17 @@ from .widget import PyQtLabGraphWidget
 
 
 def _source_tree_version() -> str:
-    pyproject_path = Path(__file__).resolve().parents[1] / "pyproject.toml"
-    project_metadata = pyproject_path.read_text(encoding="utf-8")
-    match = re.search(r'(?m)^version\s*=\s*"([^"]+)"\s*$', project_metadata)
-    if match is None:
-        raise RuntimeError("Could not read project version from pyproject.toml")
-    return match.group(1)
+    try:
+        pyproject_path = Path(__file__).resolve().parents[1] / "pyproject.toml"
+        if not pyproject_path.exists():
+            return "0.0.0-unknown"
+        project_metadata = pyproject_path.read_text(encoding="utf-8")
+        match = re.search(r'(?m)^version\s*=\s*"([^"]+)"\s*$', project_metadata)
+        if match is None:
+            return "0.0.0-unknown"
+        return match.group(1)
+    except Exception:
+        return "0.0.0-unknown"
 
 
 try:

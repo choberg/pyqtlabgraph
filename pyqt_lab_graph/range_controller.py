@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Callable
 
 import numpy as np
-from PySide6.QtCore import QSignalBlocker
+
 
 if TYPE_CHECKING:
     from .widget import PyQtLabGraphWidget
@@ -90,17 +90,20 @@ class RangeController:
         self._set_x_range(left, right)
 
     def _apply_y_autoscale(self) -> None:
-        visible_values = self._visible_y_values()
-        if not visible_values:
+        visible_arrays = self._visible_y_values()
+        if not visible_arrays:
             for curve in self._widget.curve_manager.curves.values():
                 if curve.visible:
                     y_arr = self._widget.curve_manager.get_curve_data(curve)[1]
                     if len(y_arr) > 0:
-                        visible_values.extend(y_arr)
-        if not visible_values:
+                        visible_arrays.append(y_arr)
+        if not visible_arrays:
             return
-        minimum = float(np.min(visible_values))
-        maximum = float(np.max(visible_values))
+        all_y = np.concatenate(visible_arrays)
+        if len(all_y) == 0:
+            return
+        minimum = float(all_y.min())
+        maximum = float(all_y.max())
         margin = (
             _Y_AUTOSCALE_EQUAL_VALUE_MARGIN
             if minimum == maximum
@@ -108,9 +111,9 @@ class RangeController:
         )
         self._set_y_range(minimum - margin, maximum + margin)
 
-    def _visible_y_values(self) -> list[float]:
+    def _visible_y_values(self) -> list[np.ndarray]:
         xmin, xmax = self.get_x_range()
-        values: list[float] = []
+        arrays: list[np.ndarray] = []
         for curve in self._widget.curve_manager.curves.values():
             if not curve.visible:
                 continue
@@ -119,8 +122,9 @@ class RangeController:
                 continue
             mask = (x_values >= xmin) & (x_values <= xmax)
             visible_y = y_values[mask]
-            values.extend(visible_y)
-        return values
+            if len(visible_y) > 0:
+                arrays.append(visible_y)
+        return arrays
 
     def set_x_range(self, xmin: float, xmax: float) -> None:
         """Sets the X axis range without triggering user-interaction handlers."""
@@ -141,10 +145,7 @@ class RangeController:
         )
 
     def _set_range(self, setter: Callable[[], None]) -> None:
-        # Instead of a boolean flag, temporarily block signals on the view box.
-        # Since PyQtGraph relies on some internal signal propagation, we only block
-        # the sigRangeChanged connection to our handler, or we use the old flag if blockSignals breaks it.
-        # But QSignalBlocker is requested.
+        # Set the applying_axis_scaling flag to prevent recursive scaling and range updates.
         self._widget.applying_axis_scaling = True
         try:
             setter()
