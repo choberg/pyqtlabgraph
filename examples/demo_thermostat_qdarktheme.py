@@ -16,7 +16,7 @@ def main() -> int:
     window = ThermostatDemoWindow(
         ui_path,
         plot_identifier="thermostat-live-qdarktheme",
-        layout_path=Path.cwd() / "demo_thermostat_qdarktheme.layout.json",
+        layout_path=Path(__file__).resolve().parent / "demo_thermostat_qdarktheme.layout.json",
         theme="dark",
         plot_style="dark",
         window_title="PyQtLabGraph Thermostat Demo - PyQtDarkTheme",

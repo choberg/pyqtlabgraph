@@ -6,6 +6,7 @@ from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "examples"))
 
 from PySide6.QtWidgets import QApplication, QPushButton, QWidget
 
@@ -14,7 +15,7 @@ from demo_thermostat import ThermostatDemoWindow
 
 def main() -> None:
     app = QApplication.instance() or QApplication([])
-    ui_path = Path(__file__).resolve().parents[1] / "demo_thermostat.ui"
+    ui_path = Path(__file__).resolve().parents[1] / "examples" / "demo_thermostat.ui"
     window = ThermostatDemoWindow(ui_path)
 
     for widget_name in ("plotContainer", "toolbarContainer", "legendContainer"):

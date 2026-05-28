@@ -95,26 +95,26 @@ pip install PySide6 pyqtgraph
 
 ## Quick Start
 
-You can check out how to use the library using the packaged demo files:
+You can check out how to use the library using the packaged demo files in the `examples/` directory:
 
 1. **Minimal Example** (One random walk curve, basic legend, and toolbar):
    ```bash
-   python demo_minimal.py
+   python examples/demo_minimal.py
    ```
 
 2. **Thermostat Simulation Demo** (Realistic simulated heating/cooling loop, horizontal legend, showing toolbar states and custom styling integration):
    ```bash
-   python demo_thermostat.py
+   python examples/demo_thermostat.py
    ```
 
 3. **Time Domain & FFT Demo** (Two independent synchronized plots with separate controls):
    ```bash
-   python demo_time_fft.py
+   python examples/demo_time_fft.py
    ```
 
 4. **Host Application Styling Comparison** (Integrates with dark mode styling packages like `qdarktheme`):
    ```bash
-   python demo_thermostat_qdarktheme.py
+   python examples/demo_thermostat_qdarktheme.py
    ```
 
 ---
@@ -301,9 +301,10 @@ For dense, high-frequency datasets, PyQtLabGraph provides several levels of perf
 │   ├── qt_styles.py         # Standard fallback borders and QSS wrappers
 │   └── assets/              # PNG icon assets used by the toolbar
 ├── tests/                   # Standalone smoke test suite
-├── demo_minimal.py          # Getting started minimal walkthrough
-├── demo_thermostat.py       # Main thermostat feature demo
-├── demo_time_fft.py         # Grid/dual plot designer layout demo
+├── examples/                # Packaged demo and example files
+│   ├── demo_minimal.py      # Getting started minimal walkthrough
+│   ├── demo_thermostat.py   # Main thermostat feature demo
+│   └── demo_time_fft.py     # Grid/dual plot designer layout demo
 └── pyproject.toml           # Build system and package metadata
 ```
 
