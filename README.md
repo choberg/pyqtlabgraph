@@ -8,6 +8,16 @@ A powerful, interactive, and premium live plotting library for **PySide6/Qt6**, 
 
 `PyQtLabGraph` is built specifically for real-time scientific data visualization, providing an embeddable plot widget, dedicated toolbars, external legend layouts, smart axis formatting, layout persistence, and modern, explicit visual themes.
 
+### Previews
+
+| Dark Theme (Default) | Light Solarized Theme |
+| :---: | :---: |
+| ![PyQtLabGraph Dark Theme](docs/screenshot_dark.png) | ![PyQtLabGraph Light Solarized Theme](docs/screenshot_light_solarized.png) |
+
+| Modeless Customize Dialog |
+| :---: |
+| ![PyQtLabGraph Customize Dialog](docs/screenshot_customize_dialog.png) |
+
 ---
 
 ## Why PyQtLabGraph? (Aesthetic & Usability Philosophy)
