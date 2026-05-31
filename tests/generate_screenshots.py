@@ -1,12 +1,26 @@
+# /// script
+# dependencies = [
+#   "pyqtdarktheme",
+#   "numpy",
+#   "pyside6",
+#   "pyqtgraph",
+# ]
+# ///
+
 import sys
 import os
 import numpy as np
 from pathlib import Path
+import qdarktheme
 from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout
+from PySide6.QtCore import Qt
 from pyqtlabgraph import PyQtLabGraphWidget
 
 def generate():
     app = QApplication(sys.argv)
+    
+    # Apply a real dark theme to the host application
+    app.setStyleSheet(qdarktheme.load_stylesheet("dark"))
     
     # Set up main window
     window = QMainWindow()
@@ -22,7 +36,7 @@ def generate():
     layout.addWidget(plot_container)
     layout.addWidget(legend_container)
     
-    # Initialize widget
+    # Initialize widget with horizontal legend
     plot = PyQtLabGraphWidget(
         plot_container=plot_container,
         toolbar_container=toolbar_container,
@@ -32,6 +46,7 @@ def generate():
         plot_style="dark",
         show_toolbar=True,
         show_legend=True,
+        legend_orientation=Qt.Orientation.Horizontal,
     )
     
     # Add mockup data curves
@@ -71,12 +86,14 @@ def generate():
         dialog_pixmap.save(str(docs_dir / "screenshot_customize_dialog.png"))
         dialog.close()
     
-    # 3. Light solarized theme screenshot
-    plot.set_theme("light-solarized")
-    plot.apply_plot_style("solarized")
+    # 3. Light theme (white background + light styles) screenshot
+    # Switch host application style sheet to light
+    app.setStyleSheet(qdarktheme.load_stylesheet("light"))
+    plot.set_theme("light")
+    plot.apply_plot_style("light")
     QApplication.processEvents()
     pixmap = window.grab()
-    pixmap.save(str(docs_dir / "screenshot_light_solarized.png"))
+    pixmap.save(str(docs_dir / "screenshot_light.png"))
     
     print(f"All screenshots generated and saved successfully under {docs_dir}/!")
 

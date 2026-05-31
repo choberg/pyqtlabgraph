@@ -10,9 +10,9 @@ A powerful, interactive, and premium live plotting library for **PySide6/Qt6**, 
 
 ### Previews
 
-| Dark Theme (Default) | Light Solarized Theme |
+| Dark Theme (Default) | Light Theme |
 | :---: | :---: |
-| ![PyQtLabGraph Dark Theme](docs/screenshot_dark.png) | ![PyQtLabGraph Light Solarized Theme](docs/screenshot_light_solarized.png) |
+| ![PyQtLabGraph Dark Theme](docs/screenshot_dark.png) | ![PyQtLabGraph Light Theme](docs/screenshot_light.png) |
 
 | Modeless Customize Dialog |
 | :---: |
