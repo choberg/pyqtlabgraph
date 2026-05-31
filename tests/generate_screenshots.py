@@ -12,9 +12,9 @@ import os
 import numpy as np
 from pathlib import Path
 import qdarktheme
-from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout
+from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout
 from PySide6.QtCore import Qt
-from pyqtlabgraph import PyQtLabGraphWidget
+from pyqtlabgraph import PyQtLabGraphWidget, CurveStyle
 
 def generate():
     app = QApplication(sys.argv)
@@ -94,6 +94,89 @@ def generate():
     QApplication.processEvents()
     pixmap = window.grab()
     pixmap.save(str(docs_dir / "screenshot_light.png"))
+    
+    # Close main window before alternative layout
+    window.close()
+    
+    # 4. Alternative layout screenshot (light theme, vertical legend on right, toolbar below)
+    window_alt = QMainWindow()
+    central_alt = QWidget(window_alt)
+    layout_alt = QVBoxLayout(central_alt)
+    window_alt.setCentralWidget(central_alt)
+    
+    middle_widget = QWidget()
+    middle_layout = QHBoxLayout(middle_widget)
+    middle_layout.setContentsMargins(0, 0, 0, 0)
+    middle_layout.setSpacing(8)
+    
+    plot_container_alt = QWidget()
+    legend_container_alt = QWidget()
+    toolbar_container_alt = QWidget()
+    
+    middle_layout.addWidget(plot_container_alt, stretch=1)
+    middle_layout.addWidget(legend_container_alt)
+    
+    layout_alt.addWidget(middle_widget, stretch=1)
+    layout_alt.addWidget(toolbar_container_alt)
+    
+    plot_alt = PyQtLabGraphWidget(
+        plot_container=plot_container_alt,
+        toolbar_container=toolbar_container_alt,
+        legend_container=legend_container_alt,
+        plot_identifier="screenshot_alt",
+        theme="light",
+        plot_style="light",
+        show_toolbar=True,
+        show_legend=True,
+        legend_orientation=Qt.Orientation.Vertical,
+    )
+    
+    # Define custom curve styles
+    # 1. Line + Marker
+    style1 = CurveStyle(
+        line_enabled=True,
+        line_color="#1f77b4",
+        line_width=2.0,
+        marker_enabled=True,
+        marker_filled=True,
+        marker_symbol="o",
+        marker_size=9,
+        marker_outline_width=1.0
+    )
+    # 2. Only Marker
+    style2 = CurveStyle(
+        line_enabled=False,
+        line_color="#ff7f0e",
+        line_width=2.0,
+        marker_enabled=True,
+        marker_filled=True,
+        marker_symbol="s",
+        marker_size=9,
+        marker_outline_width=1.0
+    )
+    # 3. Only Line
+    style3 = CurveStyle(line_enabled=True, line_color="#2ca02c", line_width=2.0, marker_enabled=False)
+    # 4. Only Line
+    style4 = CurveStyle(line_enabled=True, line_color="#d62728", line_width=2.0, marker_enabled=False)
+    # 5. Only Line
+    style5 = CurveStyle(line_enabled=True, line_color="#9467bd", line_width=2.0, marker_enabled=False)
+    
+    x_alt = np.linspace(0, 10, 100)
+    plot_alt.plot("curve1", x_alt, np.sin(x_alt), label="System A (Temp)", style=style1)
+    plot_alt.plot("curve2", x_alt, np.cos(x_alt) * 0.7, label="System B (Pressure)", style=style2)
+    plot_alt.plot("curve3", x_alt, np.sin(x_alt * 0.5) * 0.5 - 0.2, label="System C (Flow)", style=style3)
+    plot_alt.plot("curve4", x_alt, np.cos(x_alt * 0.5) * 0.3 - 0.5, label="System D (Level)", style=style4)
+    plot_alt.plot("curve5", x_alt, np.sin(x_alt * 2.0) * 0.15 + 0.5, label="System E (Humidity)", style=style5)
+    
+    plot_alt.set_axis_labels("Time", "Value", "s", "V")
+    
+    window_alt.resize(950, 600)
+    window_alt.show()
+    
+    QApplication.processEvents()
+    pixmap_alt = window_alt.grab()
+    pixmap_alt.save(str(docs_dir / "screenshot_alternative_layout.png"))
+    window_alt.close()
     
     print(f"All screenshots generated and saved successfully under {docs_dir}/!")
 

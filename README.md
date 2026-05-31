@@ -14,9 +14,9 @@ A powerful, interactive, and premium live plotting library for **PySide6/Qt6**, 
 | :---: | :---: |
 | ![PyQtLabGraph Light Theme](docs/screenshot_light.png) | ![PyQtLabGraph Dark Theme](docs/screenshot_dark.png) |
 
-| Modeless Customize Dialog |
-| :---: |
-| ![PyQtLabGraph Customize Dialog](docs/screenshot_customize_dialog.png) |
+| Modeless Customize Dialog | Alternative Layout (Legend Right, Toolbar Bottom) |
+| :---: | :---: |
+| ![PyQtLabGraph Customize Dialog](docs/screenshot_customize_dialog.png) | ![PyQtLabGraph Alternative Layout](docs/screenshot_alternative_layout.png) |
 
 ---
 
