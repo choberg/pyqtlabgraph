@@ -6,7 +6,7 @@
 
 A powerful, interactive, and premium live plotting library for **PySide6/Qt6**, based on **PyQtGraph**.
 
-`PyQtLabGraph` is built specifically for real-time scientific data visualization, providing an embeddable plot widget, dedicated toolbars, external legend layouts, smart axis formatting, layout persistence, and modern, explicit visual themes.
+`PyQtLabGraph` is built for both interactive scientific data analysis and high-performance real-time visualization, providing an embeddable plot widget, dedicated toolbars, external legend layouts, smart axis formatting, layout persistence, and modern, explicit visual themes.
 
 ### Previews
 
