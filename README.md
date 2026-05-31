@@ -28,7 +28,7 @@ In scientific and engineering environments, two plotting libraries dominate the 
 
 `PyQtLabGraph` bridges this gap. It is designed as a **high-productivity, instrument-grade plotting interface** that brings the ease of use of traditional graphical programming environments to Python.
 
-Many scientists, laboratory engineers, and researchers are familiar with the instant, out-of-the-box utility of instruments and classic engineering software platforms (such as LabVIEW)—where plotting components come pre-packaged with zoom controls, custom legends, scaling tools, and runtime style editors. PyQtLabGraph delivers this exact workflow in a clean, pythonic PySide6 package:
+Many scientists, laboratory engineers, and researchers are familiar with the instant, out-of-the-box utility of instruments and classic engineering software platforms (such as LabVIEW), where plotting components come pre-packaged with zoom controls, custom legends, scaling tools, and runtime style editors. PyQtLabGraph delivers this exact workflow in a clean, pythonic PySide6 package:
 
 * **Familiar, Hardware-Like Controls**: The interface mimics the look, feel, and rapid utility of physical lab instruments (e.g., oscilloscopes, analyzers) and classic instrumentation software.
 * **Instant Interactive Zooming & Panning**: Features intuitive mouse bindings (wheel zoom, key-constrained zooms) and double-click axis inputs out-of-the-box.
@@ -159,9 +159,9 @@ To see more complex features, run the bundled examples:
 
 ## Detailed Documentation
 
-- 📖 [API Reference](docs/api_reference.md) — Complete details on classes, parameters, and methods.
-- 🎨 [Visual Styling & Themes](docs/styling_themes.md) — Built-in themes, plot styles, and integrating with host stylesheets.
-- ⚡ [Performance Optimization](docs/performance.md) — Downsampling, clip-to-view, and adaptive rendering mechanics.
+- 📖 [API Reference](docs/api_reference.md): Complete details on classes, parameters, and methods.
+- 🎨 [Visual Styling & Themes](docs/styling_themes.md): Built-in themes, plot styles, and integrating with host stylesheets.
+- ⚡ [Performance Optimization](docs/performance.md): Downsampling, clip-to-view, and adaptive rendering mechanics.
 
 ---
 
