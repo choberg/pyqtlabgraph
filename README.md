@@ -14,9 +14,9 @@ A powerful, interactive, and premium live plotting library for **PySide6/Qt6**, 
 | :---: | :---: |
 | ![PyQtLabGraph Light Theme](docs/screenshot_light.png) | ![PyQtLabGraph Dark Theme](docs/screenshot_dark.png) |
 
-| Modeless Customize Dialog | Alternative Layout (Legend Right, Toolbar Bottom) |
+| Modeless Customize Dialog | Modular Widget Layout |
 | :---: | :---: |
-| ![PyQtLabGraph Customize Dialog](docs/screenshot_customize_dialog.png) | ![PyQtLabGraph Alternative Layout](docs/screenshot_alternative_layout.png) |
+| ![PyQtLabGraph Customize Dialog](docs/screenshot_customize_dialog.png) | ![PyQtLabGraph Modular Layout Diagram](docs/screenshot_layout_labeled.png) <br> **[1]** Plot Widget &bull; **[2]** External Legend Widget &bull; **[3]** Plot Toolbar Widget |
 
 ---
 
@@ -30,6 +30,7 @@ Most scientific and industrial applications in Python default to using standard 
 * **Instant Interactive Zooming & Panning**: Supports smart mouse zoom/pan controls, constraint zooms, and double-click axis input out-of-the-box.
 * **Rich Quality-of-Life (QoL) Features**: Features a built-in dedicated toolbar (Show All, X/Y-locked zoom, Autoscaling, Rolling X-ranges), a modeless real-time Customize dialog with live-previews, and full layout persistence.
 * **Modern Themes**: Clean, explicit themes completely independent of OS dark-mode checks, styled to blend with the host application's active Qt styling.
+* **Modular Widget Architecture & Qt Designer Support**: The plot canvas, toolbar, and legend are completely decoupled into three separate widgets. You can place them anywhere in your window layout, drag and size them in **Qt Designer** using standard placeholder container widgets (`QWidget`), and PyQtLabGraph will seamlessly mount itself.
 
 ---
 

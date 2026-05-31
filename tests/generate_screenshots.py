@@ -13,7 +13,8 @@ import numpy as np
 from pathlib import Path
 import qdarktheme
 from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QPoint
+from PySide6.QtGui import QPainter, QPen, QColor, QBrush, QFont
 from pyqtlabgraph import PyQtLabGraphWidget, CurveStyle
 
 def generate():
@@ -174,10 +175,64 @@ def generate():
     window_alt.show()
     
     QApplication.processEvents()
+    
+    # Save clean alternative layout screenshot
     pixmap_alt = window_alt.grab()
     pixmap_alt.save(str(docs_dir / "screenshot_alternative_layout.png"))
-    window_alt.close()
     
+    # Save labeled screenshot with outlines and badges
+    # Grab a fresh copy for drawing
+    pixmap_labeled = window_alt.grab()
+    painter = QPainter(pixmap_labeled)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    
+    # Determine widget coordinates relative to window
+    # Map coordinates from widget space to window space
+    plot_pos = plot_container_alt.mapTo(window_alt, QPoint(0, 0))
+    plot_w, plot_h = plot_container_alt.width(), plot_container_alt.height()
+    
+    legend_pos = legend_container_alt.mapTo(window_alt, QPoint(0, 0))
+    legend_w, legend_h = legend_container_alt.width(), legend_container_alt.height()
+    
+    toolbar_pos = toolbar_container_alt.mapTo(window_alt, QPoint(0, 0))
+    toolbar_w, toolbar_h = toolbar_container_alt.width(), toolbar_container_alt.height()
+    
+    # Draw blue outlines (slightly padded inwards or outwards to align nicely)
+    outline_pen = QPen(QColor("#3b82f6"), 4) # Modern blue highlight
+    painter.setPen(outline_pen)
+    painter.setBrush(Qt.BrushStyle.NoBrush)
+    
+    painter.drawRect(plot_pos.x(), plot_pos.y(), plot_w, plot_h)
+    painter.drawRect(legend_pos.x(), legend_pos.y(), legend_w, legend_h)
+    painter.drawRect(toolbar_pos.x(), toolbar_pos.y(), toolbar_w, toolbar_h)
+    
+    # Helper to draw circular badge with bold number
+    def draw_badge(number, x, y):
+        # Draw background shadow circle
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QBrush(QColor(0, 0, 0, 50)))
+        painter.drawEllipse(x + 2, y + 2, 32, 32)
+        
+        # Draw blue circle
+        painter.setBrush(QBrush(QColor("#3b82f6")))
+        painter.drawEllipse(x, y, 32, 32)
+        
+        # Draw white bold number
+        painter.setPen(QPen(Qt.GlobalColor.white))
+        font = QFont("Helvetica", 14)
+        font.setBold(True)
+        painter.setFont(font)
+        painter.drawText(x, y, 32, 32, Qt.AlignmentFlag.AlignCenter, number)
+
+    # Place badges in top-left corners of the widgets
+    draw_badge("1", plot_pos.x() + 12, plot_pos.y() + 12)
+    draw_badge("2", legend_pos.x() + 12, legend_pos.y() + 12)
+    draw_badge("3", toolbar_pos.x() + 12, toolbar_pos.y() + 12)
+    
+    painter.end()
+    pixmap_labeled.save(str(docs_dir / "screenshot_layout_labeled.png"))
+    
+    window_alt.close()
     print(f"All screenshots generated and saved successfully under {docs_dir}/!")
 
 if __name__ == "__main__":
