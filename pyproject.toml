@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyqtlabgraph"
-version = "0.1.0"
+version = "0.1.1"
 description = "Reusable PySide6/PyQtGraph live plotting widget with toolbar, legend, and smart axis formatting."
 readme = "README.md"
 requires-python = ">=3.10"
