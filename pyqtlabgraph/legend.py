@@ -52,6 +52,7 @@ class PyQtLabGraphLegend(QWidget):
             item = self._layout.takeAt(0)
             widget = item.widget()
             if widget is not None:
+                widget.setParent(None)
                 widget.deleteLater()
         self.items_by_key.clear()
         for key in self.plot.curve_manager.curve_order:
