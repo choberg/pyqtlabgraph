@@ -59,14 +59,26 @@ class RangeController:
             for curve in self._widget.curve_manager.curves.values()
             if curve.visible
         ]
-        x_arrays = [arr for arr in x_arrays if len(arr) > 0]
-        if not x_arrays:
-            return
-        
-        min_vals = [float(np.min(arr)) for arr in x_arrays]
-        max_vals = [float(np.max(arr)) for arr in x_arrays]
-        xmin = min(min_vals)
-        xmax = max(max_vals)
+        if self._widget.x_log:
+            # Filter positive values
+            x_arrays = [arr[arr > 0] for arr in x_arrays if len(arr) > 0]
+            x_arrays = [arr for arr in x_arrays if len(arr) > 0]
+            if not x_arrays:
+                return
+            min_vals = [float(np.min(arr)) for arr in x_arrays]
+            max_vals = [float(np.max(arr)) for arr in x_arrays]
+            xmin = min(min_vals)
+            xmax = max(max_vals)
+            xmin = np.log10(xmin)
+            xmax = np.log10(xmax)
+        else:
+            x_arrays = [arr for arr in x_arrays if len(arr) > 0]
+            if not x_arrays:
+                return
+            min_vals = [float(np.min(arr)) for arr in x_arrays]
+            max_vals = [float(np.max(arr)) for arr in x_arrays]
+            xmin = min(min_vals)
+            xmax = max(max_vals)
         
         if xmin == xmax:
             xmin -= _X_AUTOSCALE_EQUAL_VALUE_MARGIN
@@ -83,10 +95,18 @@ class RangeController:
         if not x_arrays:
             return
         
-        max_vals = [float(np.max(arr)) for arr in x_arrays]
-        latest_x = max(max_vals)
-        right = latest_x
-        left = right - self._widget.rolling_window_size
+        if self._widget.x_log:
+            max_vals = [float(np.max(arr)) for arr in x_arrays if np.max(arr) > 0]
+            if not max_vals:
+                return
+            latest_x = max(max_vals)
+            right = np.log10(latest_x)
+            left = right - self._widget.rolling_window_size
+        else:
+            max_vals = [float(np.max(arr)) for arr in x_arrays]
+            latest_x = max(max_vals)
+            right = latest_x
+            left = right - self._widget.rolling_window_size
         self._set_x_range(left, right)
 
     def _apply_y_autoscale(self) -> None:
@@ -99,11 +119,26 @@ class RangeController:
                         visible_arrays.append(y_arr)
         if not visible_arrays:
             return
-        all_y = np.concatenate(visible_arrays)
-        if len(all_y) == 0:
-            return
-        minimum = float(all_y.min())
-        maximum = float(all_y.max())
+
+        if self._widget.y_log:
+            visible_arrays = [arr[arr > 0] for arr in visible_arrays if len(arr) > 0]
+            visible_arrays = [arr for arr in visible_arrays if len(arr) > 0]
+            if not visible_arrays:
+                return
+            all_y = np.concatenate(visible_arrays)
+            if len(all_y) == 0:
+                return
+            minimum = float(all_y.min())
+            maximum = float(all_y.max())
+            minimum = np.log10(minimum)
+            maximum = np.log10(maximum)
+        else:
+            all_y = np.concatenate(visible_arrays)
+            if len(all_y) == 0:
+                return
+            minimum = float(all_y.min())
+            maximum = float(all_y.max())
+
         margin = (
             _Y_AUTOSCALE_EQUAL_VALUE_MARGIN
             if minimum == maximum
@@ -120,7 +155,12 @@ class RangeController:
             x_values, y_values = self._widget.curve_manager.get_curve_data(curve)
             if len(x_values) == 0:
                 continue
-            mask = (x_values >= xmin) & (x_values <= xmax)
+            if self._widget.x_log:
+                raw_xmin = 10**xmin
+                raw_xmax = 10**xmax
+                mask = (x_values >= raw_xmin) & (x_values <= raw_xmax)
+            else:
+                mask = (x_values >= xmin) & (x_values <= xmax)
             visible_y = y_values[mask]
             if len(visible_y) > 0:
                 arrays.append(visible_y)

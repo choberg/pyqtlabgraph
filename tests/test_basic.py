@@ -99,6 +99,61 @@ def test_resolve_theme() -> None:
         resolve_theme("nonexistent")
 
 
+def test_logarithmic_axes(qapp: QApplication) -> None:
+    container = QWidget()
+    container.setLayout(QVBoxLayout())
+    widget = PyQtLabGraphWidget(
+        container,
+        plot_identifier="test-log-plot",
+        show_toolbar=False,
+        show_legend=False,
+    )
+    # Test initial states
+    assert not widget.x_log
+    assert not widget.y_log
+
+    # Test setting log mode
+    widget.x_log = True
+    widget.y_log = True
+    assert widget.x_log
+    assert widget.y_log
+
+    # Test underlying plot log mode
+    assert widget.plot_item.getViewBox().state['logMode'] == [True, True]
+
+    # Test plotting data and autoscale in log mode
+    widget.add_curve("curve1")
+    widget.curve_manager.set_data("curve1", [10, 100, 1000], [10, 100, 1000])
+    widget.request_autoscale_x(True)
+    widget.request_autoscale_y(True)
+    
+    # Range should be in log10 space
+    x_range = widget.get_x_range()
+    y_range = widget.get_y_range()
+    
+    # log10(10) = 1.0, log10(1000) = 3.0
+    assert x_range[0] <= 1.05 and x_range[1] >= 2.95
+    assert y_range[0] <= 1.05 and y_range[1] >= 2.95
+
+    # Test layout persistence
+    from pyqtlabgraph.layouts import PlotLayoutState
+    layout_state = PlotLayoutState.from_widget(widget, include_x_range=True, include_y_range=True)
+    assert layout_state.x_log
+    assert layout_state.y_log
+
+    # Revert log state on a new widget using the layout
+    widget2 = PyQtLabGraphWidget(
+        container,
+        plot_identifier="test-log-plot-2",
+        show_toolbar=False,
+        show_legend=False,
+    )
+    assert not widget2.x_log
+    layout_state.apply_to_widget(widget2)
+    assert widget2.x_log
+    assert widget2.y_log
+
+
 if __name__ == "__main__":
     # Emulate pytest.raises for standalone execution
     class MockRaises:
@@ -126,4 +181,5 @@ if __name__ == "__main__":
     test_themes_validation()
     test_resolve_plot_style()
     test_resolve_theme()
+    test_logarithmic_axes(q)
     print("basic tests ok")

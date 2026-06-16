@@ -143,6 +143,8 @@ class PyQtLabGraphWidget(QObject):
         self.y_label_units: str | None = None
         self.x_axis_mode = AxisMode.AUTO
         self.y_axis_mode = AxisMode.AUTO
+        self._x_log = False
+        self._y_log = False
 
         self._setup_plot()
 
@@ -250,6 +252,32 @@ class PyQtLabGraphWidget(QObject):
 
     def set_curve_visible(self, key: str, visible: bool) -> None:
         self.curve_manager.set_curve_visible(key, visible)
+
+    @property
+    def x_log(self) -> bool:
+        return self._x_log
+
+    @x_log.setter
+    def x_log(self, enabled: bool) -> None:
+        self.set_x_log(enabled)
+
+    @property
+    def y_log(self) -> bool:
+        return self._y_log
+
+    @y_log.setter
+    def y_log(self, enabled: bool) -> None:
+        self.set_y_log(enabled)
+
+    def set_x_log(self, enabled: bool) -> None:
+        self._x_log = enabled
+        self.plot_item.setLogMode(x=self._x_log, y=self._y_log)
+        self.apply_axis_scaling()
+
+    def set_y_log(self, enabled: bool) -> None:
+        self._y_log = enabled
+        self.plot_item.setLogMode(x=self._x_log, y=self._y_log)
+        self.apply_axis_scaling()
 
     def set_axis_labels(
         self,

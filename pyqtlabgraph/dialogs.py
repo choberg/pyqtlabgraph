@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from .widget import PyQtLabGraphWidget
 
 
-_CUSTOMIZE_DIALOG_SIZE = (430, 460)
+_CUSTOMIZE_DIALOG_SIZE = (430, 520)
 
 _LINE_WIDTH_MINIMUM = 0.1
 _LINE_WIDTH_MAXIMUM = 20.0
@@ -127,6 +127,8 @@ class _GlobalControls:
     y_min: QDoubleSpinBox
     y_max: QDoubleSpinBox
     apply_y_range_button: QPushButton
+    x_log: QCheckBox
+    y_log: QCheckBox
 
 
 def show_customize_dialog(plot: PyQtLabGraphWidget, curve_key: str | None = None) -> None:
@@ -206,6 +208,16 @@ class _CustomizeDialog(QDialog):
         grid.setChecked(self.plot.grid_item.isVisible())
         grid.setToolTip("Shows or hides the plot grid.")
 
+        x_log = QCheckBox(self)
+        x_log.setObjectName("pyqtLabGraphXLogCheckbox")
+        x_log.setChecked(self.plot.x_log)
+        x_log.setToolTip("Enables or disables logarithmic scaling on the X axis.")
+
+        y_log = QCheckBox(self)
+        y_log.setObjectName("pyqtLabGraphYLogCheckbox")
+        y_log.setChecked(self.plot.y_log)
+        y_log.setToolTip("Enables or disables logarithmic scaling on the Y axis.")
+
         antialiasing = QCheckBox(self)
         antialiasing.setObjectName("pyqtLabGraphAntialiasingCheckbox")
         antialiasing.setChecked(self.plot.render_optimizer.antialiasing_enabled)
@@ -277,6 +289,8 @@ class _CustomizeDialog(QDialog):
         layout.addRow("Adaptive rendering:", adaptive_performance)
         layout.addRow("Plot background:", plot_background)
         layout.addRow("Plot style:", plot_style)
+        layout.addRow("X logarithmic:", x_log)
+        layout.addRow("Y logarithmic:", y_log)
         layout.addRow("Restore view on load:", restore_view_state_on_load)
         layout.addRow("X range:", _range_row(x_min, x_max, apply_x_range_button))
         layout.addRow("Y range:", _range_row(y_min, y_max, apply_y_range_button))
@@ -303,6 +317,8 @@ class _CustomizeDialog(QDialog):
             y_min=y_min,
             y_max=y_max,
             apply_y_range_button=apply_y_range_button,
+            x_log=x_log,
+            y_log=y_log,
         )
 
     def _build_curve_tabs(self) -> None:
@@ -395,6 +411,8 @@ class _CustomizeDialog(QDialog):
             line_edit.textChanged.connect(self._preview_axes)
         controls.x_mode.currentIndexChanged.connect(self._preview_axes)
         controls.y_mode.currentIndexChanged.connect(self._preview_axes)
+        controls.x_log.toggled.connect(lambda checked: self._preview_axes())
+        controls.y_log.toggled.connect(lambda checked: self._preview_axes())
         controls.grid.toggled.connect(self.plot.set_grid_visible)
         controls.antialiasing.toggled.connect(self.plot.set_antialiasing_enabled)
         controls.downsampling.toggled.connect(self.plot.set_downsampling_enabled)
@@ -456,6 +474,8 @@ class _CustomizeDialog(QDialog):
         if not self._preview_enabled:
             return
         controls = self.global_controls
+        self.plot.set_x_log(controls.x_log.isChecked())
+        self.plot.set_y_log(controls.y_log.isChecked())
         self.plot.set_axis_labels(
             controls.x_label.text(),
             controls.y_label.text(),
@@ -464,6 +484,24 @@ class _CustomizeDialog(QDialog):
             x_mode=controls.x_mode.currentData(),
             y_mode=controls.y_mode.currentData(),
         )
+        # Update range spin boxes to reflect the current ranges in the new coordinate system
+        xmin, xmax = self.plot.get_x_range()
+        ymin, ymax = self.plot.get_y_range()
+        
+        controls.x_min.blockSignals(True)
+        controls.x_max.blockSignals(True)
+        controls.y_min.blockSignals(True)
+        controls.y_max.blockSignals(True)
+        
+        controls.x_min.setValue(xmin)
+        controls.x_max.setValue(xmax)
+        controls.y_min.setValue(ymin)
+        controls.y_max.setValue(ymax)
+        
+        controls.x_min.blockSignals(False)
+        controls.x_max.blockSignals(False)
+        controls.y_min.blockSignals(False)
+        controls.y_max.blockSignals(False)
 
     def _preview_plot_background(self) -> None:
         if not self._preview_enabled:
@@ -537,6 +575,8 @@ class _CustomizeDialog(QDialog):
 
     def _apply_dialog_values(self) -> None:
         controls = self.global_controls
+        self.plot.set_x_log(controls.x_log.isChecked())
+        self.plot.set_y_log(controls.y_log.isChecked())
         self.plot.set_axis_labels(
             controls.x_label.text(),
             controls.y_label.text(),
