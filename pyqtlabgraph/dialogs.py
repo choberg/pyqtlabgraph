@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
+import numpy as np
 
 from PySide6.QtCore import QEvent, QObject, Qt
 from PySide6.QtGui import QColor
@@ -575,6 +576,10 @@ class _CustomizeDialog(QDialog):
 
     def _apply_dialog_values(self) -> None:
         controls = self.global_controls
+        # Keep track of whether log scale changed compared to original state
+        x_log_changed = (controls.x_log.isChecked() != self.original_state.x_log)
+        y_log_changed = (controls.y_log.isChecked() != self.original_state.y_log)
+
         self.plot.set_x_log(controls.x_log.isChecked())
         self.plot.set_y_log(controls.y_log.isChecked())
         self.plot.set_axis_labels(
@@ -595,12 +600,34 @@ class _CustomizeDialog(QDialog):
         for key, editor in self.curve_editors.items():
             self.plot.set_curve_visible(key, editor.visible.isChecked())
             self.plot.set_curve_style(key, self._curve_style_from_editor(editor))
+            
         orig_x = self.original_state.ranges.get("x")
-        if orig_x is None or abs(controls.x_min.value() - orig_x[0]) > 1e-9 or abs(controls.x_max.value() - orig_x[1]) > 1e-9:
-            self.plot.apply_manual_x_limits(controls.x_min.value(), controls.x_max.value())
+        if orig_x is not None:
+            orig_xmin, orig_xmax = orig_x
+            if x_log_changed:
+                if controls.x_log.isChecked():
+                    orig_xmin = np.log10(max(orig_xmin, 1e-9))
+                    orig_xmax = np.log10(max(orig_xmax, 1e-9))
+                else:
+                    orig_xmin = 10**np.clip(orig_xmin, -20.0, 20.0)
+                    orig_xmax = 10**np.clip(orig_xmax, -20.0, 20.0)
+            
+            if abs(controls.x_min.value() - orig_xmin) > 1e-9 or abs(controls.x_max.value() - orig_xmax) > 1e-9:
+                self.plot.apply_manual_x_limits(controls.x_min.value(), controls.x_max.value())
+                
         orig_y = self.original_state.ranges.get("y")
-        if orig_y is None or abs(controls.y_min.value() - orig_y[0]) > 1e-9 or abs(controls.y_max.value() - orig_y[1]) > 1e-9:
-            self.plot.apply_manual_y_limits(controls.y_min.value(), controls.y_max.value())
+        if orig_y is not None:
+            orig_ymin, orig_ymax = orig_y
+            if y_log_changed:
+                if controls.y_log.isChecked():
+                    orig_ymin = np.log10(max(orig_ymin, 1e-9))
+                    orig_ymax = np.log10(max(orig_ymax, 1e-9))
+                else:
+                    orig_ymin = 10**np.clip(orig_ymin, -20.0, 20.0)
+                    orig_ymax = 10**np.clip(orig_ymax, -20.0, 20.0)
+            
+            if abs(controls.y_min.value() - orig_ymin) > 1e-9 or abs(controls.y_max.value() - orig_ymax) > 1e-9:
+                self.plot.apply_manual_y_limits(controls.y_min.value(), controls.y_max.value())
 
     def _apply_and_save_layout(self) -> None:
         controls = self.global_controls
