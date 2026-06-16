@@ -272,50 +272,58 @@ class PyQtLabGraphWidget(QObject):
     def set_x_log(self, enabled: bool) -> None:
         if self._x_log == enabled:
             return
-        xmin, xmax = self.get_x_range()
-        self._x_log = enabled
-        self.plot_item.setLogMode(x=self._x_log, y=self._y_log)
-        
-        if not self.interaction_state.autoscale_x and not self.interaction_state.rolling_x:
-            if enabled:
-                if xmin <= 0:
-                    xmin = 0.1
-                if xmax <= 0:
-                    xmax = 10.0
-                xmin_new = np.log10(xmin)
-                xmax_new = np.log10(xmax)
+        self.applying_axis_scaling = True
+        try:
+            xmin, xmax = self.get_x_range()
+            self._x_log = enabled
+            self.plot_item.setLogMode(x=self._x_log, y=self._y_log)
+            
+            if not self.interaction_state.autoscale_x and not self.interaction_state.rolling_x:
+                if enabled:
+                    if xmin <= 0:
+                        xmin = 0.1
+                    if xmax <= 0:
+                        xmax = 10.0
+                    xmin_new = np.log10(xmin)
+                    xmax_new = np.log10(xmax)
+                else:
+                    xmin = np.clip(xmin, -20.0, 20.0)
+                    xmax = np.clip(xmax, -20.0, 20.0)
+                    xmin_new = 10**xmin
+                    xmax_new = 10**xmax
+                self.range_controller.set_x_range(xmin_new, xmax_new)
             else:
-                xmin = np.clip(xmin, -20.0, 20.0)
-                xmax = np.clip(xmax, -20.0, 20.0)
-                xmin_new = 10**xmin
-                xmax_new = 10**xmax
-            self.range_controller.set_x_range(xmin_new, xmax_new)
-        else:
-            self.apply_axis_scaling()
+                self.apply_axis_scaling()
+        finally:
+            self.applying_axis_scaling = False
 
     def set_y_log(self, enabled: bool) -> None:
         if self._y_log == enabled:
             return
-        ymin, ymax = self.get_y_range()
-        self._y_log = enabled
-        self.plot_item.setLogMode(x=self._x_log, y=self._y_log)
-        
-        if not self.interaction_state.autoscale_y:
-            if enabled:
-                if ymin <= 0:
-                    ymin = 0.1
-                if ymax <= 0:
-                    ymax = 10.0
-                ymin_new = np.log10(ymin)
-                ymax_new = np.log10(ymax)
+        self.applying_axis_scaling = True
+        try:
+            ymin, ymax = self.get_y_range()
+            self._y_log = enabled
+            self.plot_item.setLogMode(x=self._x_log, y=self._y_log)
+            
+            if not self.interaction_state.autoscale_y:
+                if enabled:
+                    if ymin <= 0:
+                        ymin = 0.1
+                    if ymax <= 0:
+                        ymax = 10.0
+                    ymin_new = np.log10(ymin)
+                    ymax_new = np.log10(ymax)
+                else:
+                    ymin = np.clip(ymin, -20.0, 20.0)
+                    ymax = np.clip(ymax, -20.0, 20.0)
+                    ymin_new = 10**ymin
+                    ymax_new = 10**ymax
+                self.range_controller.set_y_range(ymin_new, ymax_new)
             else:
-                ymin = np.clip(ymin, -20.0, 20.0)
-                ymax = np.clip(ymax, -20.0, 20.0)
-                ymin_new = 10**ymin
-                ymax_new = 10**ymax
-            self.range_controller.set_y_range(ymin_new, ymax_new)
-        else:
-            self.apply_axis_scaling()
+                self.apply_axis_scaling()
+        finally:
+            self.applying_axis_scaling = False
 
     def set_axis_labels(
         self,
