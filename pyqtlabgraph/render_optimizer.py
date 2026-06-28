@@ -65,8 +65,14 @@ class RenderOptimizer:
             if not curve.visible:
                 continue
             x_values, _y_values = self._widget.curve_manager.get_curve_data(curve)
-            count += int(np.count_nonzero((xmin <= x_values) & (x_values <= xmax)))
+            count += int(np.count_nonzero(self._visible_x_mask(x_values, xmin, xmax)))
         return count
+
+    def _visible_x_mask(self, x_values: np.ndarray, xmin: float, xmax: float) -> np.ndarray:
+        if self._widget.x_log:
+            xmin = 10**xmin
+            xmax = 10**xmax
+        return (xmin <= x_values) & (x_values <= xmax)
 
     def set_antialiasing_enabled(self, enabled: bool) -> None:
         self.antialiasing_enabled = enabled

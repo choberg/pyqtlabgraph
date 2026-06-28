@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QDoubleSpinBox,
     QFormLayout,
+    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -34,7 +35,7 @@ if TYPE_CHECKING:
     from .widget import PyQtLabGraphWidget
 
 
-_CUSTOMIZE_DIALOG_SIZE = (430, 520)
+_CUSTOMIZE_DIALOG_SIZE = (430, 650)
 
 _LINE_WIDTH_MINIMUM = 0.1
 _LINE_WIDTH_MAXIMUM = 20.0
@@ -159,6 +160,12 @@ class _CustomizeDialog(QDialog):
         self.curve_editors: dict[str, _CurveStyleEditor] = {}
         self._x_range_return_widgets: tuple[QObject, ...] = ()
         self._y_range_return_widgets: tuple[QObject, ...] = ()
+        
+        self._last_synced_x_min: float | None = None
+        self._last_synced_x_max: float | None = None
+        self._last_synced_y_min: float | None = None
+        self._last_synced_y_max: float | None = None
+        
         self._preview_enabled = False
 
         self.setObjectName("pyqtLabGraphCustomizeDialog")
@@ -171,6 +178,7 @@ class _CustomizeDialog(QDialog):
         self.global_controls = self._build_global_tab()
         self._build_curve_tabs()
         self._select_initial_curve_tab(curve_key)
+        self._sync_log_checkbox_availability()
 
         layout = QVBoxLayout(self)
         layout.addWidget(self.tabs)
@@ -274,27 +282,65 @@ class _CustomizeDialog(QDialog):
         y_max.setObjectName("pyqtLabGraphYMaxSpin")
         apply_y_range_button = QPushButton("Apply", self)
         apply_y_range_button.setObjectName("pyqtLabGraphApplyYRangeButton")
+        
+        # Initialize sync state with the initial values applied to the spinboxes
+        self._last_synced_x_min = x_min.value()
+        self._last_synced_x_max = x_max.value()
+        self._last_synced_y_min = y_min.value()
+        self._last_synced_y_max = y_max.value()
 
         tab = QWidget(self)
-        layout = QFormLayout(tab)
-        layout.addRow("X label:", x_label)
-        layout.addRow("X units:", x_units)
-        layout.addRow("X mode:", x_mode)
-        layout.addRow("Y label:", y_label)
-        layout.addRow("Y units:", y_units)
-        layout.addRow("Y mode:", y_mode)
-        layout.addRow("Grid:", grid)
-        layout.addRow("Anti-aliasing:", antialiasing)
-        layout.addRow("Downsampling:", downsampling)
-        layout.addRow("Clip to view:", clip_to_view)
-        layout.addRow("Adaptive rendering:", adaptive_performance)
-        layout.addRow("Plot background:", plot_background)
-        layout.addRow("Plot style:", plot_style)
-        layout.addRow("X logarithmic:", x_log)
-        layout.addRow("Y logarithmic:", y_log)
-        layout.addRow("Restore view on load:", restore_view_state_on_load)
-        layout.addRow("X range:", _range_row(x_min, x_max, apply_x_range_button))
-        layout.addRow("Y range:", _range_row(y_min, y_max, apply_y_range_button))
+        layout = QVBoxLayout(tab)
+
+        axes_group, axes_layout = _form_group("Axes", "pyqtLabGraphAxesGroup", tab)
+        axes_layout.addRow("X label:", x_label)
+        axes_layout.addRow("X units:", x_units)
+        axes_layout.addRow("X mode:", x_mode)
+        axes_layout.addRow("X logarithmic:", x_log)
+        axes_layout.addRow("Y label:", y_label)
+        axes_layout.addRow("Y units:", y_units)
+        axes_layout.addRow("Y mode:", y_mode)
+        axes_layout.addRow("Y logarithmic:", y_log)
+        layout.addWidget(axes_group)
+
+        view_ranges_group, view_ranges_layout = _form_group(
+            "View ranges",
+            "pyqtLabGraphViewRangesGroup",
+            tab,
+        )
+        view_ranges_layout.addRow("X range:", _range_row(x_min, x_max, apply_x_range_button))
+        view_ranges_layout.addRow("Y range:", _range_row(y_min, y_max, apply_y_range_button))
+        layout.addWidget(view_ranges_group)
+
+        appearance_group, appearance_layout = _form_group(
+            "Appearance",
+            "pyqtLabGraphAppearanceGroup",
+            tab,
+        )
+        appearance_layout.addRow("Plot background:", plot_background)
+        appearance_layout.addRow("Plot style:", plot_style)
+        appearance_layout.addRow("Grid:", grid)
+        layout.addWidget(appearance_group)
+
+        rendering_group, rendering_layout = _form_group(
+            "Rendering",
+            "pyqtLabGraphRenderingGroup",
+            tab,
+        )
+        rendering_layout.addRow("Anti-aliasing:", antialiasing)
+        rendering_layout.addRow("Downsampling:", downsampling)
+        rendering_layout.addRow("Clip to view:", clip_to_view)
+        rendering_layout.addRow("Adaptive rendering:", adaptive_performance)
+        layout.addWidget(rendering_group)
+
+        layout_saving_group, layout_saving_layout = _form_group(
+            "Layout saving",
+            "pyqtLabGraphLayoutSavingGroup",
+            tab,
+        )
+        layout_saving_layout.addRow("Restore view on load:", restore_view_state_on_load)
+        layout.addWidget(layout_saving_group)
+        layout.addStretch(1)
         self.tabs.addTab(tab, "Global")
 
         return _GlobalControls(
@@ -331,7 +377,7 @@ class _CustomizeDialog(QDialog):
         style = curve.style
 
         tab = QWidget(self)
-        layout = QFormLayout(tab)
+        layout = QVBoxLayout(tab)
         visible = QCheckBox(tab)
         visible.setObjectName(f"pyqtLabGraphCurveVisible_{key}")
         visible.setChecked(curve.visible)
@@ -382,15 +428,36 @@ class _CustomizeDialog(QDialog):
 
         line_color_button.clicked.connect(lambda _checked=False, curve_key=key: self._choose_line_color(curve_key))
 
-        layout.addRow("Visibility:", visible)
-        layout.addRow("Line:", line_enabled)
-        layout.addRow("Line color:", line_color_button)
-        layout.addRow("Line width:", line_width)
-        layout.addRow("Markers:", marker_enabled)
-        layout.addRow("Filled markers:", marker_filled)
-        layout.addRow("Marker shape:", marker_symbol)
-        layout.addRow("Marker size:", marker_size)
-        layout.addRow("Marker outline width:", marker_outline_width)
+        curve_group, curve_layout = _form_group(
+            "Curve",
+            f"pyqtLabGraphCurveGroup_{key}",
+            tab,
+        )
+        curve_layout.addRow("Visibility:", visible)
+        layout.addWidget(curve_group)
+
+        line_group, line_layout = _form_group(
+            "Line",
+            f"pyqtLabGraphCurveLineGroup_{key}",
+            tab,
+        )
+        line_layout.addRow("Line:", line_enabled)
+        line_layout.addRow("Line color:", line_color_button)
+        line_layout.addRow("Line width:", line_width)
+        layout.addWidget(line_group)
+
+        markers_group, markers_layout = _form_group(
+            "Markers",
+            f"pyqtLabGraphCurveMarkersGroup_{key}",
+            tab,
+        )
+        markers_layout.addRow("Markers:", marker_enabled)
+        markers_layout.addRow("Marker shape:", marker_symbol)
+        markers_layout.addRow("Marker size:", marker_size)
+        markers_layout.addRow("Filled markers:", marker_filled)
+        markers_layout.addRow("Marker outline width:", marker_outline_width)
+        layout.addWidget(markers_group)
+        layout.addStretch(1)
         self.tabs.addTab(tab, curve.label)
 
     def _build_buttons(self) -> QDialogButtonBox:
@@ -410,8 +477,8 @@ class _CustomizeDialog(QDialog):
         controls = self.global_controls
         for line_edit in (controls.x_label, controls.x_units, controls.y_label, controls.y_units):
             line_edit.textChanged.connect(self._preview_axes)
-        controls.x_mode.currentIndexChanged.connect(self._preview_axes)
-        controls.y_mode.currentIndexChanged.connect(self._preview_axes)
+        controls.x_mode.currentIndexChanged.connect(lambda _index: self._handle_axis_mode_changed())
+        controls.y_mode.currentIndexChanged.connect(lambda _index: self._handle_axis_mode_changed())
         controls.x_log.toggled.connect(lambda checked: self._preview_axes())
         controls.y_log.toggled.connect(lambda checked: self._preview_axes())
         controls.grid.toggled.connect(self.plot.set_grid_visible)
@@ -471,9 +538,28 @@ class _CustomizeDialog(QDialog):
         if curve_key in self.plot.curve_manager.curves:
             self.tabs.setCurrentIndex(self.plot.curve_manager.curve_order.index(str(curve_key)) + 1)
 
+    def _handle_axis_mode_changed(self) -> None:
+        self._sync_log_checkbox_availability()
+        self._preview_axes()
+
+    def _sync_log_checkbox_availability(self) -> None:
+        controls = self.global_controls
+        self._sync_log_checkbox(controls.x_mode, controls.x_log)
+        self._sync_log_checkbox(controls.y_mode, controls.y_log)
+
+    @staticmethod
+    def _sync_log_checkbox(mode_combo: QComboBox, log_checkbox: QCheckBox) -> None:
+        time_mode = mode_combo.currentData() == AxisMode.TIME
+        if time_mode and log_checkbox.isChecked():
+            log_checkbox.blockSignals(True)
+            log_checkbox.setChecked(False)
+            log_checkbox.blockSignals(False)
+        log_checkbox.setEnabled(not time_mode)
+
     def _preview_axes(self) -> None:
         if not self._preview_enabled:
             return
+        self._sync_log_checkbox_availability()
         controls = self.global_controls
         self.plot.set_x_log(controls.x_log.isChecked())
         self.plot.set_y_log(controls.y_log.isChecked())
@@ -498,6 +584,11 @@ class _CustomizeDialog(QDialog):
         controls.x_max.setValue(xmax)
         controls.y_min.setValue(ymin)
         controls.y_max.setValue(ymax)
+        
+        self._last_synced_x_min = controls.x_min.value()
+        self._last_synced_x_max = controls.x_max.value()
+        self._last_synced_y_min = controls.y_min.value()
+        self._last_synced_y_max = controls.y_max.value()
         
         controls.x_min.blockSignals(False)
         controls.x_max.blockSignals(False)
@@ -601,33 +692,15 @@ class _CustomizeDialog(QDialog):
             self.plot.set_curve_visible(key, editor.visible.isChecked())
             self.plot.set_curve_style(key, self._curve_style_from_editor(editor))
             
-        orig_x = self.original_state.ranges.get("x")
-        if orig_x is not None:
-            orig_xmin, orig_xmax = orig_x
-            if x_log_changed:
-                if controls.x_log.isChecked():
-                    orig_xmin = np.log10(max(orig_xmin, 1e-9))
-                    orig_xmax = np.log10(max(orig_xmax, 1e-9))
-                else:
-                    orig_xmin = 10**np.clip(orig_xmin, -20.0, 20.0)
-                    orig_xmax = 10**np.clip(orig_xmax, -20.0, 20.0)
-            
-            if abs(controls.x_min.value() - orig_xmin) > 1e-9 or abs(controls.x_max.value() - orig_xmax) > 1e-9:
-                self.plot.apply_manual_x_limits(controls.x_min.value(), controls.x_max.value())
+        x_min_val = controls.x_min.value()
+        x_max_val = controls.x_max.value()
+        if x_min_val != self._last_synced_x_min or x_max_val != self._last_synced_x_max:
+            self.plot.apply_manual_x_limits(x_min_val, x_max_val)
                 
-        orig_y = self.original_state.ranges.get("y")
-        if orig_y is not None:
-            orig_ymin, orig_ymax = orig_y
-            if y_log_changed:
-                if controls.y_log.isChecked():
-                    orig_ymin = np.log10(max(orig_ymin, 1e-9))
-                    orig_ymax = np.log10(max(orig_ymax, 1e-9))
-                else:
-                    orig_ymin = 10**np.clip(orig_ymin, -20.0, 20.0)
-                    orig_ymax = 10**np.clip(orig_ymax, -20.0, 20.0)
-            
-            if abs(controls.y_min.value() - orig_ymin) > 1e-9 or abs(controls.y_max.value() - orig_ymax) > 1e-9:
-                self.plot.apply_manual_y_limits(controls.y_min.value(), controls.y_max.value())
+        y_min_val = controls.y_min.value()
+        y_max_val = controls.y_max.value()
+        if y_min_val != self._last_synced_y_min or y_max_val != self._last_synced_y_max:
+            self.plot.apply_manual_y_limits(y_min_val, y_max_val)
 
     def _apply_and_save_layout(self) -> None:
         controls = self.global_controls
@@ -711,6 +784,13 @@ def _configure_marker_outline_width_spin_box(spin_box: QDoubleSpinBox) -> None:
     spin_box.setRange(_MARKER_OUTLINE_WIDTH_MINIMUM, _MARKER_OUTLINE_WIDTH_MAXIMUM)
     spin_box.setDecimals(_MARKER_OUTLINE_WIDTH_DECIMALS)
     spin_box.setSingleStep(_MARKER_OUTLINE_WIDTH_STEP)
+
+
+def _form_group(title: str, object_name: str, parent: QWidget) -> tuple[QGroupBox, QFormLayout]:
+    group = QGroupBox(title, parent)
+    group.setObjectName(object_name)
+    layout = QFormLayout(group)
+    return group, layout
 
 
 def _range_row(

@@ -53,16 +53,13 @@ class SmartAxisItem(pg.AxisItem):
             self.enableAutoSIPrefix(False)
         else:
             self.enableAutoSIPrefix(True)
-        self.readjust_labels()
+        self._refresh_label()
 
     def set_units(self, units: str | None) -> None:
         self._custom_units = units or ""
         # If in time mode, we don't use the standard unit display in the label
         # because the unit is attached to each tick.
-        if self._mode == AxisMode.TIME:
-            super().setLabel(units=None)
-        else:
-            super().setLabel(units=units)
+        self._refresh_label()
 
     def setLabel(self, text: str | None = None, units: str | None = None, **args: object) -> None:
         self._custom_units = units or ""
@@ -73,13 +70,14 @@ class SmartAxisItem(pg.AxisItem):
 
     def readjust_labels(self) -> None:
         # Trigger a refresh of the labels by re-setting the unit
-        self.setLabel(units=self._custom_units)
+        self._refresh_label()
 
     def tickStrings(self, values: list[float], scale: float, spacing: float) -> list[str]:
         if self._mode != AxisMode.TIME:
             return super().tickStrings(values, scale, spacing)
 
-        return [self._format_time(value, spacing) for value in values]
+        scaled_spacing = abs(spacing * scale)
+        return [self._format_time(value * scale, scaled_spacing) for value in values]
 
     def mouseDoubleClickEvent(self, event: object) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
@@ -120,3 +118,7 @@ class SmartAxisItem(pg.AxisItem):
             parts.append(f"{secs} s")
 
         return " ".join(parts)
+
+    def _refresh_label(self) -> None:
+        units = None if self._mode == AxisMode.TIME else self._custom_units
+        super().setLabel(self.labelText, units=units, **self.labelStyle)

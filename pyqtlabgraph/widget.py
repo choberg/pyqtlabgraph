@@ -272,6 +272,14 @@ class PyQtLabGraphWidget(QObject):
     def set_x_log(self, enabled: bool) -> None:
         if self._x_log == enabled:
             return
+        if enabled and self.x_axis_mode == AxisMode.TIME:
+            self.x_axis_mode = AxisMode.LINEAR
+            self.bottom_axis.set_mode(self.x_axis_mode)
+            self.bottom_axis.setLabel(
+                self.x_label_text,
+                units=self.x_label_units,
+                **{"color": self.style_controller.host_axis_color_name(), "margin-top": _AXIS_LABEL_TOP_MARGIN},
+            )
         self.applying_axis_scaling = True
         try:
             xmin, xmax = self.get_x_range()
@@ -296,10 +304,19 @@ class PyQtLabGraphWidget(QObject):
                 self.apply_axis_scaling()
         finally:
             self.applying_axis_scaling = False
+        self.render_optimizer.update_adaptive_performance(force=True)
 
     def set_y_log(self, enabled: bool) -> None:
         if self._y_log == enabled:
             return
+        if enabled and self.y_axis_mode == AxisMode.TIME:
+            self.y_axis_mode = AxisMode.LINEAR
+            self.left_axis.set_mode(self.y_axis_mode)
+            self.left_axis.setLabel(
+                self.y_label_text,
+                units=self.y_label_units,
+                **{"color": self.style_controller.host_axis_color_name(), "margin-right": _AXIS_LABEL_RIGHT_MARGIN},
+            )
         self.applying_axis_scaling = True
         try:
             ymin, ymax = self.get_y_range()
@@ -640,6 +657,10 @@ class PyQtLabGraphWidget(QObject):
             self.x_axis_mode = resolve_axis_mode(x_mode)
         if y_mode is not None:
             self.y_axis_mode = resolve_axis_mode(y_mode)
+        if self.x_axis_mode == AxisMode.TIME and self._x_log:
+            self.set_x_log(False)
+        if self.y_axis_mode == AxisMode.TIME and self._y_log:
+            self.set_y_log(False)
 
         self.bottom_axis.set_mode(self.x_axis_mode)
         self.bottom_axis.setLabel(
