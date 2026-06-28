@@ -4,7 +4,7 @@
 [![Supported Python versions](https://img.shields.io/pypi/pyversions/pyqtlabgraph.svg)](https://pypi.org/project/pyqtlabgraph/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A powerful, interactive, and premium live plotting library for **PySide6/Qt6**, based on **PyQtGraph**.
+A powerful, interactive, and polished live plotting library for **PySide6/Qt6**, based on **PyQtGraph**.
 
 `PyQtLabGraph` is built for both interactive scientific data analysis and high-performance real-time visualization, providing an embeddable plot widget, dedicated toolbars, external legend layouts, smart axis formatting, layout persistence, and modern, explicit visual themes.
 
@@ -22,18 +22,18 @@ A powerful, interactive, and premium live plotting library for **PySide6/Qt6**, 
 
 ## Why PyQtLabGraph? (Aesthetic & Usability Philosophy)
 
-In scientific and engineering environments, two plotting libraries dominate the Python ecosystem:
-- **Matplotlib**: Unrivaled for generating static, publication-quality figures, but often heavy or sluggish when handling interactive real-time telemetry or rapid live data streams.
-- **PyQtGraph**: An exceptionally fast, graphics-hardware-accelerated library built for high-performance plotting, but one that deliberately leaves user-interface chrome (like toolbars, legends, customize dialogs, and layout persistence) to be implemented by the developer from scratch.
+The Python plotting ecosystem is broad, ranging from publication-focused libraries to high-performance interactive toolkits. Two useful reference points are:
+- **Matplotlib**: Excellent for static, publication-quality figures, but often heavy or sluggish when handling interactive real-time telemetry or rapid live data streams.
+- **PyQtGraph**: An exceptionally fast Qt-based plotting library built for high-performance visualization, while deliberately leaving application-level UI chrome such as toolbars, legends, customize dialogs, and layout persistence to the developer.
 
-`PyQtLabGraph` bridges this gap. It is designed as a **high-productivity, instrument-grade plotting interface** that brings the ease of use of traditional graphical programming environments to Python.
+`PyQtLabGraph` builds on the interactive-performance side of this landscape and adds the application-level workflow pieces that PyQtGraph intentionally leaves to host applications. It is designed as a **high-productivity, instrument-grade plotting interface** that brings the ease of use of traditional graphical programming environments to Python.
 
-Many scientists, laboratory engineers, and researchers are familiar with the instant, out-of-the-box utility of instruments and classic engineering software platforms (such as LabVIEW), where plotting components come pre-packaged with zoom controls, custom legends, scaling tools, and runtime style editors. PyQtLabGraph delivers this exact workflow in a clean, pythonic PySide6 package:
+Many scientists, laboratory engineers, and researchers are familiar with the instant, out-of-the-box utility of instruments and classic engineering software platforms (such as LabVIEW), where plotting components come pre-packaged with zoom controls, custom legends, scaling tools, and runtime style editors. PyQtLabGraph brings this workflow to a clean, pythonic PySide6 package:
 
 * **Familiar, Hardware-Like Controls**: The interface mimics the look, feel, and rapid utility of physical lab instruments (e.g., oscilloscopes, analyzers) and classic instrumentation software.
 * **Instant Interactive Zooming & Panning**: Features intuitive mouse bindings (wheel zoom, key-constrained zooms) and double-click axis inputs out-of-the-box.
 * **Rich Quality-of-Life (QoL) Features**: Includes a dedicated toolbar (X/Y locked zoom, autoscaling, live rolling window), a modeless live-preview Customize dialog, and complete JSON layout persistence.
-* **Modern Aesthetic Themes**: Sleek, built-in themes (light, dark, solarized) independent of OS-level dark-mode checks, adapting naturally to the host application's active Qt stylesheet.
+* **Modern Aesthetic Themes**: Built-in themes (light, dark, solarized) independent of OS-level dark-mode checks, adapting naturally to the host application's active Qt stylesheet.
 * **Modular Widget Architecture & Qt Designer Support**: The plot canvas, toolbar, and legend are decoupled into three independent QWidgets. You can lay them out freely or drag and size placeholder containers inside **Qt Designer**, letting PyQtLabGraph mount itself automatically.
 
 

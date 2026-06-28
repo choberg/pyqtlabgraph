@@ -35,9 +35,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/claudiush/PyQtLabGraph"
-Repository = "https://github.com/claudiush/PyQtLabGraph"
-"Bug Tracker" = "https://github.com/claudiush/PyQtLabGraph/issues"
+Homepage = "https://github.com/choberg/pyqtlabgraph"
+Repository = "https://github.com/choberg/pyqtlabgraph"
+"Bug Tracker" = "https://github.com/choberg/pyqtlabgraph/issues"
 
 [tool.setuptools]
 include-package-data = false
