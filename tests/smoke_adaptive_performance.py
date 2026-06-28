@@ -82,6 +82,42 @@ def main() -> None:
     assert marker_only_curve.item.opts["symbol"] == "o"
     assert marker_only_curve.item.opts["pen"].style() == Qt.PenStyle.NoPen
 
+    log_container = QWidget()
+    log_container.setLayout(QVBoxLayout())
+    log_graph = PyQtLabGraphWidget(
+        log_container,
+        plot_identifier="adaptive-performance-log-x",
+        show_toolbar=False,
+        show_legend=False,
+    )
+    log_graph.plot(
+        "dense",
+        [float(index) for index in range(1, 101)],
+        [float(index % 3) for index in range(1, 101)],
+        style=CurveStyle(
+            marker_enabled=True,
+            marker_symbol="s",
+            marker_size=5,
+        ),
+    )
+    log_curve = log_graph.curve_manager.curves["dense"]
+    log_graph.render_optimizer.threshold = 5
+    log_graph.render_optimizer.restore_threshold = 5
+
+    log_graph.apply_manual_x_limits(1.0, 100.0)
+    log_graph.render_optimizer.update_adaptive_performance(force=True)
+    assert log_graph.render_optimizer.active is True
+    assert log_curve.item.opts["symbol"] is None
+
+    log_graph.set_x_log(True)
+    assert log_graph.get_x_range() == (0.0, 2.0)
+    assert log_graph.render_optimizer.active is True
+    assert log_curve.item.opts["symbol"] is None
+
+    log_graph.apply_manual_x_limits(0.0, 0.1)
+    assert log_graph.render_optimizer.active is False
+    assert log_curve.item.opts["symbol"] == "s"
+
     app.processEvents()
     print("adaptive performance smoke ok")
 

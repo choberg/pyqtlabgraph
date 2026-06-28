@@ -38,6 +38,8 @@ class PlotLayoutState:
     ranges: dict[str, tuple[float, float]]
     interaction_state: InteractionState
     restore_view_state_on_load: bool = True
+    x_log: bool = False
+    y_log: bool = False
 
     @classmethod
     def from_widget(
@@ -83,6 +85,8 @@ class PlotLayoutState:
                 active_tool=plot.interaction_state.active_tool,
             ),
             restore_view_state_on_load=restore_view_state_on_load,
+            x_log=plot.x_log,
+            y_log=plot.y_log,
         )
 
     @classmethod
@@ -144,6 +148,8 @@ class PlotLayoutState:
                 ranges=_ranges_from_layout(_optional_layout_object(layout, "ranges")),
                 interaction_state=_interaction_from_layout(interaction, plot.interaction_state),
                 restore_view_state_on_load=bool(layout.get("restore_view_state_on_load", True)),
+                x_log=bool(x_axis.get("log", False)),
+                y_log=bool(y_axis.get("log", False)),
             )
         except LayoutFileError:
             raise
@@ -160,11 +166,13 @@ class PlotLayoutState:
                     "label": self.x_label,
                     "units": self.x_units,
                     "mode": self.x_mode,
+                    "log": self.x_log,
                 },
                 "y": {
                     "label": self.y_label,
                     "units": self.y_units,
                     "mode": self.y_mode,
+                    "log": self.y_log,
                 },
             },
             "grid_visible": self.grid_visible,
@@ -193,6 +201,8 @@ class PlotLayoutState:
         *,
         restore_view_state: bool | None = None,
     ) -> None:
+        plot.set_x_log(self.x_log)
+        plot.set_y_log(self.y_log)
         plot.set_axis_labels(
             self.x_label,
             self.y_label,

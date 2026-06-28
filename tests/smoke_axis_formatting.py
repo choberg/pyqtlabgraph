@@ -7,9 +7,9 @@ from pathlib import Path
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QVBoxLayout, QWidget
 
-from pyqtlabgraph import AxisMode
+from pyqtlabgraph import AxisMode, PyQtLabGraphWidget
 from pyqtlabgraph.axis import SmartAxisItem, resolve_axis_mode
 
 
@@ -53,9 +53,51 @@ def main() -> None:
     assert axis.tickStrings([1.25], scale=1.0, spacing=0.1) == ["1.2 s"]
     assert axis.tickStrings([1.25], scale=1.0, spacing=0.005) == ["1.25 s"]
     assert axis.tickStrings([1.25], scale=1.0, spacing=0.0005) == ["1.250 s"]
+    assert axis.tickStrings([60000.0], scale=0.001, spacing=60000.0) == ["1 min"]
+    assert axis.tickStrings([1250.0], scale=0.001, spacing=5.0) == ["1.25 s"]
+
+    axis.setLabel("Elapsed", units="s")
+    axis.set_mode(AxisMode.AUTO)
+    assert axis.labelText == "Elapsed"
+    assert axis.labelUnits == "s"
+    axis.set_mode(AxisMode.TIME)
+    assert axis.labelText == "Elapsed"
+    assert axis.labelUnits == ""
+    axis.set_mode(AxisMode.LINEAR)
+    assert axis.labelText == "Elapsed"
+    assert axis.labelUnits == "s"
 
     axis.set_mode(AxisMode.LINEAR)
     assert len(axis.tickStrings([0.0, 1.0], scale=1.0, spacing=1.0)) == 2
+
+    container = QWidget()
+    container.setLayout(QVBoxLayout())
+    graph = PyQtLabGraphWidget(
+        container,
+        plot_identifier="axis-formatting-time-log",
+        show_toolbar=False,
+        show_legend=False,
+    )
+    graph.plot("sensor", [1.0, 10.0], [1.0, 10.0])
+    graph.set_x_log(True)
+    assert graph.x_log is True
+    graph.set_axis_labels("Elapsed", "Value", "s", "V", x_mode=AxisMode.TIME)
+    assert graph.x_axis_mode == AxisMode.TIME
+    assert graph.x_log is False
+
+    graph.set_x_log(True)
+    assert graph.x_log is True
+    assert graph.x_axis_mode == AxisMode.LINEAR
+
+    graph.set_y_log(True)
+    assert graph.y_log is True
+    graph.set_axis_labels("Elapsed", "Value", "s", "V", y_mode=AxisMode.TIME)
+    assert graph.y_axis_mode == AxisMode.TIME
+    assert graph.y_log is False
+
+    graph.set_y_log(True)
+    assert graph.y_log is True
+    assert graph.y_axis_mode == AxisMode.LINEAR
 
     app.processEvents()
     print("axis formatting smoke ok")

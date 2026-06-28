@@ -15,6 +15,8 @@ from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
     QDoubleSpinBox,
+    QFormLayout,
+    QGroupBox,
     QLineEdit,
     QPushButton,
     QSpinBox,
@@ -37,6 +39,39 @@ def _set_combo_data(combo: QComboBox, data: object) -> None:
     index = combo.findData(data)
     assert index >= 0, f"Missing combo data: {data!r}"
     combo.setCurrentIndex(index)
+
+
+def _form_labels(layout: QFormLayout) -> list[str]:
+    labels: list[str] = []
+    for row in range(layout.rowCount()):
+        item = layout.itemAt(row, QFormLayout.ItemRole.LabelRole)
+        widget = item.widget() if item is not None else None
+        labels.append(widget.text() if widget is not None and hasattr(widget, "text") else "")
+    return labels
+
+
+def _group_sections(dialog: QDialog, tab_index: int) -> list[tuple[str, list[str]]]:
+    layout = dialog.tabs.widget(tab_index).layout()
+    assert isinstance(layout, QVBoxLayout)
+    sections: list[tuple[str, list[str]]] = []
+    for index in range(layout.count()):
+        item = layout.itemAt(index)
+        widget = item.widget() if item is not None else None
+        if widget is None:
+            continue
+        assert isinstance(widget, QGroupBox)
+        group_layout = widget.layout()
+        assert isinstance(group_layout, QFormLayout)
+        sections.append((widget.title(), _form_labels(group_layout)))
+    return sections
+
+
+def _global_sections(dialog: QDialog) -> list[tuple[str, list[str]]]:
+    return _group_sections(dialog, 0)
+
+
+def _curve_sections(dialog: QDialog, tab_index: int) -> list[tuple[str, list[str]]]:
+    return _group_sections(dialog, tab_index)
 
 
 def main() -> None:
@@ -71,13 +106,88 @@ def main() -> None:
         assert dialog.objectName() == "pyqtLabGraphCustomizeDialog"
         assert dialog.isModal() is False
         assert dialog.windowModality() == Qt.WindowModality.NonModal
+        assert _global_sections(dialog) == [
+            (
+                "Axes",
+                [
+                    "X label:",
+                    "X units:",
+                    "X mode:",
+                    "X logarithmic:",
+                    "Y label:",
+                    "Y units:",
+                    "Y mode:",
+                    "Y logarithmic:",
+                ],
+            ),
+            (
+                "View ranges",
+                [
+                    "X range:",
+                    "Y range:",
+                ],
+            ),
+            (
+                "Appearance",
+                [
+                    "Plot background:",
+                    "Plot style:",
+                    "Grid:",
+                ],
+            ),
+            (
+                "Rendering",
+                [
+                    "Anti-aliasing:",
+                    "Downsampling:",
+                    "Clip to view:",
+                    "Adaptive rendering:",
+                ],
+            ),
+            (
+                "Layout saving",
+                [
+                    "Restore view on load:",
+                ],
+            ),
+        ]
+        assert _curve_sections(dialog, 1) == [
+            (
+                "Curve",
+                [
+                    "Visibility:",
+                ],
+            ),
+            (
+                "Line",
+                [
+                    "Line:",
+                    "Line color:",
+                    "Line width:",
+                ],
+            ),
+            (
+                "Markers",
+                [
+                    "Markers:",
+                    "Marker shape:",
+                    "Marker size:",
+                    "Filled markers:",
+                    "Marker outline width:",
+                ],
+            ),
+        ]
 
         _child(dialog, QLineEdit, "pyqtLabGraphXLabelEdit").setText("Elapsed")
         _child(dialog, QLineEdit, "pyqtLabGraphXUnitsEdit").setText("ms")
         _child(dialog, QLineEdit, "pyqtLabGraphYLabelEdit").setText("Signal")
         _child(dialog, QLineEdit, "pyqtLabGraphYUnitsEdit").setText("V")
         _set_combo_data(_child(dialog, QComboBox, "pyqtLabGraphXModeCombo"), AxisMode.TIME)
+        x_log_checkbox = _child(dialog, QCheckBox, "pyqtLabGraphXLogCheckbox")
+        assert x_log_checkbox.isChecked() is False
+        assert x_log_checkbox.isEnabled() is False
         _set_combo_data(_child(dialog, QComboBox, "pyqtLabGraphYModeCombo"), AxisMode.LINEAR)
+        assert _child(dialog, QCheckBox, "pyqtLabGraphYLogCheckbox").isEnabled() is True
         assert graph.x_label_text == "Elapsed"
         assert graph.y_label_text == "Signal"
         assert graph.x_axis_mode == AxisMode.TIME
