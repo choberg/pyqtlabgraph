@@ -6,6 +6,7 @@ __pycache__/
 .venv/
 venv/
 env/
+uv.lock
 
 .pytest_cache/
 .mypy_cache/
@@ -24,4 +25,3 @@ original_icons/toolbar/
 
 # Local release process documentation
 upload_process_github_pypi.md
-
