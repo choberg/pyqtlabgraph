@@ -35,7 +35,9 @@ self.plot.set_plot_style("solarized")
 
 ## Host Application Styling
 
-PyQtLabGraph widgets are transparent outside the `ViewBox` canvas. All surrounding chrome (toolbar buttons, external legend container, customize dialog, pop-up menus) inherits the host Qt application's active style. 
+PyQtLabGraph widgets are transparent outside the `ViewBox` canvas. All surrounding chrome (toolbar buttons, external legend container, customize dialog, pop-up menus) inherits the host Qt application's active style.
+
+The Customize dialog is organized around plot-owned settings, but it remains a normal host-styled Qt dialog. Plot themes affect only the plot data area and grid; they do not restyle dialog controls, toolbar chrome, legend chrome, menus, or application windows.
 
 You can apply modern styling frameworks to your host application (like `qdarktheme` or `QCommonStyle`), and PyQtLabGraph's chrome will adapt automatically:
 

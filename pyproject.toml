@@ -29,6 +29,11 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Visualization",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "tomli>=2; python_version < '3.11'",
+]
+
 [project.urls]
 Homepage = "https://github.com/claudiush/PyQtLabGraph"
 Repository = "https://github.com/claudiush/PyQtLabGraph"

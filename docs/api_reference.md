@@ -77,6 +77,7 @@ Configure views, axes, limits, and serialize settings:
 
 * **`set_axis_labels(x_label: str, y_label: str, x_units: str = None, y_units: str = None, x_mode: AxisMode = None, y_mode: AxisMode = None)`**  
   Updates axis titles, units, and tick representation modes (`AxisMode.AUTO`, `AxisMode.LINEAR`, `AxisMode.TIME`).
+  `AxisMode.TIME` is mutually exclusive with logarithmic scaling on the same axis. Enabling time mode disables that axis' logarithmic scaling, and enabling logarithmic scaling switches a time axis back to linear numeric formatting.
 * **`get_x_range() -> tuple[float, float]`** / **`get_y_range() -> tuple[float, float]`**  
   Gets active viewport limits.
 * **`apply_manual_x_limits(xmin: float, xmax: float)`** / **`apply_manual_y_limits(ymin: float, ymax: float)`**  

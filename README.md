@@ -56,9 +56,10 @@ Many scientists, laboratory engineers, and researchers are familiar with the ins
   - Rolling X-range display with custom size configuration.
   - Live PNG export and instant Customize dialog access.
 - **Modeless Customize Dialog**:
-  - Adjust titles, labels, units, and axis formatting modes.
+  - Adjust titles, labels, units, axis formatting modes, and logarithmic scaling from grouped axis sections.
   - Toggle grids, global anti-aliasing, downsampling, clip-to-view, and adaptive performance.
-  - Manage individual curves: toggling visibility, line width, line colors, marker styles (circle, square, cross, diamond, etc.), size, and borders.
+  - Manage individual curves in per-curve tabs with grouped curve, line, and marker controls.
+  - Edit line width, line colors, marker styles (circle, square, cross, diamond, etc.), size, and borders.
   - **Live Preview**: All configuration edits preview immediately in the plot in real-time, and revert instantly if the user clicks *Cancel*.
 - **Layout Persistence**: Save/Load all layout configurations (visual properties, themes, active ranges, curve states) to a shared versioned JSON file.
 - **Adaptive Performance**: Automatic visual simplification when rendering very dense datasets to avoid UI lag.
