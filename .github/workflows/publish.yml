@@ -11,6 +11,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       id-token: write  # Mandatory for Trusted Publishing (OIDC)
     environment:
       name: release
@@ -26,6 +27,26 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
+
+      - name: Check release tag matches package version
+        run: |
+          python - <<'PY'
+          import re
+          import os
+          from pathlib import Path
+
+          pyproject = Path("pyproject.toml").read_text(encoding="utf-8")
+          match = re.search(r'(?m)^version\s*=\s*"([^"]+)"\s*$', pyproject)
+          if match is None:
+              raise SystemExit("No project.version found in pyproject.toml")
+
+          package_version = match.group(1)
+          tag_version = os.environ["GITHUB_REF_NAME"].removeprefix("v")
+          if tag_version != package_version:
+              raise SystemExit(
+                  f"Release tag {tag_version!r} does not match package version {package_version!r}"
+              )
+          PY
 
       - name: Build package
         run: uv build

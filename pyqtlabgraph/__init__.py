@@ -32,10 +32,14 @@ def _source_tree_version() -> str:
         return "0.0.0-unknown"
 
 
-try:
-    __version__ = version("pyqtlabgraph")
-except PackageNotFoundError:
-    __version__ = _source_tree_version()
+_local_version = _source_tree_version()
+if _local_version != "0.0.0-unknown":
+    __version__ = _local_version
+else:
+    try:
+        __version__ = version("pyqtlabgraph")
+    except PackageNotFoundError:
+        __version__ = "0.0.0-unknown"
 
 __all__ = [
     "AxisMode",
