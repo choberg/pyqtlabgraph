@@ -5,12 +5,14 @@ on:
     types: [published]
 
 permissions:
+  attestations: write
   contents: read
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     permissions:
+      attestations: write
       contents: read
       id-token: write  # Mandatory for Trusted Publishing (OIDC)
     environment:
