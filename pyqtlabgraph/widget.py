@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import replace
 from pathlib import Path
 from typing import overload
@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 
 from .axis import AxisMode, SmartAxisItem, resolve_axis_mode
 from .axis_editors import _RANGE_EDITOR_OFFSET, _AxisRangePopup
+from .colormaps import PyQtLabGraphColorGradient, PyQtLabGraphCurvePalette
 from .constants import (
     _AXIS_LABEL_RIGHT_MARGIN,
     _AXIS_LABEL_TOP_MARGIN,
@@ -47,6 +48,7 @@ from .models import (
     InteractionState,
     InteractionTool,
 )
+from .persistence import TracePersistenceConfig, TracePersistenceManager
 from .range_controller import RangeController
 from .render_optimizer import RenderOptimizer
 from .runtime_state import PlotSnapshot
@@ -73,6 +75,7 @@ _LEFT_AXIS_WIDTH = 62
 _GRID_Z_VALUE = -10
 _PLOT_FRAME_MARGIN = 8
 _FRAME_LAYOUT_SPACING = 0
+
 
 class PyQtLabGraphWidget(QWidget):
     """Independent embeddable PyQtGraph plot component."""
@@ -102,6 +105,7 @@ class PyQtLabGraphWidget(QWidget):
         rolling_window_size: float = 300.0,
         theme: str | PyQtLabGraphTheme | None = None,
         plot_style: str | PyQtLabGraphPlotStyle | None = None,
+        curve_palette: str | PyQtLabGraphCurvePalette | None = None,
         style_registry: PyQtLabGraphStyleRegistry | None = None,
         parent: QWidget | None = None,
         show_frame: bool = True,
@@ -113,9 +117,7 @@ class PyQtLabGraphWidget(QWidget):
         self.layout_path = Path(layout_path) if layout_path is not None else None
         self.rolling_window_size = rolling_window_size
         self._style_registry = (
-            style_registry
-            if style_registry is not None
-            else PyQtLabGraphStyleRegistry()
+            style_registry if style_registry is not None else PyQtLabGraphStyleRegistry()
         )
         self._change_dispatcher = PlotChangeDispatcher(
             emit_curve_added=self.curve_added.emit,
@@ -168,6 +170,8 @@ class PyQtLabGraphWidget(QWidget):
         self._y_log = False
 
         self._curve_manager = CurveManager(self._plot_item)
+        self._trace_persistence = TracePersistenceManager(self._plot_item)
+        self._curve_palette: PyQtLabGraphCurvePalette | None = None
         self._range_controller = RangeController(
             view_box=self._view_box,
             curves_provider=self._curve_manager.ordered_curves,
@@ -198,9 +202,7 @@ class PyQtLabGraphWidget(QWidget):
             curves_provider=self._curve_manager.ordered_curves,
             adaptive_mode_provider=lambda: self._render_optimizer.active,
         )
-        self._view_box.sigResized.connect(
-            self._style_controller.extend_view_box_background
-        )
+        self._view_box.sigResized.connect(self._style_controller.extend_view_box_background)
 
         self._cursor_controller = CursorController(
             parent=self,
@@ -246,6 +248,8 @@ class PyQtLabGraphWidget(QWidget):
         self._view_box.sigRangeChanged.connect(self._handle_view_range_changed)
         self._style_controller.set_theme(theme)
         self._style_controller.set_plot_style(plot_style)
+        if curve_palette is not None:
+            self.set_curve_palette(curve_palette)
         self._range_controller._set_x_range(*_DEFAULT_X_RANGE)
         self._range_controller._set_y_range(*_DEFAULT_Y_RANGE)
         self._cursor_controller.refresh_presentation()
@@ -259,6 +263,15 @@ class PyQtLabGraphWidget(QWidget):
     def _reapply_curve_styles(self) -> None:
         for curve in self._curve_manager.ordered_curves():
             self._style_controller.apply_curve_style(curve)
+            self._trace_persistence.update_curve(curve.key, curve.style, curve.visible)
+        self._apply_persistence_rendering()
+
+    def _apply_persistence_rendering(self) -> None:
+        self._trace_persistence.apply_rendering(
+            clip_to_view=self.clip_to_view_enabled,
+            downsampling=self.downsampling_enabled,
+            antialias=self._render_optimizer.effective_antialiasing_enabled(),
+        )
 
     def _finish_range_and_presentation_update(self) -> None:
         self._range_controller.apply_axis_scaling()
@@ -279,9 +292,10 @@ class PyQtLabGraphWidget(QWidget):
         label: str | None = None,
         style: CurveStyle | None = None,
     ) -> pg.PlotDataItem:
-        curve_style = style or self._style_controller.default_curve_style(
-            len(self._curve_manager.curve_order)
-        )
+        index = len(self._curve_manager.curve_order)
+        curve_style = style or self._style_controller.default_curve_style(index)
+        if style is None and self._curve_palette is not None:
+            curve_style = replace(curve_style, line_color=self._curve_palette.color(index).name())
         with self._change_dispatcher.batch():
             item = self._curve_manager.add_curve(
                 key,
@@ -316,7 +330,11 @@ class PyQtLabGraphWidget(QWidget):
         y: ArrayLike | None = None,
     ) -> None:
         with self._change_dispatcher.batch():
+            previous_x, previous_y = self._curve_manager.curve_data(key)
             self._curve_manager.set_data(key, x, y)
+            curve = self._curve_manager.get_curve(key)
+            self._trace_persistence.capture(key, previous_x, previous_y, curve.style, curve.visible)
+            self._apply_persistence_rendering()
             self._finish_curve_data_update(key, notify=True)
 
     @overload
@@ -349,9 +367,10 @@ class PyQtLabGraphWidget(QWidget):
         label: str | None = None,
         style: CurveStyle | None = None,
     ) -> pg.PlotDataItem:
-        curve_style = style or self._style_controller.default_curve_style(
-            len(self._curve_manager.curve_order)
-        )
+        index = len(self._curve_manager.curve_order)
+        curve_style = style or self._style_controller.default_curve_style(index)
+        if style is None and self._curve_palette is not None:
+            curve_style = replace(curve_style, line_color=self._curve_palette.color(index).name())
         with self._change_dispatcher.batch():
             item = self._curve_manager.plot(
                 key,
@@ -392,10 +411,12 @@ class PyQtLabGraphWidget(QWidget):
     def clear_curve(self, key: str) -> None:
         with self._change_dispatcher.batch():
             self._curve_manager.clear_curve(key)
+            self._trace_persistence.clear(key)
             self._finish_curve_data_update(key, notify=True)
 
     def remove_curve(self, key: str) -> None:
         with self._change_dispatcher.batch():
+            self._trace_persistence.remove(key)
             self._curve_manager.remove_curve(key)
             self._cursor_controller.refresh_for_curve(key)
             self._finish_range_and_presentation_update()
@@ -403,9 +424,9 @@ class PyQtLabGraphWidget(QWidget):
 
     def set_curve_style(self, key: str, style: CurveStyle) -> None:
         if self._curve_manager.set_curve_style(key, style):
-            self._style_controller.apply_curve_style(
-                self._curve_manager.get_curve(key)
-            )
+            self._style_controller.apply_curve_style(self._curve_manager.get_curve(key))
+            curve = self._curve_manager.get_curve(key)
+            self._trace_persistence.update_curve(key, curve.style, curve.visible)
             self._publish_curve_changed(key)
 
     def curve_style(self, key: str) -> CurveStyle:
@@ -421,6 +442,8 @@ class PyQtLabGraphWidget(QWidget):
         if not self._curve_manager.set_curve_visible(key, visible):
             return
         with self._change_dispatcher.batch():
+            curve = self._curve_manager.get_curve(key)
+            self._trace_persistence.update_curve(key, curve.style, curve.visible)
             self._cursor_controller.handle_curve_visibility_changed(key)
             self._finish_range_and_presentation_update()
             self._publish_curve_changed(key)
@@ -582,7 +605,10 @@ class PyQtLabGraphWidget(QWidget):
                 self.bottom_axis.setLabel(
                     self.x_label_text,
                     units=self.x_label_units,
-                    **{"color": self._style_controller.host_axis_color_name(), "margin-top": _AXIS_LABEL_TOP_MARGIN},
+                    **{
+                        "color": self._style_controller.host_axis_color_name(),
+                        "margin-top": _AXIS_LABEL_TOP_MARGIN,
+                    },
                 )
             self.applying_axis_scaling = True
             try:
@@ -590,7 +616,10 @@ class PyQtLabGraphWidget(QWidget):
                 self._x_log = enabled
                 self._plot_item.setLogMode(x=self._x_log, y=self._y_log)
 
-                if not self._interaction_state.autoscale_x and not self._interaction_state.rolling_x:
+                if (
+                    not self._interaction_state.autoscale_x
+                    and not self._interaction_state.rolling_x
+                ):
                     if enabled:
                         if xmin <= 0:
                             xmin = 0.1
@@ -623,7 +652,10 @@ class PyQtLabGraphWidget(QWidget):
                 self.left_axis.setLabel(
                     self.y_label_text,
                     units=self.y_label_units,
-                    **{"color": self._style_controller.host_axis_color_name(), "margin-right": _AXIS_LABEL_RIGHT_MARGIN},
+                    **{
+                        "color": self._style_controller.host_axis_color_name(),
+                        "margin-right": _AXIS_LABEL_RIGHT_MARGIN,
+                    },
                 )
             self.applying_axis_scaling = True
             try:
@@ -672,6 +704,7 @@ class PyQtLabGraphWidget(QWidget):
 
     def set_antialiasing_enabled(self, enabled: bool) -> None:
         self._render_optimizer.set_antialiasing_enabled(enabled)
+        self._apply_persistence_rendering()
 
     @property
     def antialiasing_enabled(self) -> bool:
@@ -679,6 +712,7 @@ class PyQtLabGraphWidget(QWidget):
 
     def set_downsampling_enabled(self, enabled: bool) -> None:
         self._render_optimizer.set_downsampling_enabled(enabled)
+        self._apply_persistence_rendering()
 
     @property
     def downsampling_enabled(self) -> bool:
@@ -686,6 +720,7 @@ class PyQtLabGraphWidget(QWidget):
 
     def set_clip_to_view_enabled(self, enabled: bool) -> None:
         self._render_optimizer.set_clip_to_view_enabled(enabled)
+        self._apply_persistence_rendering()
 
     @property
     def clip_to_view_enabled(self) -> bool:
@@ -754,9 +789,7 @@ class PyQtLabGraphWidget(QWidget):
             self._finish_range_and_presentation_update()
 
     def request_tool(self, tool: InteractionTool, enabled: bool) -> None:
-        changes: dict[str, object] = {
-            "active_tool": tool if enabled else InteractionTool.NONE
-        }
+        changes: dict[str, object] = {"active_tool": tool if enabled else InteractionTool.NONE}
         if enabled and tool is not InteractionTool.NONE:
             changes.update(
                 autoscale_x=False,
@@ -923,10 +956,122 @@ class PyQtLabGraphWidget(QWidget):
     ) -> None:
         with self._change_dispatcher.batch():
             style_changed, changed_keys = self._style_controller.set_plot_style(plot_style)
+            if self._curve_palette is not None:
+                palette_changed: list[str] = []
+                for index, curve in enumerate(self._curve_manager.ordered_curves()):
+                    target = replace(
+                        curve.style,
+                        line_color=self._curve_palette.color(index).name(),
+                    )
+                    if self._curve_manager.set_curve_style(curve.key, target):
+                        self._style_controller.apply_curve_style(curve)
+                        palette_changed.append(curve.key)
+                changed_keys = tuple(dict.fromkeys((*changed_keys, *palette_changed)))
             for key in changed_keys:
+                curve = self._curve_manager.get_curve(key)
+                self._trace_persistence.update_curve(key, curve.style, curve.visible)
                 self._publish_curve_changed(key)
             if style_changed or changed_keys:
                 self._publish_presentation_changed()
+
+    @property
+    def curve_palette(self) -> PyQtLabGraphCurvePalette | None:
+        return self._curve_palette
+
+    def set_curve_palette(self, palette: str | PyQtLabGraphCurvePalette | None) -> None:
+        resolved = None if palette is None else self._style_registry.resolve_curve_palette(palette)
+        if resolved == self._curve_palette:
+            return
+        self._curve_palette = resolved
+        with self._change_dispatcher.batch():
+            for index, curve in enumerate(self._curve_manager.ordered_curves()):
+                color = (
+                    self._style_controller.plot_style_curve_style(index).line_color
+                    if resolved is None
+                    else resolved.color(index).name()
+                )
+                self.set_curve_style(curve.key, replace(curve.style, line_color=color))
+            self._publish_presentation_changed()
+
+    def apply_curve_gradient(
+        self,
+        gradient: str | PyQtLabGraphColorGradient,
+        *,
+        values: Mapping[str, float] | None = None,
+        value_range: tuple[float, float] | None = None,
+        reverse: bool = False,
+    ) -> None:
+        resolved = self._style_registry.resolve_color_gradient(gradient)
+        if not isinstance(reverse, bool):
+            raise TypeError("reverse must be a bool.")
+        keys = [key for key, _label in self.curve_choices()]
+        if values is None:
+            if value_range is not None:
+                raise ValueError("value_range requires explicit curve values.")
+            positions = {
+                key: (0.5 if len(keys) == 1 else index / (len(keys) - 1))
+                for index, key in enumerate(keys)
+            }
+        else:
+            if not isinstance(values, Mapping) or not values:
+                raise ValueError("values must be a non-empty mapping.")
+            if any(not isinstance(key, str) for key in values):
+                raise TypeError("Gradient curve keys must be strings.")
+            unknown = set(values).difference(keys)
+            if unknown:
+                raise KeyError(f'Curve "{sorted(unknown)[0]}" does not exist.')
+            numeric: dict[str, float] = {}
+            for key, raw in values.items():
+                if isinstance(raw, bool) or not isinstance(raw, (int, float)):
+                    raise TypeError("Gradient curve values must be real numbers.")
+                value = float(raw)
+                if not np.isfinite(value):
+                    raise ValueError("Gradient curve values must be finite.")
+                numeric[key] = value
+            if value_range is None:
+                low, high = min(numeric.values()), max(numeric.values())
+            else:
+                if len(value_range) != 2:
+                    raise ValueError("value_range must contain exactly two values.")
+                if any(
+                    isinstance(value, bool) or not isinstance(value, (int, float))
+                    for value in value_range
+                ):
+                    raise TypeError("value_range values must be real numbers.")
+                low, high = float(value_range[0]), float(value_range[1])
+                if not np.isfinite(low) or not np.isfinite(high) or low >= high:
+                    raise ValueError("value_range must be finite and strictly increasing.")
+            positions = {
+                key: 0.5 if low == high else (value - low) / (high - low)
+                for key, value in numeric.items()
+            }
+        updates = {
+            key: replace(
+                self.curve_style(key),
+                line_color=resolved.color_at(position, reverse=reverse).name(),
+            )
+            for key, position in positions.items()
+        }
+        with self._change_dispatcher.batch():
+            for key, style in updates.items():
+                self.set_curve_style(key, style)
+
+    def set_curve_persistence(self, key: str, config: TracePersistenceConfig | None) -> None:
+        curve = self._curve_manager.get_curve(key)
+        if self._trace_persistence.config(key) == config:
+            return
+        self._trace_persistence.set_config(key, config)
+        self._trace_persistence.update_curve(key, curve.style, curve.visible)
+        self._apply_persistence_rendering()
+        self._publish_curve_changed(key)
+
+    def curve_persistence(self, key: str) -> TracePersistenceConfig | None:
+        self._curve_manager.get_curve(key)
+        return self._trace_persistence.config(key)
+
+    def clear_curve_persistence_history(self, key: str) -> None:
+        self._curve_manager.get_curve(key)
+        self._trace_persistence.clear(key)
 
     def restore_snapshot(self, snapshot: PlotSnapshot) -> None:
         """Atomically restore an exact runtime snapshot."""
@@ -941,14 +1086,10 @@ class PyQtLabGraphWidget(QWidget):
                 raise
 
     def _apply_snapshot(self, snapshot: PlotSnapshot) -> None:
-        current_curve_keys = {
-            key for key, _label in self.curve_choices()
-        }
+        current_curve_keys = {key for key, _label in self.curve_choices()}
         snapshot_curve_keys = {state.key for state in snapshot.curves}
         if snapshot_curve_keys != current_curve_keys:
-            raise ValueError(
-                "PlotSnapshot curve keys must match the target widget."
-            )
+            raise ValueError("PlotSnapshot curve keys must match the target widget.")
 
         self.set_x_log(snapshot.x_log)
         self.set_y_log(snapshot.y_log)
@@ -967,9 +1108,11 @@ class PyQtLabGraphWidget(QWidget):
         self.set_adaptive_performance_enabled(snapshot.adaptive_performance)
         self.set_theme(snapshot.theme)
         self.set_plot_style(snapshot.plot_style)
+        self.set_curve_palette(snapshot.curve_palette)
         for curve in snapshot.curves:
             self.set_curve_visible(curve.key, curve.visible)
             self.set_curve_style(curve.key, curve.style)
+            self.set_curve_persistence(curve.key, curve.persistence)
 
         for cursor in tuple(self.cursor_states()):
             self.remove_cursor(cursor.key)
@@ -1009,6 +1152,7 @@ class PyQtLabGraphWidget(QWidget):
         if layout is None:
             return False
         apply_plot_layout(self, layout)
+        self._trace_persistence.clear_all()
         return True
 
     def save_layout(
@@ -1124,13 +1268,19 @@ class PyQtLabGraphWidget(QWidget):
         self.bottom_axis.setLabel(
             x_label,
             units=x_units,
-            **{"color": self._style_controller.host_axis_color_name(), "margin-top": _AXIS_LABEL_TOP_MARGIN},
+            **{
+                "color": self._style_controller.host_axis_color_name(),
+                "margin-top": _AXIS_LABEL_TOP_MARGIN,
+            },
         )
         self.left_axis.set_mode(self.y_axis_mode)
         self.left_axis.setLabel(
             y_label,
             units=y_units,
-            **{"color": self._style_controller.host_axis_color_name(), "margin-right": _AXIS_LABEL_RIGHT_MARGIN},
+            **{
+                "color": self._style_controller.host_axis_color_name(),
+                "margin-right": _AXIS_LABEL_RIGHT_MARGIN,
+            },
         )
         self._cursor_controller.refresh_presentation()
         self._publish_presentation_changed()

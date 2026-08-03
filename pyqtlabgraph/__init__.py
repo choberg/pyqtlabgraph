@@ -3,10 +3,17 @@ from __future__ import annotations
 from importlib.metadata import PackageNotFoundError, version
 
 from .axis import AxisMode
+from .colormaps import (
+    BUILTIN_COLOR_GRADIENTS,
+    BUILTIN_CURVE_PALETTES,
+    PyQtLabGraphColorGradient,
+    PyQtLabGraphCurvePalette,
+)
 from .cursor_widget import PyQtLabGraphCursorWidget
 from .layouts import LayoutFileError
 from .legend import PyQtLabGraphLegend
 from .models import CursorLineStyle, CursorPairState, CursorState, CursorStyle, CursorType
+from .persistence import TracePersistenceConfig
 from .runtime_state import PlotSnapshot
 from .style_registry import PyQtLabGraphStyleRegistry
 from .styles import (
@@ -29,6 +36,8 @@ except PackageNotFoundError:
 __all__ = [
     "AxisMode",
     "BUILTIN_PLOT_STYLES",
+    "BUILTIN_CURVE_PALETTES",
+    "BUILTIN_COLOR_GRADIENTS",
     "BUILTIN_THEMES",
     "CursorState",
     "CursorLineStyle",
@@ -39,11 +48,14 @@ __all__ = [
     "LayoutFileError",
     "PlotSnapshot",
     "PyQtLabGraphPlotStyle",
+    "PyQtLabGraphCurvePalette",
+    "PyQtLabGraphColorGradient",
     "PyQtLabGraphStyleRegistry",
     "PyQtLabGraphTheme",
     "PyQtLabGraphCursorWidget",
     "PyQtLabGraphLegend",
     "PyQtLabGraphToolbar",
     "PyQtLabGraphWidget",
+    "TracePersistenceConfig",
     "__version__",
 ]

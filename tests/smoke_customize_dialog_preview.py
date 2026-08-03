@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QDoubleSpinBox,
     QLineEdit,
     QPushButton,
+    QSpinBox,
 )
 
 from pyqtlabgraph import AxisMode, CurveStyle
@@ -42,6 +43,8 @@ def main() -> None:
         set_combo_data(child(dialog, QComboBox, "pyqtLabGraphPlotStyleCombo"), "dark")
         child(dialog, QCheckBox, "pyqtLabGraphCurveVisible_sensor").setChecked(False)
         child(dialog, QDoubleSpinBox, "pyqtLabGraphCurveLineWidth_sensor").setValue(3.5)
+        child(dialog, QCheckBox, "pyqtLabGraphPersistenceEnabled_sensor").setChecked(True)
+        child(dialog, QSpinBox, "pyqtLabGraphPersistenceHistoryLength_sensor").setValue(9)
         child(dialog, QDoubleSpinBox, "pyqtLabGraphXMinSpin").setValue(10.0)
         x_max = child(dialog, QDoubleSpinBox, "pyqtLabGraphXMaxSpin")
         x_max.setValue(20.0)
@@ -64,17 +67,21 @@ def main() -> None:
     assert plot.get_x_range() == (-1.0, 3.0)
     assert plot.get_y_range() == (-2.0, 4.0)
     assert plot.curve_style("sensor") == original_style
+    assert plot.curve_persistence("sensor") is None
 
     def apply_and_close(dialog: QDialog) -> None:
         child(dialog, QLineEdit, "pyqtLabGraphXLabelEdit").setText("Applied X")
         child(dialog, QDoubleSpinBox, "pyqtLabGraphYMinSpin").setValue(-5.0)
         child(dialog, QDoubleSpinBox, "pyqtLabGraphYMaxSpin").setValue(5.0)
+        child(dialog, QCheckBox, "pyqtLabGraphPersistenceEnabled_sensor").setChecked(True)
+        child(dialog, QSpinBox, "pyqtLabGraphPersistenceHistoryLength_sensor").setValue(9)
         child(dialog, QPushButton, "pyqtLabGraphApplyAndCloseButton").click()
 
     show_with_callback(plot, apply_and_close)
     app.processEvents()
     assert plot.x_label_text == "Applied X"
     assert plot.get_y_range() == (-5.0, 5.0)
+    assert plot.curve_persistence("sensor").history_length == 9
 
     plot.show_customize_dialog()
     app.processEvents()
@@ -85,11 +92,15 @@ def main() -> None:
     ]
     assert len(visible_dialogs) == 1
     close_dialog = visible_dialogs[0]
+    child(close_dialog, QSpinBox, "pyqtLabGraphPersistenceHistoryLength_sensor").setValue(6)
+    child(close_dialog, QPushButton, "pyqtLabGraphApplyButton").click()
+    assert plot.curve_persistence("sensor").history_length == 6
     child(close_dialog, QLineEdit, "pyqtLabGraphXLabelEdit").setText("Window-close preview")
     assert plot.x_label_text == "Window-close preview"
     close_dialog.close()
     app.processEvents()
     assert plot.x_label_text == "Applied X"
+    assert plot.curve_persistence("sensor").history_length == 6
     print("customize dialog preview smoke ok")
 
 

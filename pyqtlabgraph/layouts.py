@@ -18,6 +18,7 @@ from .models import (
     InteractionState,
     InteractionTool,
 )
+from .persistence import TracePersistenceConfig
 from .runtime_state import CurveSnapshot, PlotSnapshot
 from .styles import CurveStyle
 
@@ -33,6 +34,7 @@ _PLOT_FIELDS = frozenset(
         "restore_view_state_on_load",
         "theme",
         "plot_style",
+        "curve_palette",
         "axes",
         "grid_visible",
         "rendering",
@@ -48,11 +50,10 @@ _AXIS_FIELDS = frozenset({"label", "units", "mode", "log"})
 _RENDERING_FIELDS = frozenset(
     {"antialiasing", "downsampling", "clip_to_view", "adaptive_performance"}
 )
-_INTERACTION_FIELDS = frozenset(
-    {"autoscale_x", "autoscale_y", "rolling_x", "active_tool"}
-)
+_INTERACTION_FIELDS = frozenset({"autoscale_x", "autoscale_y", "rolling_x", "active_tool"})
 _RANGE_FIELDS = frozenset({"x", "y"})
-_CURVE_FIELDS = frozenset({"visible", "style"})
+_CURVE_FIELDS = frozenset({"visible", "style", "persistence"})
+_PERSISTENCE_FIELDS = frozenset({"history_length", "oldest_opacity", "newest_opacity", "decay"})
 _CURVE_STYLE_FIELDS = frozenset(
     {
         "line_enabled",
@@ -79,9 +80,7 @@ _CURSOR_FIELDS = frozenset(
     }
 )
 _CURSOR_STYLE_FIELDS = frozenset({"line_color", "line_width", "line_style"})
-_CURSOR_PAIR_FIELDS = frozenset(
-    {"key", "members", "measurement_visible", "annotation_position"}
-)
+_CURSOR_PAIR_FIELDS = frozenset({"key", "members", "measurement_visible", "annotation_position"})
 
 
 class LayoutFileError(RuntimeError):
@@ -108,6 +107,7 @@ class RenderingLayoutState:
 class CurveLayoutState:
     visible: bool
     style: CurveStyle
+    persistence: TracePersistenceConfig | None
 
 
 @dataclass(frozen=True)
@@ -137,6 +137,7 @@ class PlotLayoutState:
     restore_view_state_on_load: bool
     theme: str
     plot_style: str
+    curve_palette: str | None
     x_axis: AxisLayoutState
     y_axis: AxisLayoutState
     grid_visible: bool
@@ -211,9 +212,7 @@ def save_plot_layout(
     )
     plots = dict(document.plots)
     plots[plot_identifier] = plot_layout
-    encoded = encode_layout_document(
-        LayoutDocument(version=LAYOUT_FORMAT_VERSION, plots=plots)
-    )
+    encoded = encode_layout_document(LayoutDocument(version=LAYOUT_FORMAT_VERSION, plots=plots))
     layout_path.parent.mkdir(parents=True, exist_ok=True)
     temporary: Path | None = None
     try:
@@ -250,6 +249,7 @@ def capture_plot_layout(
         restore_view_state_on_load=restore_view_state_on_load,
         theme=snapshot.theme.name,
         plot_style=snapshot.plot_style.name,
+        curve_palette=(snapshot.curve_palette.name if snapshot.curve_palette is not None else None),
         x_axis=AxisLayoutState(
             snapshot.x_label,
             snapshot.x_units,
@@ -272,7 +272,7 @@ def capture_plot_layout(
         interaction_state=snapshot.interaction_state,
         ranges=ranges,
         curves={
-            curve.key: CurveLayoutState(curve.visible, curve.style)
+            curve.key: CurveLayoutState(curve.visible, curve.style, curve.persistence)
             for curve in snapshot.curves
         },
         cursors=tuple(
@@ -310,9 +310,7 @@ def apply_plot_layout(
 ) -> None:
     """Reconcile a validated layout and replace widget state atomically."""
     restore_view = (
-        layout.restore_view_state_on_load
-        if restore_view_state is None
-        else restore_view_state
+        layout.restore_view_state_on_load if restore_view_state is None else restore_view_state
     )
     target = _reconcile_layout(plot, layout, restore_view=restore_view)
     plot.restore_snapshot(target)
@@ -328,6 +326,11 @@ def _reconcile_layout(
     try:
         theme = plot.style_registry.resolve_theme(layout.theme)
         plot_style = plot.style_registry.resolve_plot_style(layout.plot_style)
+        curve_palette = (
+            None
+            if layout.curve_palette is None
+            else plot.style_registry.resolve_curve_palette(layout.curve_palette)
+        )
     except ValueError as exc:
         raise LayoutFileError(str(exc)) from exc
 
@@ -335,23 +338,19 @@ def _reconcile_layout(
         CurveSnapshot(
             key=state.key,
             visible=(
-                layout.curves[state.key].visible
-                if state.key in layout.curves
-                else state.visible
+                layout.curves[state.key].visible if state.key in layout.curves else state.visible
             ),
-            style=(
-                layout.curves[state.key].style
+            style=(layout.curves[state.key].style if state.key in layout.curves else state.style),
+            persistence=(
+                layout.curves[state.key].persistence
                 if state.key in layout.curves
-                else state.style
+                else state.persistence
             ),
         )
         for state in current.curves
     )
     curve_keys = {state.key for state in current.curves}
-    cursors = tuple(
-        _cursor_layout_to_state(state, curve_keys)
-        for state in layout.cursors
-    )
+    cursors = tuple(_cursor_layout_to_state(state, curve_keys) for state in layout.cursors)
     pairs = tuple(
         CursorPairState(
             key=state.key,
@@ -363,17 +362,11 @@ def _reconcile_layout(
         for state in layout.cursor_pairs
     )
 
-    interaction = (
-        layout.interaction_state if restore_view else current.interaction_state
-    )
+    interaction = layout.interaction_state if restore_view else current.interaction_state
     x_range = current.x_range
     y_range = current.y_range
     if restore_view:
-        if (
-            "x" in layout.ranges
-            and not interaction.autoscale_x
-            and not interaction.rolling_x
-        ):
+        if "x" in layout.ranges and not interaction.autoscale_x and not interaction.rolling_x:
             x_range = layout.ranges["x"]
         if "y" in layout.ranges and not interaction.autoscale_y:
             y_range = layout.ranges["y"]
@@ -381,6 +374,7 @@ def _reconcile_layout(
     return PlotSnapshot(
         theme=theme,
         plot_style=plot_style,
+        curve_palette=curve_palette,
         x_label=layout.x_axis.label,
         y_label=layout.y_axis.label,
         x_units=layout.x_axis.units,
@@ -430,15 +424,11 @@ def _read_layout_document(path: Path) -> LayoutDocument:
     try:
         source = path.read_text(encoding="utf-8")
     except OSError as exc:
-        raise LayoutFileError(
-            f"Could not read PyQtLabGraph layout file {path}: {exc}"
-        ) from exc
+        raise LayoutFileError(f"Could not read PyQtLabGraph layout file {path}: {exc}") from exc
     try:
         return decode_layout_document(source)
     except LayoutFileError as exc:
-        raise LayoutFileError(
-            f"Could not read PyQtLabGraph layout file {path}: {exc}"
-        ) from exc
+        raise LayoutFileError(f"Could not read PyQtLabGraph layout file {path}: {exc}") from exc
 
 
 def _parse_document(raw: object) -> LayoutDocument:
@@ -488,6 +478,9 @@ def _parse_plot_layout(raw: dict[str, Any]) -> PlotLayoutState:
             raw["plot_style"],
             'layout field "plot_style"',
         ),
+        curve_palette=_optional_non_empty_string(
+            raw["curve_palette"], 'layout field "curve_palette"'
+        ),
         x_axis=_parse_axis(
             _mapping(axes["x"], 'layout axis "x"'),
             axis="x",
@@ -504,12 +497,8 @@ def _parse_plot_layout(raw: dict[str, Any]) -> PlotLayoutState:
             adaptive_performance=_boolean(rendering, "adaptive_performance"),
         ),
         interaction_state=_parse_interaction(interaction),
-        ranges=_parse_ranges(
-            _mapping(raw["ranges"], 'layout field "ranges"')
-        ),
-        curves=_parse_curves(
-            _mapping(raw["curves"], 'layout field "curves"')
-        ),
+        ranges=_parse_ranges(_mapping(raw["ranges"], 'layout field "ranges"')),
+        curves=_parse_curves(_mapping(raw["curves"], 'layout field "curves"')),
         cursors=cursors,
         cursor_pairs=pairs,
     )
@@ -528,9 +517,7 @@ def _parse_axis(raw: dict[str, Any], *, axis: str) -> AxisLayoutState:
         raise LayoutFileError(str(exc)) from exc
     log = _boolean(raw, "log")
     if log and mode is AxisMode.TIME:
-        raise LayoutFileError(
-            f'Layout axis "{axis}" cannot combine time mode with log scaling.'
-        )
+        raise LayoutFileError(f'Layout axis "{axis}" cannot combine time mode with log scaling.')
     return AxisLayoutState(
         label=_string(raw["label"], f'layout axis "{axis}" label'),
         units=_optional_string(raw["units"], f'layout axis "{axis}" units'),
@@ -547,9 +534,7 @@ def _parse_interaction(raw: dict[str, Any]) -> InteractionState:
     try:
         tool = InteractionTool(tool_value)
     except ValueError as exc:
-        raise LayoutFileError(
-            f'Layout interaction active_tool "{tool_value}" is invalid.'
-        ) from exc
+        raise LayoutFileError(f'Layout interaction active_tool "{tool_value}" is invalid.') from exc
     try:
         return InteractionState(
             autoscale_x=_boolean(raw, "autoscale_x"),
@@ -569,15 +554,11 @@ def _parse_ranges(raw: dict[str, Any]) -> dict[str, tuple[float, float]]:
             continue
         value = raw[axis]
         if not isinstance(value, list) or len(value) != 2:
-            raise LayoutFileError(
-                f'Layout range "{axis}" must contain two numbers.'
-            )
+            raise LayoutFileError(f'Layout range "{axis}" must contain two numbers.')
         first = _finite_number(value[0], f'layout range "{axis}"')
         second = _finite_number(value[1], f'layout range "{axis}"')
         if first == second:
-            raise LayoutFileError(
-                f'Layout range "{axis}" must have a non-zero span.'
-            )
+            raise LayoutFileError(f'Layout range "{axis}" must have a non-zero span.')
         result[axis] = (min(first, second), max(first, second))
     return result
 
@@ -595,8 +576,27 @@ def _parse_curves(raw: dict[str, Any]) -> dict[str, CurveLayoutState]:
                 state["style"],
                 owner=f'layout curve "{curve_key}" style',
             ),
+            persistence=_parse_persistence(
+                state["persistence"], owner=f'layout curve "{curve_key}" persistence'
+            ),
         )
     return result
+
+
+def _parse_persistence(raw: object, *, owner: str) -> TracePersistenceConfig | None:
+    if raw is None:
+        return None
+    value = _mapping(raw, owner)
+    _validate_fields(value, _PERSISTENCE_FIELDS, owner)
+    try:
+        return TracePersistenceConfig(
+            history_length=_integer(value["history_length"], f"{owner} history_length"),
+            oldest_opacity=_finite_number(value["oldest_opacity"], f"{owner} oldest_opacity"),
+            newest_opacity=_finite_number(value["newest_opacity"], f"{owner} newest_opacity"),
+            decay=_finite_number(value["decay"], f"{owner} decay"),
+        )
+    except (TypeError, ValueError) as exc:
+        raise LayoutFileError(str(exc)) from exc
 
 
 def _parse_curve_style(raw: object, *, owner: str) -> CurveStyle:
@@ -652,22 +652,16 @@ def _parse_cursors(raw: object) -> tuple[CursorLayoutState, ...]:
         try:
             cursor_type = CursorType(type_value)
         except ValueError as exc:
-            raise LayoutFileError(
-                f'Cursor "{key}" has an invalid type.'
-            ) from exc
+            raise LayoutFileError(f'Cursor "{key}" has an invalid type.') from exc
         target = _optional_string(
             state["snap_target_curve_key"],
             f'cursor "{key}" snap_target_curve_key',
         )
         if cursor_type is CursorType.Y and target is not None:
-            raise LayoutFileError(
-                f'Y cursor "{key}" cannot have a snap target.'
-            )
+            raise LayoutFileError(f'Y cursor "{key}" cannot have a snap target.')
         follow = _boolean(state, "follow_target_visibility")
         if follow and target is None:
-            raise LayoutFileError(
-                f'Cursor "{key}" visibility coupling requires a snap target.'
-            )
+            raise LayoutFileError(f'Cursor "{key}" visibility coupling requires a snap target.')
         result.append(
             CursorLayoutState(
                 key=key,
@@ -727,9 +721,7 @@ def _parse_pairs(raw: object) -> tuple[CursorPairLayoutState, ...]:
         key = _non_empty_string(state["key"], f"{owner} key")
         raw_members = state["members"]
         if not isinstance(raw_members, list) or len(raw_members) != 2:
-            raise LayoutFileError(
-                f'Cursor pair "{key}" must contain exactly two members.'
-            )
+            raise LayoutFileError(f'Cursor pair "{key}" must contain exactly two members.')
         first = _non_empty_string(
             raw_members[0],
             f'cursor pair "{key}" first member',
@@ -739,15 +731,11 @@ def _parse_pairs(raw: object) -> tuple[CursorPairLayoutState, ...]:
             f'cursor pair "{key}" second member',
         )
         if first == second:
-            raise LayoutFileError(
-                f'Cursor pair "{key}" requires two distinct members.'
-            )
+            raise LayoutFileError(f'Cursor pair "{key}" requires two distinct members.')
         if key in keys:
             raise LayoutFileError(f'Duplicate cursor pair key "{key}".')
         if first in members or second in members:
-            raise LayoutFileError(
-                f'Cursor pair "{key}" reuses a cursor from another saved pair.'
-            )
+            raise LayoutFileError(f'Cursor pair "{key}" reuses a cursor from another saved pair.')
         annotation = _finite_number(
             state["annotation_position"],
             f'cursor pair "{key}" annotation_position',
@@ -783,19 +771,13 @@ def _validate_saved_pair_members(
         first = cursor_types.get(pair.first_cursor_key)
         second = cursor_types.get(pair.second_cursor_key)
         if first is None or second is None:
-            raise LayoutFileError(
-                f'Cursor pair "{pair.key}" refers to an unknown cursor.'
-            )
+            raise LayoutFileError(f'Cursor pair "{pair.key}" refers to an unknown cursor.')
         if first is not second:
-            raise LayoutFileError(
-                f'Cursor pair "{pair.key}" members must use the same axis.'
-            )
+            raise LayoutFileError(f'Cursor pair "{pair.key}" members must use the same axis.')
         first_position = cursor_positions[pair.first_cursor_key]
         second_position = cursor_positions[pair.second_cursor_key]
         if second_position != first_position + 1:
-            raise LayoutFileError(
-                f'Cursor pair "{pair.key}" members must be adjacent and ordered.'
-            )
+            raise LayoutFileError(f'Cursor pair "{pair.key}" members must be adjacent and ordered.')
 
 
 def _plot_layout_to_mapping(layout: PlotLayoutState) -> dict[str, object]:
@@ -803,6 +785,7 @@ def _plot_layout_to_mapping(layout: PlotLayoutState) -> dict[str, object]:
         "restore_view_state_on_load": layout.restore_view_state_on_load,
         "theme": layout.theme,
         "plot_style": layout.plot_style,
+        "curve_palette": layout.curve_palette,
         "axes": {
             "x": _axis_to_mapping(layout.x_axis),
             "y": _axis_to_mapping(layout.y_axis),
@@ -820,21 +803,17 @@ def _plot_layout_to_mapping(layout: PlotLayoutState) -> dict[str, object]:
             "rolling_x": layout.interaction_state.rolling_x,
             "active_tool": layout.interaction_state.active_tool.value,
         },
-        "ranges": {
-            key: [values[0], values[1]]
-            for key, values in layout.ranges.items()
-        },
+        "ranges": {key: [values[0], values[1]] for key, values in layout.ranges.items()},
         "curves": {
             key: {
                 "visible": state.visible,
                 "style": _curve_style_to_mapping(state.style),
+                "persistence": _persistence_to_mapping(state.persistence),
             }
             for key, state in layout.curves.items()
         },
         "cursors": [_cursor_to_mapping(state) for state in layout.cursors],
-        "cursor_pairs": [
-            _pair_to_mapping(state) for state in layout.cursor_pairs
-        ],
+        "cursor_pairs": [_pair_to_mapping(state) for state in layout.cursor_pairs],
     }
 
 
@@ -857,6 +836,19 @@ def _curve_style_to_mapping(style: CurveStyle) -> dict[str, object]:
         "marker_outline_width": style.marker_outline_width,
         "marker_enabled": style.marker_enabled,
         "marker_filled": style.marker_filled,
+    }
+
+
+def _persistence_to_mapping(
+    config: TracePersistenceConfig | None,
+) -> dict[str, object] | None:
+    if config is None:
+        return None
+    return {
+        "history_length": config.history_length,
+        "oldest_opacity": config.oldest_opacity,
+        "newest_opacity": config.newest_opacity,
+        "decay": config.decay,
     }
 
 
@@ -949,6 +941,12 @@ def _optional_string(value: object, owner: str) -> str | None:
         return None
     result = _string(value, owner)
     return result or None
+
+
+def _optional_non_empty_string(value: object, owner: str) -> str | None:
+    if value is None:
+        return None
+    return _non_empty_string(value, owner)
 
 
 def _finite_number(value: object, owner: str) -> float:

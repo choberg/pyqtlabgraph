@@ -50,6 +50,7 @@ def _layout(*, theme: str = "light", plot_style: str = "light") -> dict[str, obj
         "restore_view_state_on_load": True,
         "theme": theme,
         "plot_style": plot_style,
+        "curve_palette": None,
         "axes": {
             "x": {"label": "Time", "units": "s", "mode": "linear", "log": False},
             "y": {"label": "Value", "units": None, "mode": "auto", "log": False},
@@ -188,7 +189,11 @@ def test_layout_codec_strictly_rejects_invalid_values(
     for key in path[:-1]:
         if key == "unknown":
             assert isinstance(target, dict)
-            target[key] = {"visible": True, "style": _curve_style()}
+            target[key] = {
+                "visible": True,
+                "style": _curve_style(),
+                "persistence": None,
+            }
         assert isinstance(target, dict)
         target = target[key]
     assert isinstance(target, dict)
@@ -199,10 +204,7 @@ def test_layout_codec_strictly_rejects_invalid_values(
 
 
 def test_layout_codec_rejects_duplicate_json_keys() -> None:
-    raw = (
-        '{"version":1,"plots":{"plot":'
-        '{"grid_visible":true,"grid_visible":false}}}'
-    )
+    raw = '{"version":1,"plots":{"plot":{"grid_visible":true,"grid_visible":false}}}'
     with pytest.raises(LayoutFileError, match="Duplicate JSON object key"):
         decode_layout_document(raw)
 
@@ -325,6 +327,7 @@ def test_layout_load_is_atomic_and_emits_only_state_reset(
     layout["curves"] = {
         "sensor": {
             "visible": False,
+            "persistence": None,
             "style": {
                 "line_enabled": True,
                 "line_color": "#D55E00",
@@ -367,7 +370,11 @@ def test_failed_layout_application_restores_snapshot_and_emits_nothing(
     path = tmp_path / "layout.json"
     layout = _layout(theme="dark")
     layout["curves"] = {
-        "sensor": {"visible": False, "style": CurveStyle(line_color="#D55E00").__dict__}
+        "sensor": {
+            "visible": False,
+            "style": CurveStyle(line_color="#D55E00").__dict__,
+            "persistence": None,
+        }
     }
     _write(path, _document(layout))
     plot = PyQtLabGraphWidget(plot_identifier="plot", layout_path=path)
@@ -482,7 +489,11 @@ def test_state_reset_refreshes_companion_projections(
     path = tmp_path / "layout.json"
     layout = _layout()
     layout["curves"] = {
-        "sensor": {"visible": False, "style": CurveStyle().__dict__},
+        "sensor": {
+            "visible": False,
+            "style": CurveStyle().__dict__,
+            "persistence": None,
+        },
     }
     layout["cursors"] = [
         _cursor("saved", name="Saved", cursor_type="y", value=2.0),
@@ -510,11 +521,13 @@ def test_layout_keeps_host_curves_and_replaces_cursor_state(
     path = tmp_path / "layout.json"
     layout = _layout()
     layout["curves"] = {
-        "saved-only": {"visible": False, "style": CurveStyle().__dict__},
+        "saved-only": {
+            "visible": False,
+            "style": CurveStyle().__dict__,
+            "persistence": None,
+        },
     }
-    layout["cursors"] = [
-        _cursor("saved", name="Saved", value=4.0, label_visible=True)
-    ]
+    layout["cursors"] = [_cursor("saved", name="Saved", value=4.0, label_visible=True)]
     _write(path, _document(layout))
     plot = PyQtLabGraphWidget(plot_identifier="plot", layout_path=path)
     plot.add_curve("current-only")

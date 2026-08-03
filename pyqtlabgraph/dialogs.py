@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QLabel,
+    QMenu,
     QMessageBox,
     QTabWidget,
     QVBoxLayout,
@@ -78,6 +79,7 @@ class _CustomizeDialog(QDialog):
         )
         self.select_initial_curve_tab(curve_key)
         self._sync_log_checkbox_availability()
+        self._update_color_previews()
         self.session.sync_ranges_from_plot()
 
         hint = QLabel(_PREVIEW_HINT, self)
@@ -115,6 +117,9 @@ class _CustomizeDialog(QDialog):
         save_button = buttons.addButton("Save Layout", QDialogButtonBox.ButtonRole.ActionRole)
         save_button.setObjectName("pyqtLabGraphSaveLayoutButton")
         save_button.clicked.connect(self._save_layout)
+        apply_button = buttons.addButton(QDialogButtonBox.StandardButton.Apply)
+        apply_button.setObjectName("pyqtLabGraphApplyButton")
+        apply_button.clicked.connect(self._apply)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         self.finished.connect(self._finish)
@@ -143,6 +148,10 @@ class _CustomizeDialog(QDialog):
             checkbox.toggled.connect(self._preview_rendering)
         controls.plot_background.currentIndexChanged.connect(self._preview_plot_background)
         controls.plot_style.currentIndexChanged.connect(self._preview_plot_style)
+        controls.curve_palette.currentIndexChanged.connect(self._preview_curve_palette)
+        controls.gradient.currentIndexChanged.connect(self._update_color_previews)
+        controls.gradient_reverse.toggled.connect(self._update_color_previews)
+        controls.apply_gradient.clicked.connect(self._apply_gradient)
         controls.preview_x_range_button.clicked.connect(self._preview_x_range)
         controls.preview_y_range_button.clicked.connect(self._preview_y_range)
         for key, editor in self.curve_editors.items():
@@ -248,7 +257,62 @@ class _CustomizeDialog(QDialog):
         )
         self.plot.set_plot_style(style)
         for index, (key, _label) in enumerate(self.plot.curve_choices()):
-            self.curve_editors[key].set_curve_style(style.curve_style(index), self.plot.theme)
+            curve_style = self.plot.curve_style(key)
+            self.curve_editors[key].set_curve_style(curve_style, self.plot.theme)
+
+    def _preview_curve_palette(self, *_args: object) -> None:
+        if not self._preview_enabled:
+            return
+        name = self.global_controls.curve_palette.currentData()
+        self.plot.set_curve_palette(None if name is None else str(name))
+        for key, _label in self.plot.curve_choices():
+            self.curve_editors[key].set_curve_style(self.plot.curve_style(key), self.plot.theme)
+        self._update_color_previews()
+
+    def _apply_gradient(self, *_args: object) -> None:
+        name = str(self.global_controls.gradient.currentData())
+        self.plot.apply_curve_gradient(
+            name, reverse=self.global_controls.gradient_reverse.isChecked()
+        )
+        for key, _label in self.plot.curve_choices():
+            self.curve_editors[key].set_curve_style(self.plot.curve_style(key), self.plot.theme)
+
+    def _update_color_previews(self, *_args: object) -> None:
+        controls = self.global_controls
+        palette_name = controls.curve_palette.currentData()
+        if palette_name is None:
+            colors = tuple(style.line_color for style in self.plot.plot_style.curve_styles)
+        else:
+            colors = tuple(
+                QColor(color).name()
+                for color in self.plot.style_registry.resolve_curve_palette(
+                    str(palette_name)
+                ).colors
+            )
+        controls.palette_preview.setText(" ")
+        controls.palette_preview.setMinimumHeight(18)
+        controls.palette_preview.setStyleSheet(self._color_strip(colors))
+        recommended = "dark" if palette_name in {"default-dark"} else "light"
+        controls.palette_preview.setToolTip(f"Recommended for a {recommended} plot background.")
+        gradient = self.plot.style_registry.resolve_color_gradient(
+            str(controls.gradient.currentData())
+        )
+        sampled = gradient.sample(7, reverse=controls.gradient_reverse.isChecked())
+        controls.gradient_preview.setText(" ")
+        controls.gradient_preview.setMinimumHeight(18)
+        controls.gradient_preview.setStyleSheet(
+            self._color_strip(tuple(color.name() for color in sampled))
+        )
+
+    @staticmethod
+    def _color_strip(colors: tuple[str, ...]) -> str:
+        if not colors:
+            return ""
+        stops = ", ".join(
+            f"stop:{index / max(len(colors) - 1, 1):.3f} {color}"
+            for index, color in enumerate(colors)
+        )
+        return f"background: qlineargradient(x1:0,y1:0,x2:1,y2:0,{stops});"
 
     def _preview_x_range(self, *_args: object) -> None:
         if self._preview_enabled:
@@ -280,21 +344,49 @@ class _CustomizeDialog(QDialog):
         curve_labels = dict(self.plot.curve_choices())
         if key not in curve_labels:
             return
-        selected = QColorDialog.getColor(
-            QColor(editor.line_color),
-            self,
-            f"{curve_labels[key]} line color",
+        menu = QMenu(self)
+        menu.setObjectName(f"pyqtLabGraphColorSwatches_{key}")
+        palette = self.plot.curve_palette
+        colors = (
+            tuple(QColor(color).name() for color in palette.colors)
+            if palette is not None
+            else tuple(style.line_color for style in self.plot.plot_style.curve_styles)
         )
-        if selected.isValid():
-            editor.line_color = selected
-            set_color_button_style(editor.line_color_button, selected, self.plot.theme)
-            self._preview_curve(key)
+        for color_name in colors:
+            action = menu.addAction(f"●  {color_name}")
+            action.setData(color_name)
+            action.setIconVisibleInMenu(False)
+        menu.addSeparator()
+        custom = menu.addAction("Custom color…")
+        selected_action = menu.exec(
+            editor.line_color_button.mapToGlobal(editor.line_color_button.rect().bottomLeft())
+        )
+        if selected_action is None:
+            return
+        if selected_action is custom:
+            selected = QColorDialog.getColor(
+                QColor(editor.line_color), self, f"{curve_labels[key]} line color"
+            )
+        else:
+            selected = QColor(str(selected_action.data()))
+        if not selected.isValid():
+            return
+        editor.line_color = selected
+        set_color_button_style(editor.line_color_button, selected, self.plot.theme)
+        self._preview_curve(key)
 
     def _save_layout(self) -> None:
         try:
             self.session.save_layout(self.global_controls, self.curve_editors)
         except Exception as exc:
             QMessageBox.critical(self, "Save layout", str(exc))
+
+    def _apply(self) -> None:
+        try:
+            self.session.apply_all(self.global_controls, self.curve_editors)
+            self.session.capture_baseline()
+        except Exception as exc:
+            QMessageBox.critical(self, "Apply customization", str(exc))
 
     def _finish(self, result: int) -> None:
         if result == int(QDialog.DialogCode.Accepted):

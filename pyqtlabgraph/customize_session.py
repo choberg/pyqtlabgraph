@@ -26,7 +26,9 @@ class CustomizeSession:
         self.synced_y_range = self.plot.get_y_range()
         return self.synced_x_range, self.synced_y_range
 
-    def preview_axes(self, controls: GlobalControls) -> tuple[tuple[float, float], tuple[float, float]]:
+    def preview_axes(
+        self, controls: GlobalControls
+    ) -> tuple[tuple[float, float], tuple[float, float]]:
         self.plot.set_x_log(controls.x_log.isChecked())
         self.plot.set_y_log(controls.y_log.isChecked())
         self.plot.set_axis_labels(
@@ -70,8 +72,11 @@ class CustomizeSession:
         self.preview_rendering(controls)
         self.preview_theme(controls)
         self.plot.set_plot_style(str(controls.plot_style.currentData()))
+        palette_name = controls.curve_palette.currentData()
+        self.plot.set_curve_palette(None if palette_name is None else str(palette_name))
         for key, editor in curve_editors.items():
             self.preview_curve(key, editor)
+            self.plot.set_curve_persistence(key, editor.persistence_config())
         requested_x = (controls.x_min.value(), controls.x_max.value())
         requested_y = (controls.y_min.value(), controls.y_max.value())
         if requested_x != self.synced_x_range:

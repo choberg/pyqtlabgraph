@@ -31,6 +31,40 @@ To apply a plot style to all current curves and use it for new curves:
 self.plot.set_plot_style("solarized")
 ```
 
+## Curve Palettes and Continuous Gradients
+
+Curve palettes change only line colors. They are independent of the plot theme
+and plot style, and cycle when there are more curves than colors:
+
+```python
+plot.set_curve_palette("okabe-ito")
+plot.set_curve_palette(None)  # return to colors from the plot style
+```
+
+Built-ins include Default Light/Dark, Solarized, Okabe–Ito, Matplotlib Tab10
+and Petroff10, Seaborn Colorblind, Paul Tol Bright/Muted, and Plotly Safe.
+Their published values come from the
+[Matplotlib](https://matplotlib.org/stable/gallery/color/color_sequences.html),
+[Seaborn](https://seaborn.pydata.org/tutorial/color_palettes.html),
+[Paul Tol](https://sronpersonalpages.nl/~pault/),
+[Plotly](https://plotly.com/python/discrete-color/), and
+[Okabe–Ito](https://jfly.uni-koeln.de/color/) references.
+
+Continuous gradients are one-shot color assignments rather than live bindings:
+
+```python
+plot.apply_curve_gradient(
+    "viridis",
+    values={"20C": 20.0, "35C": 35.0, "80C": 80.0},
+    value_range=(20.0, 80.0),
+)
+```
+
+Without `values`, current curves are distributed evenly by curve order.
+Viridis, Cividis, Plasma, Inferno, Magma, Turbo, Coolwarm, RdBu, BrBG, and the
+cyclic Twilight gradient are built in. Hosts can also use a gradient's
+`color_at()` and `sample()` methods directly.
+
 ---
 
 ## Custom Themes and Plot Styles
@@ -42,6 +76,7 @@ with the built-ins and remains independent from other registries:
 from PySide6.QtGui import QColor
 from pyqtlabgraph import (
     CurveStyle,
+    PyQtLabGraphCurvePalette,
     PyQtLabGraphPlotStyle,
     PyQtLabGraphStyleRegistry,
     PyQtLabGraphTheme,
@@ -62,6 +97,9 @@ registry.register_plot_style(
         name="laboratory",
         curve_styles=(CurveStyle(line_color="#abcdef"),),
     )
+)
+registry.register_curve_palette(
+    PyQtLabGraphCurvePalette(name="laboratory-curves", colors=("#abcdef", "#fedcba"))
 )
 
 plot = PyQtLabGraphWidget(

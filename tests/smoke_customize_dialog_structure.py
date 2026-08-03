@@ -30,24 +30,69 @@ def main() -> None:
             "reference",
         ]
         assert group_sections(dialog, 0) == [
-            ("Axes", ["X label:", "X units:", "X mode:", "X logarithmic:",
-                       "Y label:", "Y units:", "Y mode:", "Y logarithmic:"]),
+            (
+                "Axes",
+                [
+                    "X label:",
+                    "X units:",
+                    "X mode:",
+                    "X logarithmic:",
+                    "Y label:",
+                    "Y units:",
+                    "Y mode:",
+                    "Y logarithmic:",
+                ],
+            ),
             ("View ranges", ["X range:", "Y range:"]),
-            ("Appearance", ["Plot background:", "Plot style:", "Grid:"]),
-            ("Rendering", ["Anti-aliasing:", "Downsampling:", "Clip to view:",
-                            "Adaptive rendering:"]),
+            (
+                "Appearance",
+                [
+                    "Plot background:",
+                    "Plot style:",
+                    "Curve palette:",
+                    "Palette preview:",
+                    "Gradient:",
+                    "Gradient preview:",
+                    "Reverse gradient:",
+                    "",
+                    "Grid:",
+                ],
+            ),
+            (
+                "Rendering",
+                ["Anti-aliasing:", "Downsampling:", "Clip to view:", "Adaptive rendering:"],
+            ),
             ("Layout saving", ["Restore view on load:"]),
         ]
         assert group_sections(dialog, 1) == [
             ("Curve", ["Visibility:"]),
             ("Line", ["Line:", "Line color:", "Line width:"]),
-            ("Markers", ["Markers:", "Marker shape:", "Marker size:",
-                          "Filled markers:", "Marker outline width:"]),
+            (
+                "Markers",
+                [
+                    "Markers:",
+                    "Marker shape:",
+                    "Marker size:",
+                    "Filled markers:",
+                    "Marker outline width:",
+                ],
+            ),
+            (
+                "Trace persistence",
+                ["Enabled:", "History length:", "Oldest opacity:", "Newest opacity:", "Decay:"],
+            ),
         ]
-        assert child(dialog, QPushButton, "pyqtLabGraphApplyAndCloseButton").text() == "Apply && Close"
+        assert (
+            child(dialog, QPushButton, "pyqtLabGraphApplyAndCloseButton").text() == "Apply && Close"
+        )
         assert child(dialog, QPushButton, "pyqtLabGraphSaveLayoutButton").text() == "Save Layout"
-        assert child(dialog, QPushButton, "pyqtLabGraphPreviewXRangeButton").text() == "Preview Range"
-        assert child(dialog, QPushButton, "pyqtLabGraphPreviewYRangeButton").text() == "Preview Range"
+        assert child(dialog, QPushButton, "pyqtLabGraphApplyButton").text() == "Apply"
+        assert (
+            child(dialog, QPushButton, "pyqtLabGraphPreviewXRangeButton").text() == "Preview Range"
+        )
+        assert (
+            child(dialog, QPushButton, "pyqtLabGraphPreviewYRangeButton").text() == "Preview Range"
+        )
         hint = child(dialog, QLabel, "pyqtLabGraphCustomizePreviewHint")
         assert "previewed live" in hint.text()
         assert "Cancel restores" in hint.text()

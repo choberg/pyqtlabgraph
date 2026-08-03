@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 )
 
 from .axis import AxisMode
+from .persistence import TracePersistenceConfig
 from .styles import CurveStyle
 from .themes import PyQtLabGraphTheme
 
@@ -89,6 +90,11 @@ class CurveStyleEditor:
     marker_symbol: QComboBox
     marker_size: QSpinBox
     marker_outline_width: QDoubleSpinBox
+    persistence_enabled: QCheckBox
+    persistence_history_length: QSpinBox
+    persistence_oldest_opacity: QDoubleSpinBox
+    persistence_newest_opacity: QDoubleSpinBox
+    persistence_decay: QDoubleSpinBox
 
     def curve_style(self) -> CurveStyle:
         return CurveStyle(
@@ -113,6 +119,16 @@ class CurveStyleEditor:
         self.marker_size.setValue(style.marker_size)
         self.marker_outline_width.setValue(style.marker_outline_width)
 
+    def persistence_config(self) -> TracePersistenceConfig | None:
+        if not self.persistence_enabled.isChecked():
+            return None
+        return TracePersistenceConfig(
+            history_length=self.persistence_history_length.value(),
+            oldest_opacity=self.persistence_oldest_opacity.value(),
+            newest_opacity=self.persistence_newest_opacity.value(),
+            decay=self.persistence_decay.value(),
+        )
+
 
 @dataclass
 class GlobalControls:
@@ -129,6 +145,12 @@ class GlobalControls:
     adaptive_performance: QCheckBox
     plot_background: QComboBox
     plot_style: QComboBox
+    curve_palette: QComboBox
+    palette_preview: QLabel
+    gradient: QComboBox
+    gradient_preview: QLabel
+    gradient_reverse: QCheckBox
+    apply_gradient: QPushButton
     restore_view_state_on_load: QCheckBox
     x_min: QDoubleSpinBox
     x_max: QDoubleSpinBox
@@ -195,6 +217,26 @@ def build_global_tab(
         name = registered_plot_style.name
         plot_style.addItem(_PLOT_STYLE_LABELS.get(name, name.title()), name)
     plot_style.setCurrentIndex(max(plot_style.findData(plot.plot_style.name), 0))
+    curve_palette = QComboBox(parent)
+    curve_palette.setObjectName("pyqtLabGraphCurvePaletteCombo")
+    curve_palette.addItem("From plot style", None)
+    for palette in plot.style_registry.curve_palettes:
+        curve_palette.addItem(palette.name.replace("-", " ").title(), palette.name)
+    active_palette = plot.curve_palette.name if plot.curve_palette is not None else None
+    curve_palette.setCurrentIndex(max(curve_palette.findData(active_palette), 0))
+    palette_preview = QLabel(parent)
+    palette_preview.setObjectName("pyqtLabGraphCurvePalettePreview")
+    palette_preview.setAccessibleName("Curve palette color preview")
+    gradient = QComboBox(parent)
+    gradient.setObjectName("pyqtLabGraphGradientCombo")
+    for value in plot.style_registry.color_gradients:
+        gradient.addItem(value.name.title(), value.name)
+    gradient_preview = QLabel(parent)
+    gradient_preview.setObjectName("pyqtLabGraphGradientPreview")
+    gradient_preview.setAccessibleName("Color gradient preview")
+    gradient_reverse = _check_box(False, "pyqtLabGraphGradientReverseCheckbox", parent)
+    apply_gradient = QPushButton("Apply gradient by curve order", parent)
+    apply_gradient.setObjectName("pyqtLabGraphApplyGradientButton")
     restore_view = _check_box(True, "pyqtLabGraphRestoreViewStateOnLoadCheckbox", parent)
     restore_view.setToolTip(
         "Restores saved zoom, autoscale, and rolling-range state when loading this layout."
@@ -215,15 +257,18 @@ def build_global_tab(
     layout = QVBoxLayout(tab)
     axes_group, axes_layout = _form_group("Axes", "pyqtLabGraphAxesGroup", tab)
     for label, control in (
-        ("X label:", x_label), ("X units:", x_units), ("X mode:", x_mode),
-        ("X logarithmic:", x_log), ("Y label:", y_label), ("Y units:", y_units),
-        ("Y mode:", y_mode), ("Y logarithmic:", y_log),
+        ("X label:", x_label),
+        ("X units:", x_units),
+        ("X mode:", x_mode),
+        ("X logarithmic:", x_log),
+        ("Y label:", y_label),
+        ("Y units:", y_units),
+        ("Y mode:", y_mode),
+        ("Y logarithmic:", y_log),
     ):
         axes_layout.addRow(label, control)
     layout.addWidget(axes_group)
-    ranges_group, ranges_layout = _form_group(
-        "View ranges", "pyqtLabGraphViewRangesGroup", tab
-    )
+    ranges_group, ranges_layout = _form_group("View ranges", "pyqtLabGraphViewRangesGroup", tab)
     ranges_layout.addRow("X range:", _range_row(x_min, x_max, preview_x))
     ranges_layout.addRow("Y range:", _range_row(y_min, y_max, preview_y))
     layout.addWidget(ranges_group)
@@ -232,27 +277,54 @@ def build_global_tab(
     )
     appearance_layout.addRow("Plot background:", plot_background)
     appearance_layout.addRow("Plot style:", plot_style)
+    appearance_layout.addRow("Curve palette:", curve_palette)
+    appearance_layout.addRow("Palette preview:", palette_preview)
+    appearance_layout.addRow("Gradient:", gradient)
+    appearance_layout.addRow("Gradient preview:", gradient_preview)
+    appearance_layout.addRow("Reverse gradient:", gradient_reverse)
+    appearance_layout.addRow(apply_gradient)
     appearance_layout.addRow("Grid:", grid)
     layout.addWidget(appearance_group)
-    rendering_group, rendering_layout = _form_group(
-        "Rendering", "pyqtLabGraphRenderingGroup", tab
-    )
+    rendering_group, rendering_layout = _form_group("Rendering", "pyqtLabGraphRenderingGroup", tab)
     rendering_layout.addRow("Anti-aliasing:", antialiasing)
     rendering_layout.addRow("Downsampling:", downsampling)
     rendering_layout.addRow("Clip to view:", clip_to_view)
     rendering_layout.addRow("Adaptive rendering:", adaptive_performance)
     layout.addWidget(rendering_group)
-    saving_group, saving_layout = _form_group(
-        "Layout saving", "pyqtLabGraphLayoutSavingGroup", tab
-    )
+    saving_group, saving_layout = _form_group("Layout saving", "pyqtLabGraphLayoutSavingGroup", tab)
     saving_layout.addRow("Restore view on load:", restore_view)
     layout.addWidget(saving_group)
     layout.addStretch(1)
     tabs.addTab(tab, "Global")
     return GlobalControls(
-        x_label, x_units, y_label, y_units, x_mode, y_mode, grid, antialiasing,
-        downsampling, clip_to_view, adaptive_performance, plot_background, plot_style,
-        restore_view, x_min, x_max, preview_x, y_min, y_max, preview_y, x_log, y_log,
+        x_label,
+        x_units,
+        y_label,
+        y_units,
+        x_mode,
+        y_mode,
+        grid,
+        antialiasing,
+        downsampling,
+        clip_to_view,
+        adaptive_performance,
+        plot_background,
+        plot_style,
+        curve_palette,
+        palette_preview,
+        gradient,
+        gradient_preview,
+        gradient_reverse,
+        apply_gradient,
+        restore_view,
+        x_min,
+        x_max,
+        preview_x,
+        y_min,
+        y_max,
+        preview_y,
+        x_log,
+        y_log,
     )
 
 
@@ -272,9 +344,7 @@ def build_curve_tabs(
             f"pyqtLabGraphCurveVisible_{key}",
             tab,
         )
-        line_enabled = _check_box(
-            style.line_enabled, f"pyqtLabGraphCurveLineEnabled_{key}", tab
-        )
+        line_enabled = _check_box(style.line_enabled, f"pyqtLabGraphCurveLineEnabled_{key}", tab)
         line_color_button = QPushButton(tab)
         line_color_button.setObjectName(f"pyqtLabGraphCurveLineColor_{key}")
         line_color = QColor(style.line_color)
@@ -286,9 +356,7 @@ def build_curve_tabs(
         marker_enabled = _check_box(
             style.marker_enabled, f"pyqtLabGraphCurveMarkerEnabled_{key}", tab
         )
-        marker_filled = _check_box(
-            style.marker_filled, f"pyqtLabGraphCurveMarkerFilled_{key}", tab
-        )
+        marker_filled = _check_box(style.marker_filled, f"pyqtLabGraphCurveMarkerFilled_{key}", tab)
         marker_symbol = QComboBox(tab)
         marker_symbol.setObjectName(f"pyqtLabGraphCurveMarkerSymbol_{key}")
         for marker_label, symbol in _MARKER_OPTIONS:
@@ -302,22 +370,51 @@ def build_curve_tabs(
         outline.setObjectName(f"pyqtLabGraphCurveMarkerOutlineWidth_{key}")
         _configure_marker_outline_width_spin_box(outline)
         outline.setValue(style.marker_outline_width)
+        persistence = plot.curve_persistence(key)
+        persistence_enabled = _check_box(
+            persistence is not None, f"pyqtLabGraphPersistenceEnabled_{key}", tab
+        )
+        config = persistence or TracePersistenceConfig()
+        history_length = QSpinBox(tab)
+        history_length.setObjectName(f"pyqtLabGraphPersistenceHistoryLength_{key}")
+        history_length.setRange(1, 128)
+        history_length.setValue(config.history_length)
+        oldest_opacity = _opacity_spin(
+            config.oldest_opacity, f"pyqtLabGraphPersistenceOldestOpacity_{key}", tab
+        )
+        newest_opacity = _opacity_spin(
+            config.newest_opacity, f"pyqtLabGraphPersistenceNewestOpacity_{key}", tab
+        )
+        decay = QDoubleSpinBox(tab)
+        decay.setObjectName(f"pyqtLabGraphPersistenceDecay_{key}")
+        decay.setRange(0.01, 100.0)
+        decay.setDecimals(2)
+        decay.setValue(config.decay)
         editor = CurveStyleEditor(
-            visible, line_enabled, line_color, line_color_button, line_width,
-            marker_enabled, marker_filled, marker_symbol, marker_size, outline,
+            visible,
+            line_enabled,
+            line_color,
+            line_color_button,
+            line_width,
+            marker_enabled,
+            marker_filled,
+            marker_symbol,
+            marker_size,
+            outline,
+            persistence_enabled,
+            history_length,
+            oldest_opacity,
+            newest_opacity,
+            decay,
         )
         editors[key] = editor
         line_color_button.clicked.connect(
             lambda _checked=False, curve_key=key: choose_color(curve_key)
         )
-        curve_group, curve_layout = _form_group(
-            "Curve", f"pyqtLabGraphCurveGroup_{key}", tab
-        )
+        curve_group, curve_layout = _form_group("Curve", f"pyqtLabGraphCurveGroup_{key}", tab)
         curve_layout.addRow("Visibility:", visible)
         layout.addWidget(curve_group)
-        line_group, line_layout = _form_group(
-            "Line", f"pyqtLabGraphCurveLineGroup_{key}", tab
-        )
+        line_group, line_layout = _form_group("Line", f"pyqtLabGraphCurveLineGroup_{key}", tab)
         line_layout.addRow("Line:", line_enabled)
         line_layout.addRow("Line color:", line_color_button)
         line_layout.addRow("Line width:", line_width)
@@ -331,6 +428,15 @@ def build_curve_tabs(
         marker_layout.addRow("Filled markers:", marker_filled)
         marker_layout.addRow("Marker outline width:", outline)
         layout.addWidget(marker_group)
+        persistence_group, persistence_layout = _form_group(
+            "Trace persistence", f"pyqtLabGraphPersistenceGroup_{key}", tab
+        )
+        persistence_layout.addRow("Enabled:", persistence_enabled)
+        persistence_layout.addRow("History length:", history_length)
+        persistence_layout.addRow("Oldest opacity:", oldest_opacity)
+        persistence_layout.addRow("Newest opacity:", newest_opacity)
+        persistence_layout.addRow("Decay:", decay)
+        layout.addWidget(persistence_group)
         layout.addStretch(1)
         tabs.addTab(tab, curve_label)
     return editors
@@ -388,6 +494,16 @@ def _range_spin_box(value: float, name: str, parent: QWidget) -> QDoubleSpinBox:
     spin.setObjectName(name)
     spin.setRange(_RANGE_SPIN_MINIMUM, _RANGE_SPIN_MAXIMUM)
     spin.setDecimals(_RANGE_SPIN_DECIMALS)
+    spin.setValue(value)
+    return spin
+
+
+def _opacity_spin(value: float, name: str, parent: QWidget) -> QDoubleSpinBox:
+    spin = QDoubleSpinBox(parent)
+    spin.setObjectName(name)
+    spin.setRange(0.0, 1.0)
+    spin.setDecimals(2)
+    spin.setSingleStep(0.01)
     spin.setValue(value)
     return spin
 

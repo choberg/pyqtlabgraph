@@ -28,6 +28,7 @@ self.plot = PyQtLabGraphWidget(
     rolling_window_size=300.0,                   # Initial rolling X window size (default: 300.0)
     theme="dark",                                # Initial theme (default: light)
     plot_style="dark",                           # Initial curve style palette (default: light)
+    curve_palette="okabe-ito",                   # Optional line-color-only palette
     style_registry=style_registry,               # Optional explicit style registry
     show_frame=True,                             # Draw the component frame
 )
@@ -57,6 +58,7 @@ for placeholder, component in (
 | `rolling_window_size` | `float` | `300.0` | Initial width of the rolling X-window. |
 | `theme` | `str` \| `PyQtLabGraphTheme` | `None` | Active background/grid theme name (`"light"`, `"dark"`, `"light-solarized"`, `"dark-solarized"`). |
 | `plot_style` | `str` \| `PyQtLabGraphPlotStyle` | `None` | Active curve styling palette name (`"light"`, `"dark"`, `"solarized"`). |
+| `curve_palette` | `str` \| `PyQtLabGraphCurvePalette` | `None` | Optional line-color palette; `None` uses plot-style colors. |
 | `style_registry` | `PyQtLabGraphStyleRegistry` | `None` | Registry for built-in and host-registered themes and plot styles. A widget-owned built-in registry is created when omitted. |
 | `parent` | `QWidget` | `None` | Optional Qt parent. |
 | `show_frame` | `bool` | `True` | Draw the component-owned palette-aware frame. |
@@ -97,6 +99,12 @@ Explicit X/Y calls may use the named `x=` and `y=` parameters.
   Applies a new `CurveStyle` to the given curve.
 * **`set_curve_visible(key: str, visible: bool)`**
   Toggles rendering of the curve in the canvas and marks its checkbox state in the legend.
+* **`set_curve_palette(palette)`**
+  Changes only current curve line colors and provides the color cycle for new curves.
+* **`apply_curve_gradient(gradient, *, values=None, value_range=None, reverse=False)`**
+  Atomically performs a one-shot gradient color assignment.
+* **`set_curve_persistence(key, config)`**, **`curve_persistence(key)`**, and
+  **`clear_curve_persistence_history(key)`** configure and clear alpha trace history.
 
 The high-level data API deliberately accepts no arbitrary PyQtGraph keyword
 arguments. Configure native options through `curve_item(key)` or the

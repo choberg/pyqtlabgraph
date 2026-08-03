@@ -4,7 +4,9 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from .axis import AxisMode
+from .colormaps import PyQtLabGraphCurvePalette
 from .models import CursorPairState, CursorState, InteractionState
+from .persistence import TracePersistenceConfig
 from .styles import CurveStyle, PyQtLabGraphPlotStyle
 from .themes import PyQtLabGraphTheme
 
@@ -17,6 +19,7 @@ class CurveSnapshot:
     key: str
     visible: bool
     style: CurveStyle
+    persistence: TracePersistenceConfig | None
 
 
 @dataclass(frozen=True)
@@ -25,6 +28,7 @@ class PlotSnapshot:
 
     theme: PyQtLabGraphTheme
     plot_style: PyQtLabGraphPlotStyle
+    curve_palette: PyQtLabGraphCurvePalette | None
     x_label: str
     y_label: str
     x_units: str | None
@@ -51,6 +55,7 @@ class PlotSnapshot:
         return cls(
             theme=plot.theme,
             plot_style=plot.plot_style,
+            curve_palette=plot.curve_palette,
             x_label=plot.x_label_text,
             y_label=plot.y_label_text,
             x_units=plot.x_label_units,
@@ -69,6 +74,7 @@ class PlotSnapshot:
                     key=key,
                     visible=plot.curve_visible(key),
                     style=plot.curve_style(key),
+                    persistence=plot.curve_persistence(key),
                 )
                 for key, _label in plot.curve_choices()
             ),

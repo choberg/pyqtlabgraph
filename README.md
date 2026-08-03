@@ -50,6 +50,8 @@ Many scientists, laboratory engineers, and researchers are familiar with the ins
 ## Features
 
 - **Real-Time Plotting**: High-performance rendering optimized for rapid updates, live sensor streams, or fast oscilloscope-style displays.
+- **Scientific Color Tools**: Ten categorical curve palettes and ten continuous gradients for ordered or scalar-mapped curve coloring.
+- **Alpha Trace Persistence**: Bounded, reusable fading-history pools for repeated full oscilloscope-style acquisitions.
 - **Smart Axis Formatting (`SmartAxisItem`)**:
   - `AUTO`: Automatic SI-prefix scaling (e.g., scaling raw Hertz to `kHz` / `MHz` / `GHz`).
   - `LINEAR`: Explicit raw values with user-defined units, bypassing auto-scaling.
@@ -72,11 +74,11 @@ Many scientists, laboratory engineers, and researchers are familiar with the ins
 - **Modeless Customize Dialog**:
   - Adjust titles, labels, units, axis formatting modes, and logarithmic scaling from grouped axis sections.
   - Toggle grids, global anti-aliasing, downsampling, clip-to-view, and adaptive performance.
-  - Manage individual curves in per-curve tabs with grouped curve, line, and marker controls.
+  - Manage individual curves in per-curve tabs with grouped curve, line, marker, and trace-persistence controls.
   - Edit line width, line colors, marker styles (circle, square, cross, diamond, etc.), size, and borders.
   - **Live Preview**: Axes, appearance, rendering, and curve edits preview immediately. View ranges preview explicitly through *Preview Range* or Enter so partially typed values do not move the plot.
   - **Clear Commit Actions**: *Apply & Close* keeps the current preview, *Save Layout* saves it without closing, and *Cancel* restores the state from when the dialog was opened or last saved.
-- **Layout Persistence**: Save/Load all layout configurations (visual properties, themes, active ranges, curve states) to a shared versioned JSON file.
+- **Layout Persistence**: Save/Load all layout configurations (visual properties, themes, active palette, ranges, curve styles, and persistence configuration) to a shared versioned JSON file.
 - **Adaptive Performance**: Automatic visual simplification when rendering very dense datasets to avoid UI lag.
 
 ---

@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+from .colormaps import (
+    BUILTIN_COLOR_GRADIENTS,
+    BUILTIN_CURVE_PALETTES,
+    PyQtLabGraphColorGradient,
+    PyQtLabGraphCurvePalette,
+)
 from .styles import (
     BUILTIN_PLOT_STYLES,
     LIGHT_PLOT_STYLE,
@@ -19,12 +25,15 @@ class PyQtLabGraphStyleRegistry:
     """Resolves the built-in and host-registered plot appearance values."""
 
     def __init__(self) -> None:
-        self._themes = {
-            _normalized_name(name): theme for name, theme in BUILTIN_THEMES.items()
-        }
+        self._themes = {_normalized_name(name): theme for name, theme in BUILTIN_THEMES.items()}
         self._plot_styles = {
-            _normalized_name(name): plot_style
-            for name, plot_style in BUILTIN_PLOT_STYLES.items()
+            _normalized_name(name): plot_style for name, plot_style in BUILTIN_PLOT_STYLES.items()
+        }
+        self._curve_palettes = {
+            _normalized_name(name): value for name, value in BUILTIN_CURVE_PALETTES.items()
+        }
+        self._color_gradients = {
+            _normalized_name(name): value for name, value in BUILTIN_COLOR_GRADIENTS.items()
         }
 
     @property
@@ -35,12 +44,18 @@ class PyQtLabGraphStyleRegistry:
     def plot_styles(self) -> tuple[PyQtLabGraphPlotStyle, ...]:
         return tuple(self._plot_styles.values())
 
+    @property
+    def curve_palettes(self) -> tuple[PyQtLabGraphCurvePalette, ...]:
+        return tuple(self._curve_palettes.values())
+
+    @property
+    def color_gradients(self) -> tuple[PyQtLabGraphColorGradient, ...]:
+        return tuple(self._color_gradients.values())
+
     def register_theme(self, theme: PyQtLabGraphTheme) -> None:
         key = _normalized_name(theme.name)
         if key in self._themes:
-            raise ValueError(
-                f'PyQtLabGraph theme name "{theme.name}" is already registered.'
-            )
+            raise ValueError(f'PyQtLabGraph theme name "{theme.name}" is already registered.')
         self._themes[key] = theme
 
     def register_plot_style(self, plot_style: PyQtLabGraphPlotStyle) -> None:
@@ -50,6 +65,26 @@ class PyQtLabGraphStyleRegistry:
                 f'PyQtLabGraph plot style name "{plot_style.name}" is already registered.'
             )
         self._plot_styles[key] = plot_style
+
+    def register_curve_palette(self, palette: PyQtLabGraphCurvePalette) -> None:
+        if not isinstance(palette, PyQtLabGraphCurvePalette):
+            raise TypeError("palette must be a PyQtLabGraphCurvePalette.")
+        key = _normalized_name(palette.name)
+        if key in self._curve_palettes:
+            raise ValueError(
+                f'PyQtLabGraph curve palette name "{palette.name}" is already registered.'
+            )
+        self._curve_palettes[key] = palette
+
+    def register_color_gradient(self, gradient: PyQtLabGraphColorGradient) -> None:
+        if not isinstance(gradient, PyQtLabGraphColorGradient):
+            raise TypeError("gradient must be a PyQtLabGraphColorGradient.")
+        key = _normalized_name(gradient.name)
+        if key in self._color_gradients:
+            raise ValueError(
+                f'PyQtLabGraph color gradient name "{gradient.name}" is already registered.'
+            )
+        self._color_gradients[key] = gradient
 
     def resolve_theme(
         self,
@@ -86,6 +121,37 @@ class PyQtLabGraphStyleRegistry:
                 f"Available plot styles: {available}."
             ) from exc
 
+    def resolve_curve_palette(
+        self, palette: str | PyQtLabGraphCurvePalette
+    ) -> PyQtLabGraphCurvePalette:
+        return self._resolve_named_value(palette, self._curve_palettes, "curve palette", "palettes")
+
+    def resolve_color_gradient(
+        self, gradient: str | PyQtLabGraphColorGradient
+    ) -> PyQtLabGraphColorGradient:
+        return self._resolve_named_value(
+            gradient, self._color_gradients, "color gradient", "gradients"
+        )
+
+    @staticmethod
+    def _resolve_named_value(value, values, kind: str, plural: str):
+        key = _normalized_name(value.name if hasattr(value, "name") else value)
+        registered = values.get(key)
+        if registered is None:
+            if hasattr(value, "name"):
+                raise ValueError(
+                    f'PyQtLabGraph {kind} "{value.name}" is not registered in this registry.'
+                )
+            available = ", ".join(item.name for item in values.values())
+            raise ValueError(
+                f'Unknown PyQtLabGraph {kind} "{value}". Available {plural}: {available}.'
+            )
+        if hasattr(value, "name") and registered != value:
+            raise ValueError(
+                f'PyQtLabGraph {kind} "{value.name}" does not match the registered value.'
+            )
+        return registered
+
     def _resolve_theme_object(self, theme: PyQtLabGraphTheme) -> PyQtLabGraphTheme:
         registered = self._themes.get(_normalized_name(theme.name))
         if registered is None:
@@ -105,12 +171,10 @@ class PyQtLabGraphStyleRegistry:
         registered = self._plot_styles.get(_normalized_name(plot_style.name))
         if registered is None:
             raise ValueError(
-                f'PyQtLabGraph plot style "{plot_style.name}" is not registered '
-                "in this registry."
+                f'PyQtLabGraph plot style "{plot_style.name}" is not registered in this registry.'
             )
         if registered != plot_style:
             raise ValueError(
-                f'PyQtLabGraph plot style "{plot_style.name}" does not match '
-                "the registered value."
+                f'PyQtLabGraph plot style "{plot_style.name}" does not match the registered value.'
             )
         return registered

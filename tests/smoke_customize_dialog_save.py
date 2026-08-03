@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QDoubleSpinBox,
     QLineEdit,
     QPushButton,
+    QSpinBox,
 )
 
 from pyqtlabgraph import dialogs
@@ -38,6 +39,8 @@ def main() -> None:
             child(dialog, QCheckBox, "pyqtLabGraphRestoreViewStateOnLoadCheckbox").setChecked(False)
             child(dialog, QDoubleSpinBox, "pyqtLabGraphYMinSpin").setValue(-4.0)
             child(dialog, QDoubleSpinBox, "pyqtLabGraphYMaxSpin").setValue(4.0)
+            child(dialog, QCheckBox, "pyqtLabGraphPersistenceEnabled_sensor").setChecked(True)
+            child(dialog, QSpinBox, "pyqtLabGraphPersistenceHistoryLength_sensor").setValue(5)
             child(dialog, QPushButton, "pyqtLabGraphSaveLayoutButton").click()
             assert finished == []
             child(dialog, QLineEdit, "pyqtLabGraphXLabelEdit").setText("Unsaved X")
@@ -50,6 +53,7 @@ def main() -> None:
         assert saved["theme"] == "dark"
         assert saved["ranges"]["y"] == [-4.0, 4.0]
         assert saved["restore_view_state_on_load"] is False
+        assert saved["curves"]["sensor"]["persistence"]["history_length"] == 5
         assert plot.x_label_text == "Saved X"
         assert plot.theme.name == "dark"
         assert plot.get_y_range() == (-4.0, 4.0)
