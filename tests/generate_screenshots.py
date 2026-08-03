@@ -1,6 +1,5 @@
 # /// script
 # dependencies = [
-#   "pyqtdarktheme",
 #   "numpy",
 #   "pyside6",
 #   "pyqtgraph",
@@ -8,20 +7,29 @@
 # ///
 
 import sys
-import os
-import numpy as np
 from pathlib import Path
-import qdarktheme
-from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout
-from PySide6.QtCore import Qt, QPoint
-from PySide6.QtGui import QPainter, QPen, QColor, QBrush, QFont
-from pyqtlabgraph import PyQtLabGraphWidget, CurveStyle
+
+import numpy as np
+from PySide6.QtCore import QPoint, Qt
+from PySide6.QtGui import QBrush, QColor, QFont, QPainter, QPen
+from PySide6.QtWidgets import QApplication, QDialog, QHBoxLayout, QMainWindow, QVBoxLayout, QWidget
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "examples"))
+
+from _demo_theme import apply_demo_theme
+from demo_cursor import create_window as create_cursor_demo_window
+
+from pyqtlabgraph import (
+    CurveStyle,
+    PyQtLabGraphLegend,
+    PyQtLabGraphToolbar,
+    PyQtLabGraphWidget,
+)
+
 
 def generate():
     app = QApplication(sys.argv)
-    
-    # Apply a real dark theme to the host application
-    app.setStyleSheet(qdarktheme.load_stylesheet("dark"))
     
     # Set up main window
     window = QMainWindow()
@@ -39,16 +47,15 @@ def generate():
     
     # Initialize widget with horizontal legend
     plot = PyQtLabGraphWidget(
-        plot_container=plot_container,
-        toolbar_container=toolbar_container,
-        legend_container=legend_container,
         plot_identifier="screenshot_gen",
         theme="dark",
         plot_style="dark",
-        show_toolbar=True,
-        show_legend=True,
-        legend_orientation=Qt.Orientation.Horizontal,
     )
+    toolbar = PyQtLabGraphToolbar(plot)
+    legend = PyQtLabGraphLegend(plot, orientation=Qt.Orientation.Horizontal)
+    QVBoxLayout(plot_container).addWidget(plot)
+    QVBoxLayout(toolbar_container).addWidget(toolbar)
+    QVBoxLayout(legend_container).addWidget(legend)
     
     # Add mockup data curves
     x = np.linspace(0, 10, 500)
@@ -62,6 +69,7 @@ def generate():
     plot.plot("noise", x, y_noise, label="Sensor C (Noise)")
     
     plot.set_axis_labels("Time", "Measurement", "s", "V")
+    apply_demo_theme(app, plot, dark_mode=True)
     
     # Resize and layout
     window.resize(900, 600)
@@ -79,8 +87,8 @@ def generate():
     
     # 2. Customize Dialog screenshot
     plot.show_customize_dialog()
-    if plot._customize_dialogs:
-        dialog = plot._customize_dialogs[0]
+    dialog = plot.findChild(QDialog, "pyqtLabGraphCustomizeDialog")
+    if dialog is not None:
         dialog.show()
         QApplication.processEvents()
         dialog_pixmap = dialog.grab()
@@ -88,10 +96,7 @@ def generate():
         dialog.close()
     
     # 3. Light theme (white background + light styles) screenshot
-    # Switch host application style sheet to light
-    app.setStyleSheet(qdarktheme.load_stylesheet("light"))
-    plot.set_theme("light")
-    plot.apply_plot_style("light")
+    apply_demo_theme(app, plot, dark_mode=False)
     QApplication.processEvents()
     pixmap = window.grab()
     pixmap.save(str(docs_dir / "screenshot_light.png"))
@@ -121,16 +126,15 @@ def generate():
     layout_alt.addWidget(toolbar_container_alt)
     
     plot_alt = PyQtLabGraphWidget(
-        plot_container=plot_container_alt,
-        toolbar_container=toolbar_container_alt,
-        legend_container=legend_container_alt,
         plot_identifier="screenshot_alt",
         theme="light",
         plot_style="light",
-        show_toolbar=True,
-        show_legend=True,
-        legend_orientation=Qt.Orientation.Vertical,
     )
+    toolbar_alt = PyQtLabGraphToolbar(plot_alt)
+    legend_alt = PyQtLabGraphLegend(plot_alt, orientation=Qt.Orientation.Vertical)
+    QVBoxLayout(plot_container_alt).addWidget(plot_alt)
+    QVBoxLayout(toolbar_container_alt).addWidget(toolbar_alt)
+    QVBoxLayout(legend_container_alt).addWidget(legend_alt)
     
     # Define custom curve styles
     # 1. Line + Marker
@@ -233,6 +237,19 @@ def generate():
     pixmap_labeled.save(str(docs_dir / "screenshot_layout_labeled.png"))
     
     window_alt.close()
+
+    # 5. Cursor inspector with a paired X measurement
+    cursor_window = create_cursor_demo_window(load_saved_layout=False)
+    cursor_window.graph.add_cursor_pair(
+        "free_x",
+        "signal_snap",
+        key="screenshot_pair",
+    )
+    cursor_window.show()
+    QApplication.processEvents()
+    cursor_window.grab().save(str(docs_dir / "screenshot_cursor_widget.png"))
+    cursor_window.close()
+
     print(f"All screenshots generated and saved successfully under {docs_dir}/!")
 
 if __name__ == "__main__":

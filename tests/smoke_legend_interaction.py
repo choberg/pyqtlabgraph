@@ -12,8 +12,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QVBoxLayout, QWidget
 
-from pyqtlabgraph import PyQtLabGraphWidget
-
+from pyqtlabgraph import PyQtLabGraphLegend, PyQtLabGraphWidget
 
 LEGEND_CLICK_DELAY_MS = 220
 
@@ -28,36 +27,32 @@ def main() -> None:
         widget.setLayout(QVBoxLayout())
 
     graph = PyQtLabGraphWidget(
-        plot_container,
-        toolbar_container,
-        legend_container,
         plot_identifier="legend-interaction",
-        show_toolbar=False,
-        show_legend=True,
         theme="light",
     )
+    legend = PyQtLabGraphLegend(graph)
+    legend_container.layout().addWidget(legend)
     graph.plot("sensor", [0.0, 1.0], [2.0, 3.0], label="Sensor")
-    assert graph.legend is not None
-    assert "sensor" in graph.legend.items_by_key
+    assert "sensor" in legend.items_by_key
 
-    legend_item = graph.legend.items_by_key["sensor"]
-    assert graph.curve_manager.curves["sensor"].visible is True
-    assert graph.curve_manager.curves["sensor"].item.isVisible() is True
+    legend_item = legend.items_by_key["sensor"]
+    assert graph._curve_manager.curves["sensor"].visible is True
+    assert graph._curve_manager.curves["sensor"].item.isVisible() is True
 
     QTest.mouseClick(legend_item, Qt.MouseButton.LeftButton)
     QTest.qWait(LEGEND_CLICK_DELAY_MS + 50)
     app.processEvents()
 
-    assert graph.curve_manager.curves["sensor"].visible is False
-    assert graph.curve_manager.curves["sensor"].item.isVisible() is False
+    assert graph._curve_manager.curves["sensor"].visible is False
+    assert graph._curve_manager.curves["sensor"].item.isVisible() is False
     assert legend_item.sample.opacity < 1.0
 
     QTest.mouseClick(legend_item, Qt.MouseButton.LeftButton)
     QTest.qWait(LEGEND_CLICK_DELAY_MS + 50)
     app.processEvents()
 
-    assert graph.curve_manager.curves["sensor"].visible is True
-    assert graph.curve_manager.curves["sensor"].item.isVisible() is True
+    assert graph._curve_manager.curves["sensor"].visible is True
+    assert graph._curve_manager.curves["sensor"].item.isVisible() is True
     assert legend_item.sample.opacity == 1.0
 
     customize_requests: list[str | None] = []
@@ -75,8 +70,8 @@ def main() -> None:
     app.processEvents()
 
     assert customize_requests == ["sensor"]
-    assert graph.curve_manager.curves["sensor"].visible is True
-    assert graph.curve_manager.curves["sensor"].item.isVisible() is True
+    assert graph._curve_manager.curves["sensor"].visible is True
+    assert graph._curve_manager.curves["sensor"].item.isVisible() is True
 
     print("legend interaction smoke ok")
 

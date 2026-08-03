@@ -8,12 +8,12 @@ from random import uniform
 from typing import TypeVar
 
 import numpy as np
+from _demo_theme import install_demo_theme_toggle
 from PySide6.QtCore import QFile, QObject, Qt, QTimer
 from PySide6.QtUiTools import QUiLoader
-from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton, QWidget
+from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget
 
-from pyqtlabgraph import PyQtLabGraphWidget
-
+from pyqtlabgraph import PyQtLabGraphLegend, PyQtLabGraphToolbar, PyQtLabGraphWidget
 
 WidgetType = TypeVar("WidgetType", bound=QWidget)
 
@@ -24,11 +24,7 @@ class ThermostatDemoWindow(QObject):
     def __init__(
         self,
         ui_path: Path,
-        plot_identifier: str = "thermostat-live",
         layout_path: Path | None = None,
-        theme: str = "light",
-        plot_style: str = "light",
-        window_title: str = "PyQtLabGraph Thermostat Demo",
     ) -> None:
         super().__init__()
         self.window = self._load_ui(ui_path)
@@ -42,18 +38,19 @@ class ThermostatDemoWindow(QObject):
         actual_layout_path = layout_path or Path.cwd() / "demo_thermostat.layout.json"
 
         self.live_plot = PyQtLabGraphWidget(
-            self.plot_container,
-            self.toolbar_container,
-            self.legend_container,
-            plot_identifier=plot_identifier,
+            plot_identifier="thermostat-live",
             layout_path=actual_layout_path,
-            show_toolbar=True,
             rolling_window_size=300.0,
-            legend_orientation=Qt.Orientation.Horizontal,
-            theme=theme,
-            plot_style=plot_style,
         )
-        self.window.setWindowTitle(window_title)
+        self.toolbar = PyQtLabGraphToolbar(self.live_plot)
+        self.legend = PyQtLabGraphLegend(
+            self.live_plot,
+            orientation=Qt.Orientation.Horizontal,
+        )
+        self._embed(self.plot_container, self.live_plot)
+        self._embed(self.toolbar_container, self.toolbar)
+        self._embed(self.legend_container, self.legend)
+        self.window.setWindowTitle("PyQtLabGraph Thermostat Demo")
         self.live_plot.set_axis_labels("Elapsed time", "Temperature", "s", "deg C", x_mode="time", y_mode="linear")
         self.live_plot.add_curve("process_temperature", label="Process temperature")
         self.live_plot.add_curve("bath_temperature", label="Bath temperature")
@@ -69,6 +66,13 @@ class ThermostatDemoWindow(QObject):
         self.stop_button.clicked.connect(self.stop_acquisition)
         self.add_points_button.clicked.connect(self.add_bulk_test_points)
         self._set_acquisition_running(False)
+        install_demo_theme_toggle(self.window, self.live_plot)
+
+    @staticmethod
+    def _embed(container: QWidget, component: QWidget) -> None:
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(component)
 
     def show(self) -> None:
         self.window.show()

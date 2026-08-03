@@ -6,12 +6,12 @@ from pathlib import Path
 from typing import TypeVar
 
 import numpy as np
+from _demo_theme import install_demo_theme_toggle
 from PySide6.QtCore import QFile, QObject, Qt, QTimer
 from PySide6.QtUiTools import QUiLoader
-from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton, QWidget
+from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget
 
-from pyqtlabgraph import PyQtLabGraphWidget
-
+from pyqtlabgraph import PyQtLabGraphLegend, PyQtLabGraphToolbar, PyQtLabGraphWidget
 
 WidgetType = TypeVar("WidgetType", bound=QWidget)
 
@@ -34,6 +34,8 @@ class TimeFftDemoWindow(QObject):
         self.sample_index = 0
         self.time_values = np.array([], dtype=float)
         self.signal_values = np.array([], dtype=float)
+        self.toolbars: list[PyQtLabGraphToolbar] = []
+        self.legends: list[PyQtLabGraphLegend] = []
 
         self.time_plot = self._create_plot(
             plot_container_name="timePlotContainer",
@@ -79,6 +81,7 @@ class TimeFftDemoWindow(QObject):
         self.reset_button.clicked.connect(self.reset_data)
         self.append_samples(int(4.0 * self.sample_rate_hz))
         self._set_acquisition_running(False)
+        install_demo_theme_toggle(self.window, self.time_plot, self.fft_plot)
 
     def show(self) -> None:
         self.window.show()
@@ -131,18 +134,29 @@ class TimeFftDemoWindow(QObject):
         legend_container_name: str,
         plot_identifier: str,
     ) -> PyQtLabGraphWidget:
-        return PyQtLabGraphWidget(
-            plot_container=self._find_required_widget(plot_container_name),
-            toolbar_container=self._find_required_widget(toolbar_container_name),
-            legend_container=self._find_required_widget(legend_container_name),
+        plot = PyQtLabGraphWidget(
             plot_identifier=plot_identifier,
             layout_path=Path.cwd() / "demo_time_fft.layout.json",
             rolling_window_size=10.0,
-            legend_orientation=Qt.Orientation.Vertical,
-            theme="light",
-            plot_style="light",
-            show_component_frames=False,
+            show_frame=False,
         )
+        toolbar = PyQtLabGraphToolbar(plot, show_frame=False)
+        legend = PyQtLabGraphLegend(
+            plot,
+            orientation=Qt.Orientation.Vertical,
+            show_frame=False,
+        )
+        for container_name, component in (
+            (plot_container_name, plot),
+            (toolbar_container_name, toolbar),
+            (legend_container_name, legend),
+        ):
+            layout = QVBoxLayout(self._find_required_widget(container_name))
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.addWidget(component)
+        self.toolbars.append(toolbar)
+        self.legends.append(legend)
+        return plot
 
     def _signal(self, time_values: np.ndarray) -> np.ndarray:
         base = np.sin(2.0 * math.pi * 5.0 * time_values)

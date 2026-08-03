@@ -30,12 +30,7 @@ def main() -> None:
         widget.setLayout(QVBoxLayout())
 
     graph = PyQtLabGraphWidget(
-        plot_container,
-        toolbar_container,
-        legend_container,
         plot_identifier="public-api-cleanup",
-        show_toolbar=False,
-        show_legend=False,
         theme="light",
     )
     graph.plot(
@@ -64,20 +59,20 @@ def main() -> None:
     assert sensor_x.tolist() == [0.0, 1.0, 2.0]
     assert sensor_y.tolist() == [3.0, 2.0, 1.0]
 
-    assert graph.native_plot_widget is graph.plot_widget
-    assert graph.native_plot_item is graph.plot_item
-    assert graph.native_view_box is graph.view_box
+    assert graph.native_plot_widget is graph.native_plot_widget
+    assert graph.native_plot_item is graph.native_plot_item
+    assert graph.native_view_box is graph.native_view_box
     assert graph.native_plot_widget.frameShape() == QFrame.Shape.NoFrame
     sensor_item = graph.curve_item("sensor")
     assert isinstance(sensor_item, pg.PlotDataItem)
-    assert sensor_item is graph.curve_manager.curves["sensor"].item
+    assert sensor_item is graph._curve_manager.curves["sensor"].item
     sensor_item.setData([10.0, 11.0], [12.0, 13.0])
     sensor_x, sensor_y = graph.curve_data("sensor")
     assert sensor_x.tolist() == [10.0, 11.0]
     assert sensor_y.tolist() == [12.0, 13.0]
 
     graph.add_curve("dense")
-    graph.range_controller._set_x_range(0.0, 10.0)
+    graph._range_controller._set_x_range(0.0, 10.0)
     graph.set_data(
         "dense",
         np.arange(1.0, 10_001.0),
@@ -99,14 +94,13 @@ def main() -> None:
 
     graph.set_theme("dark")
     after_dark_style = graph.curve_style("sensor")
-    assert "QGraphicsView#pyqtLabGraphPlotWidget" in graph.plot_widget.styleSheet()
-    assert "border: none" in graph.plot_widget.styleSheet()
+    assert graph.native_plot_widget.styleSheet() == ""
     graph.set_theme("light-solarized")
     app.processEvents()
     after_light_solarized_style = graph.curve_style("sensor")
-    assert graph.plot_widget.backgroundBrush().color().alpha() == 0
-    assert graph.view_box.background.rect().right() > graph.view_box.rect().right()
-    assert graph.view_box.background.rect().bottom() > graph.view_box.rect().bottom()
+    assert graph.native_plot_widget.backgroundBrush().color().alpha() == 0
+    assert graph.native_view_box.background.rect().right() > graph.native_view_box.rect().right()
+    assert graph.native_view_box.background.rect().bottom() > graph.native_view_box.rect().bottom()
     assert graph.bottom_axis.pen().color().name().lower() == "#445566"
     assert graph.bottom_axis.tickPen().color().name().lower() == "#445566"
     assert graph.bottom_axis.textPen().color().name().lower() == "#445566"
@@ -122,7 +116,7 @@ def main() -> None:
     assert after_dark_style == before_style
     assert after_light_solarized_style == before_style
     assert after_dark_solarized_style == before_style
-    assert graph.curve_manager.curves["sensor"].item.opts["pen"].color().name().lower() == "#123456"
+    assert graph._curve_manager.curves["sensor"].item.opts["pen"].color().name().lower() == "#123456"
 
     app.processEvents()
     print("public api cleanup smoke ok")

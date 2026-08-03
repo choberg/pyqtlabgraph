@@ -20,15 +20,29 @@ class CurveStyle:
     def __post_init__(self) -> None:
         if not QColor(self.line_color).isValid():
             raise ValueError(f"Invalid line_color color: {self.line_color}")
+        if self.line_width <= 0.0:
+            raise ValueError("Curve line_width must be greater than zero.")
+        if self.marker_size <= 0:
+            raise ValueError("Curve marker_size must be greater than zero.")
+        if self.marker_outline_width < 0.0:
+            raise ValueError("Curve marker_outline_width must not be negative.")
 
     def with_overrides(self, **overrides: object) -> "CurveStyle":
-        return replace(self, **overrides)
+        return replace(self, **overrides)  # type: ignore[arg-type]
 
 
 @dataclass(frozen=True)
 class PyQtLabGraphPlotStyle:
     name: str
     curve_styles: tuple[CurveStyle, ...]
+
+    def __post_init__(self) -> None:
+        if not self.name.strip():
+            raise ValueError("PyQtLabGraph plot style name must not be empty.")
+        if not self.curve_styles:
+            raise ValueError(
+                "PyQtLabGraph plot style must contain at least one curve style."
+            )
 
     def curve_style(self, index: int) -> CurveStyle:
         return self.curve_styles[index % len(self.curve_styles)]
@@ -88,26 +102,3 @@ BUILTIN_PLOT_STYLES: Mapping[str, PyQtLabGraphPlotStyle] = {
     DARK_PLOT_STYLE.name: DARK_PLOT_STYLE,
     SOLARIZED_PLOT_STYLE.name: SOLARIZED_PLOT_STYLE,
 }
-
-
-def resolve_plot_style(
-    plot_style: str | PyQtLabGraphPlotStyle | None,
-) -> PyQtLabGraphPlotStyle:
-    if plot_style is None:
-        return LIGHT_PLOT_STYLE
-    if isinstance(plot_style, PyQtLabGraphPlotStyle):
-        return plot_style
-
-    key = plot_style.lower()
-    try:
-        return BUILTIN_PLOT_STYLES[key]
-    except KeyError as exc:
-        available = ", ".join(sorted(BUILTIN_PLOT_STYLES))
-        raise ValueError(
-            f'Unknown PyQtLabGraph plot style "{plot_style}". '
-            f"Available plot styles: {available}."
-        ) from exc
-
-
-def default_curve_style(color: str) -> CurveStyle:
-    return LIGHT_PLOT_STYLE.curve_style(0).with_overrides(line_color=color)

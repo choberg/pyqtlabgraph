@@ -23,12 +23,7 @@ def main() -> None:
         widget.setLayout(QVBoxLayout())
 
     graph = PyQtLabGraphWidget(
-        plot_container,
-        toolbar_container,
-        legend_container,
         plot_identifier="adaptive-performance",
-        show_toolbar=True,
-        show_legend=True,
     )
     graph.plot(
         "dense",
@@ -53,31 +48,28 @@ def main() -> None:
         ),
     )
 
-    curve = graph.curve_manager.curves["dense"]
-    marker_only_curve = graph.curve_manager.curves["marker-only"]
-    graph.render_optimizer.threshold = 5
-    graph.render_optimizer.restore_threshold = 5
+    curve = graph._curve_manager.curves["dense"]
+    marker_only_curve = graph._curve_manager.curves["marker-only"]
+    graph._render_optimizer.threshold = 5
+    graph._render_optimizer.restore_threshold = 5
 
-    graph.range_controller._set_x_range(0.0, 19.0)
-    graph.render_optimizer.update_adaptive_performance(force=True)
-    assert graph.render_optimizer.active is True
+    graph.apply_manual_x_limits(0.0, 19.0)
+    assert graph._render_optimizer.active is True
     assert curve.item.opts["symbol"] is None
     assert marker_only_curve.item.opts["symbol"] is None
     assert marker_only_curve.item.opts["pen"].style() != Qt.PenStyle.NoPen
-    assert graph.render_optimizer.effective_antialiasing_enabled() is False
+    assert graph._render_optimizer.effective_antialiasing_enabled() is False
 
-    graph.range_controller._set_x_range(0.0, 1.0)
-    graph.render_optimizer.update_adaptive_performance(force=True)
-    assert graph.render_optimizer.active is False
+    graph.apply_manual_x_limits(0.0, 1.0)
+    assert graph._render_optimizer.active is False
     assert curve.item.opts["symbol"] == "s"
     assert marker_only_curve.item.opts["symbol"] == "o"
     assert marker_only_curve.item.opts["pen"].style() == Qt.PenStyle.NoPen
-    assert graph.render_optimizer.effective_antialiasing_enabled() is True
+    assert graph._render_optimizer.effective_antialiasing_enabled() is True
 
     graph.set_adaptive_performance_enabled(False)
-    graph.range_controller._set_x_range(0.0, 19.0)
-    graph.render_optimizer.update_adaptive_performance(force=True)
-    assert graph.render_optimizer.active is False
+    graph.apply_manual_x_limits(0.0, 19.0)
+    assert graph._render_optimizer.active is False
     assert curve.item.opts["symbol"] == "s"
     assert marker_only_curve.item.opts["symbol"] == "o"
     assert marker_only_curve.item.opts["pen"].style() == Qt.PenStyle.NoPen
@@ -85,10 +77,7 @@ def main() -> None:
     log_container = QWidget()
     log_container.setLayout(QVBoxLayout())
     log_graph = PyQtLabGraphWidget(
-        log_container,
         plot_identifier="adaptive-performance-log-x",
-        show_toolbar=False,
-        show_legend=False,
     )
     log_graph.plot(
         "dense",
@@ -100,22 +89,21 @@ def main() -> None:
             marker_size=5,
         ),
     )
-    log_curve = log_graph.curve_manager.curves["dense"]
-    log_graph.render_optimizer.threshold = 5
-    log_graph.render_optimizer.restore_threshold = 5
+    log_curve = log_graph._curve_manager.curves["dense"]
+    log_graph._render_optimizer.threshold = 5
+    log_graph._render_optimizer.restore_threshold = 5
 
     log_graph.apply_manual_x_limits(1.0, 100.0)
-    log_graph.render_optimizer.update_adaptive_performance(force=True)
-    assert log_graph.render_optimizer.active is True
+    assert log_graph._render_optimizer.active is True
     assert log_curve.item.opts["symbol"] is None
 
     log_graph.set_x_log(True)
     assert log_graph.get_x_range() == (0.0, 2.0)
-    assert log_graph.render_optimizer.active is True
+    assert log_graph._render_optimizer.active is True
     assert log_curve.item.opts["symbol"] is None
 
     log_graph.apply_manual_x_limits(0.0, 0.1)
-    assert log_graph.render_optimizer.active is False
+    assert log_graph._render_optimizer.active is False
     assert log_curve.item.opts["symbol"] == "s"
 
     app.processEvents()

@@ -19,9 +19,4 @@ dist/
 bak/
 archive/
 
-original_icons/toolbar/
-
 .DS_Store
-
-# Local release process documentation
-upload_process_github_pypi.md

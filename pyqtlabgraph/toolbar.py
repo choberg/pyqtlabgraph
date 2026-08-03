@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 
 from PySide6.QtCore import QEvent, Qt
-from PySide6.QtGui import QAction, QColor, QIcon, QPainter, QPalette, QPixmap
+from PySide6.QtGui import QAction, QColor, QIcon, QPainter, QPaintEvent, QPalette, QPixmap
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
@@ -17,6 +17,10 @@ from PySide6.QtWidgets import (
 )
 
 from .models import InteractionState, InteractionTool
+from .qt_styles import paint_host_frame
+
+if TYPE_CHECKING:
+    from .widget import PyQtLabGraphWidget
 
 _TOOLBAR_ICON_SIZE = 24
 
@@ -35,32 +39,17 @@ class PyQtLabGraphToolbar(QToolBar):
 
     def __init__(
         self,
+        plot: PyQtLabGraphWidget,
+        *,
         parent: QWidget | None = None,
-        on_tool_requested: Callable[[InteractionTool, bool], None] | None = None,
-        on_autoscale_x_requested: Callable[[bool], None] | None = None,
-        on_autoscale_y_requested: Callable[[bool], None] | None = None,
-        on_rolling_requested: Callable[[bool], None] | None = None,
-        on_rolling_window_selected: Callable[[float], None] | None = None,
-        get_current_x_window_size: Callable[[], float] | None = None,
-        on_show_all_requested: Callable[[], None] | None = None,
-        on_save_requested: Callable[[], None] | None = None,
-        on_customize_requested: Callable[[], None] | None = None,
+        show_frame: bool = True,
     ) -> None:
         super().__init__(parent)
+        self.plot = plot
+        self._show_frame = show_frame
         self.setObjectName("pyqtLabGraphToolbar")
-        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
-        self.setStyleSheet(
-            "QToolBar#pyqtLabGraphToolbar { background: transparent; border: none; }"
-        )
-        self.on_tool_requested = on_tool_requested
-        self.on_autoscale_x_requested = on_autoscale_x_requested
-        self.on_autoscale_y_requested = on_autoscale_y_requested
-        self.on_rolling_requested = on_rolling_requested
-        self.on_rolling_window_selected = on_rolling_window_selected
-        self.get_current_x_window_size = get_current_x_window_size
-        self.on_show_all_requested = on_show_all_requested
-        self.on_save_requested = on_save_requested
-        self.on_customize_requested = on_customize_requested
+        if show_frame:
+            self.setContentsMargins(4, 4, 4, 4)
         self._themed_icon_actions: list[tuple[QAction, str]] = []
 
         self.setMovable(False)
@@ -105,21 +94,23 @@ class PyQtLabGraphToolbar(QToolBar):
         self.addSeparator()
         self.customize_action = self._add_action("edit_params.png", "Customize", self.customize)
         self.save_action = self._add_action("saveplot.png", "Save", self.save_figure)
+        self.plot.interaction_state_changed.connect(self.sync_state)
+        self.plot.state_reset.connect(
+            lambda: self.sync_state(self.plot.interaction_state)
+        )
+        self.sync_state(self.plot.interaction_state)
 
     def show_all(self) -> None:
-        if self.on_show_all_requested is not None:
-            self.on_show_all_requested()
+        self.plot.request_show_all()
 
     def zoom(self, enabled: bool) -> None:
         self._request_tool(InteractionTool.RECT_ZOOM, enabled)
 
     def customize(self) -> None:
-        if self.on_customize_requested is not None:
-            self.on_customize_requested()
+        self.plot.show_customize_dialog()
 
     def save_figure(self) -> None:
-        if self.on_save_requested is not None:
-            self.on_save_requested()
+        self.plot.save_figure()
 
     def set_x_zoom_enabled(self, enabled: bool) -> None:
         self._request_tool(InteractionTool.X_ZOOM, enabled)
@@ -153,36 +144,31 @@ class PyQtLabGraphToolbar(QToolBar):
             self.refresh_icons()
         return handled
 
+    def paintEvent(self, event: QPaintEvent) -> None:
+        super().paintEvent(event)
+        if self._show_frame:
+            paint_host_frame(self)
+
     def _autoscale_x_toggled(self, enabled: bool) -> None:
-        if self.on_autoscale_x_requested is not None:
-            self.on_autoscale_x_requested(enabled)
+        self.plot.request_autoscale_x(enabled)
 
     def _autoscale_y_toggled(self, enabled: bool) -> None:
-        if self.on_autoscale_y_requested is not None:
-            self.on_autoscale_y_requested(enabled)
+        self.plot.request_autoscale_y(enabled)
 
     def _rolling_toggled(self, enabled: bool) -> None:
         if enabled:
             self._select_current_x_rolling_window()
-        if self.on_rolling_requested is not None:
-            self.on_rolling_requested(enabled)
+        self.plot.request_rolling_x(enabled)
 
     def _enable_rolling_window(self, size: float) -> None:
-        if self.on_rolling_window_selected is not None:
-            self.on_rolling_window_selected(size)
-        if self.on_rolling_requested is not None:
-            self.on_rolling_requested(True)
+        self.plot.set_rolling_window_size(size)
+        self.plot.request_rolling_x(True)
 
     def _select_current_x_rolling_window(self) -> None:
-        if (
-            self.get_current_x_window_size is not None
-            and self.on_rolling_window_selected is not None
-        ):
-            self.on_rolling_window_selected(self.get_current_x_window_size())
+        self.plot.set_rolling_window_size(self.plot.get_current_x_window_size())
 
     def _enable_current_x_rolling_window(self) -> None:
-        if self.get_current_x_window_size is not None:
-            self._enable_rolling_window(self.get_current_x_window_size())
+        self._enable_rolling_window(self.plot.get_current_x_window_size())
 
     def _enable_custom_rolling_window(self) -> None:
         dialog = QDialog(self)
@@ -190,10 +176,7 @@ class PyQtLabGraphToolbar(QToolBar):
         spin_box = QDoubleSpinBox(dialog)
         spin_box.setRange(_ROLLING_CUSTOM_MINIMUM, _ROLLING_CUSTOM_MAXIMUM)
         spin_box.setDecimals(_ROLLING_CUSTOM_DECIMALS)
-        if self.get_current_x_window_size is not None:
-            spin_box.setValue(self.get_current_x_window_size())
-        else:
-            spin_box.setValue(_ROLLING_CUSTOM_DEFAULT)
+        spin_box.setValue(self.plot.get_current_x_window_size())
         layout = QFormLayout(dialog)
         layout.addRow("X range width:", spin_box)
         buttons = QDialogButtonBox(
@@ -239,8 +222,7 @@ class PyQtLabGraphToolbar(QToolBar):
         return button
 
     def _request_tool(self, tool: InteractionTool, enabled: bool) -> None:
-        if self.on_tool_requested is not None:
-            self.on_tool_requested(tool, enabled)
+        self.plot.request_tool(tool, enabled)
 
     @staticmethod
     def _set_checked(action: QAction | QToolButton, checked: bool) -> None:

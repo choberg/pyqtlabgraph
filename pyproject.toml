@@ -4,34 +4,38 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyqtlabgraph"
-version = "0.1.2"
-description = "Reusable PySide6/PyQtGraph live plotting widget with toolbar, legend, and smart axis formatting."
+version = "0.2.0"
+description = "Reusable PySide6/PyQtGraph live plotting widget with toolbar, legend, cursors, layout persistence, and smart axis formatting."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = "MIT"
 dependencies = [
+    "numpy>=1.23",
     "PySide6>=6.6",
     "pyqtgraph>=0.13",
 ]
 authors = [
     { name = "Claudius Hoberg" },
 ]
-keywords = ["pyside6", "qt", "pyqtgraph", "plotting", "scientific-visualization", "data-visualization", "live-plot"]
+keywords = ["pyside6", "qt", "pyqtgraph", "plotting", "scientific-visualization", "data-visualization", "live-plot", "cursor", "layout-persistence"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Visualization",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "tomli>=2; python_version < '3.11'",
+    "build>=1.2",
+    "mypy>=1.11",
+    "pytest>=8",
+    "ruff>=0.8",
 ]
 
 [project.urls]
@@ -58,3 +62,27 @@ pyqtlabgraph = [
     "assets/y-zoom.png",
     "assets/zoom_area.png",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+pythonpath = ["."]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
+
+[tool.mypy]
+python_version = "3.11"
+check_untyped_defs = true
+no_implicit_optional = true
+show_error_codes = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+module = ["PySide6.*", "pyqtgraph.*"]
+ignore_missing_imports = true

@@ -4,7 +4,7 @@ from enum import Enum
 
 import pyqtgraph as pg
 from PySide6.QtCore import QPointF, Qt, Signal
-
+from PySide6.QtWidgets import QGraphicsSceneMouseEvent
 
 _SECONDS_PER_MINUTE = 60
 _SECONDS_PER_HOUR = 60 * _SECONDS_PER_MINUTE
@@ -13,6 +13,7 @@ _SECONDS_PER_DAY = 24 * _SECONDS_PER_HOUR
 _SUBSECOND_SPACING = 1.0
 _CENTISECOND_SPACING = 0.01
 _MILLISECOND_SPACING = 0.001
+_CURSOR_TIME_DECIMALS = 6
 
 
 class AxisMode(str, Enum):
@@ -79,7 +80,7 @@ class SmartAxisItem(pg.AxisItem):
         scaled_spacing = abs(spacing * scale)
         return [self._format_time(value * scale, scaled_spacing) for value in values]
 
-    def mouseDoubleClickEvent(self, event: object) -> None:
+    def mouseDoubleClickEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
             self.double_clicked.emit(self.orientation, event.scenePos())
             event.accept()
@@ -92,7 +93,7 @@ class SmartAxisItem(pg.AxisItem):
 
         s = int(seconds)
         ms = seconds - s
-        
+
         days = s // _SECONDS_PER_DAY
         hours = (s % _SECONDS_PER_DAY) // _SECONDS_PER_HOUR
         minutes = (s % _SECONDS_PER_HOUR) // _SECONDS_PER_MINUTE
@@ -105,7 +106,7 @@ class SmartAxisItem(pg.AxisItem):
             parts.append(f"{hours} h")
         if minutes > 0:
             parts.append(f"{minutes} min")
-        
+
         if spacing < _SUBSECOND_SPACING:
             if spacing < _MILLISECOND_SPACING:
                 fmt = f"{secs + ms:.3f}"
@@ -122,3 +123,30 @@ class SmartAxisItem(pg.AxisItem):
     def _refresh_label(self) -> None:
         units = None if self._mode == AxisMode.TIME else self._custom_units
         super().setLabel(self.labelText, units=units, **self.labelStyle)
+
+
+def format_relative_time(seconds: float) -> str:
+    """Format an exact relative time value for cursor readouts."""
+    sign = "-" if seconds < 0.0 else ""
+    remaining = abs(seconds)
+    whole_seconds = int(remaining)
+    fraction = remaining - whole_seconds
+
+    days = whole_seconds // _SECONDS_PER_DAY
+    hours = (whole_seconds % _SECONDS_PER_DAY) // _SECONDS_PER_HOUR
+    minutes = (whole_seconds % _SECONDS_PER_HOUR) // _SECONDS_PER_MINUTE
+    seconds_in_minute = whole_seconds % _SECONDS_PER_MINUTE
+
+    parts: list[str] = []
+    if days:
+        parts.append(f"{days} d")
+    if hours:
+        parts.append(f"{hours} h")
+    if minutes:
+        parts.append(f"{minutes} min")
+
+    seconds_value = seconds_in_minute + fraction
+    if seconds_value or not parts:
+        seconds_text = f"{seconds_value:.{_CURSOR_TIME_DECIMALS}f}".rstrip("0").rstrip(".")
+        parts.append(f"{seconds_text or '0'} s")
+    return f"{sign}{' '.join(parts)}"

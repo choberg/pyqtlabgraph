@@ -1,23 +1,34 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-import numpy as np
+from collections.abc import Callable, Sequence
 
-if TYPE_CHECKING:
-    from .widget import PyQtLabGraphWidget
-    from .models import CurveState
+import numpy as np
+import pyqtgraph as pg
 
 from .constants import (
-    _ADAPTIVE_PERFORMANCE_THRESHOLD,
     _ADAPTIVE_PERFORMANCE_RESTORE_THRESHOLD,
+    _ADAPTIVE_PERFORMANCE_THRESHOLD,
 )
+from .models import CurveState
 
 
 class RenderOptimizer:
-    """Manages Adaptive Performance and rendering flags."""
+    """Owns rendering flags and adaptive-performance policy."""
 
-    def __init__(self, widget: PyQtLabGraphWidget) -> None:
-        self._widget = widget
+    def __init__(
+        self,
+        *,
+        plot_widget: pg.PlotWidget,
+        curves_provider: Callable[[], Sequence[CurveState]],
+        curve_data_provider: Callable[[CurveState], tuple[np.ndarray, np.ndarray]],
+        x_range_provider: Callable[[], tuple[float, float]],
+        x_log_provider: Callable[[], bool],
+    ) -> None:
+        self._plot_widget = plot_widget
+        self._curves_provider = curves_provider
+        self._curve_data_provider = curve_data_provider
+        self._x_range_provider = x_range_provider
+        self._x_log_provider = x_log_provider
         self.enabled = True
         self.active = False
         self.threshold = _ADAPTIVE_PERFORMANCE_THRESHOLD
@@ -26,20 +37,20 @@ class RenderOptimizer:
         self.downsampling_enabled = True
         self.clip_to_view_enabled = True
 
-    def set_adaptive_performance_enabled(self, enabled: bool) -> None:
+    def set_adaptive_performance_enabled(self, enabled: bool) -> bool:
         self.enabled = enabled
-        self.update_adaptive_performance(force=True)
+        return self.update_adaptive_performance(force=True)
 
     def effective_antialiasing_enabled(self) -> bool:
         return self.antialiasing_enabled and not self.active
 
     def marker_cache_enabled(self) -> bool:
-        # Evaluate decoupling later as noted in roadmap, but for now replicate behavior
         return self.effective_antialiasing_enabled()
 
-    def update_adaptive_performance(self, *, force: bool = False) -> None:
-        """Toggle expensive visual details when a dense view is visible."""
-        active = self.active
+    def update_adaptive_performance(self, *, force: bool = False) -> bool:
+        """Apply rendering options and report whether adaptive mode changed."""
+        previous_active = self.active
+        active = previous_active
         if not self.enabled:
             active = False
         else:
@@ -49,45 +60,51 @@ class RenderOptimizer:
             else:
                 active = visible_points >= self.threshold
 
-        if not force and active == self.active:
-            return
+        mode_changed = active != previous_active
+        if not force and not mode_changed:
+            return False
 
         self.active = active
-        self._widget.plot_widget.setAntialiasing(self.effective_antialiasing_enabled())
-        for curve in self._widget.curve_manager.curves.values():
+        self._plot_widget.setAntialiasing(self.effective_antialiasing_enabled())
+        for curve in self._curves_provider():
             self.apply_curve_rendering_options(curve)
-            self._widget.style_controller.apply_curve_style(curve)
+        return mode_changed
 
     def _visible_data_point_count(self) -> int:
-        xmin, xmax = self._widget.get_x_range()
+        xmin, xmax = self._x_range_provider()
         count = 0
-        for curve in self._widget.curve_manager.curves.values():
+        for curve in self._curves_provider():
             if not curve.visible:
                 continue
-            x_values, _y_values = self._widget.curve_manager.get_curve_data(curve)
+            x_values, _y_values = self._curve_data_provider(curve)
             count += int(np.count_nonzero(self._visible_x_mask(x_values, xmin, xmax)))
         return count
 
-    def _visible_x_mask(self, x_values: np.ndarray, xmin: float, xmax: float) -> np.ndarray:
-        if self._widget.x_log:
+    def _visible_x_mask(
+        self,
+        x_values: np.ndarray,
+        xmin: float,
+        xmax: float,
+    ) -> np.ndarray:
+        if self._x_log_provider():
             xmin = 10**xmin
             xmax = 10**xmax
         return (xmin <= x_values) & (x_values <= xmax)
 
     def set_antialiasing_enabled(self, enabled: bool) -> None:
         self.antialiasing_enabled = enabled
-        self._widget.plot_widget.setAntialiasing(self.effective_antialiasing_enabled())
-        for curve in self._widget.curve_manager.curves.values():
+        self._plot_widget.setAntialiasing(self.effective_antialiasing_enabled())
+        for curve in self._curves_provider():
             self.apply_curve_rendering_options(curve)
 
     def set_downsampling_enabled(self, enabled: bool) -> None:
         self.downsampling_enabled = enabled
-        for curve in self._widget.curve_manager.curves.values():
+        for curve in self._curves_provider():
             self.apply_curve_rendering_options(curve)
 
     def set_clip_to_view_enabled(self, enabled: bool) -> None:
         self.clip_to_view_enabled = enabled
-        for curve in self._widget.curve_manager.curves.values():
+        for curve in self._curves_provider():
             self.apply_curve_rendering_options(curve)
 
     def apply_curve_rendering_options(self, curve: CurveState) -> None:

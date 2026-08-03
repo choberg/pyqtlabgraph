@@ -4,10 +4,11 @@ import random
 import sys
 from pathlib import Path
 
-from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget
+from _demo_theme import install_demo_theme_toggle
 from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget
 
-from pyqtlabgraph import PyQtLabGraphWidget
+from pyqtlabgraph import PyQtLabGraphLegend, PyQtLabGraphToolbar, PyQtLabGraphWidget
 
 
 def create_window() -> QMainWindow:
@@ -27,16 +28,16 @@ def create_window() -> QMainWindow:
     layout.addWidget(legend_container)
     window.setCentralWidget(central_widget)
 
-    # Create the graph and connect it to the three containers.
+    # Create independent components and embed them in the host layout.
     graph = PyQtLabGraphWidget(
-        plot_container=plot_container,
-        toolbar_container=toolbar_container,
-        legend_container=legend_container,
-        legend_orientation=Qt.Orientation.Horizontal,
         plot_identifier="minimal-main",
         layout_path=Path.cwd() / "demo_minimal.layout.json",
-        theme="light",
     )
+    toolbar = PyQtLabGraphToolbar(graph)
+    legend = PyQtLabGraphLegend(graph, orientation=Qt.Orientation.Horizontal)
+    QVBoxLayout(toolbar_container).addWidget(toolbar)
+    QVBoxLayout(plot_container).addWidget(graph)
+    QVBoxLayout(legend_container).addWidget(legend)
 
     # Configure labels and plot one named curve.
     graph.set_axis_labels("Index", "Value")
@@ -52,6 +53,9 @@ def create_window() -> QMainWindow:
 
     # Keep a reference to the graph for the lifetime of the window.
     window.graph = graph
+    window.toolbar = toolbar
+    window.legend = legend
+    install_demo_theme_toggle(window, graph)
     window.resize(900, 600)
     return window
 

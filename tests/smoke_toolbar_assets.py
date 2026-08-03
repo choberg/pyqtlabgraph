@@ -2,12 +2,8 @@ from __future__ import annotations
 
 import ast
 import sys
-try:
-    import tomllib
-except ImportError:
-    import tomli as tomllib
+import tomllib
 from pathlib import Path
-
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 TOOLBAR_PATH = REPO_ROOT / "pyqtlabgraph" / "toolbar.py"

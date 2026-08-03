@@ -8,9 +8,9 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "examples"))
 
-from PySide6.QtWidgets import QApplication, QPushButton, QWidget
-
 from demo_time_fft import TimeFftDemoWindow
+from PySide6.QtGui import QAction
+from PySide6.QtWidgets import QApplication, QDialog, QPushButton, QWidget
 
 
 def main() -> None:
@@ -29,15 +29,18 @@ def main() -> None:
     for button_name in ("startButton", "stopButton", "resetButton"):
         assert window.window.findChild(QPushButton, button_name) is not None
 
-    assert window.time_plot.plot_frame is None
-    assert window.time_plot.toolbar_frame is None
-    assert window.time_plot.legend_frame is None
-    assert window.fft_plot.plot_frame is None
-    assert window.fft_plot.toolbar_frame is None
-    assert window.fft_plot.legend_frame is None
+    assert len(window.toolbars) == 2
+    assert len(window.legends) == 2
+    dark_mode_action = window.window.findChild(QAction, "demoDarkModeAction")
+    assert dark_mode_action is not None
+    assert all(not hasattr(plot, "toolbar") for plot in (window.time_plot, window.fft_plot))
 
     window.show()
     app.processEvents()
+    dark_mode_action.setChecked(True)
+    app.processEvents()
+    assert window.time_plot.theme.name == "dark"
+    assert window.fft_plot.theme.name == "dark"
     time_section = window.window.findChild(QWidget, "timePlotSection")
     fft_section = window.window.findChild(QWidget, "fftPlotSection")
     assert time_section.sizePolicy().verticalStretch() == 1
@@ -47,7 +50,10 @@ def main() -> None:
 
     window.time_plot.show_customize_dialog()
     app.processEvents()
-    time_dialog = getattr(window.time_plot, "_pyqt_lab_graph_customize_dialogs")[0]
+    time_dialog = window.time_plot.findChild(
+        QDialog, "pyqtLabGraphCustomizeDialog"
+    )
+    assert time_dialog is not None
     time_dialog.reject()
     app.processEvents()
     assert time_section.height() == initial_time_height
@@ -55,7 +61,10 @@ def main() -> None:
 
     window.fft_plot.show_customize_dialog()
     app.processEvents()
-    fft_dialog = getattr(window.fft_plot, "_pyqt_lab_graph_customize_dialogs")[0]
+    fft_dialog = window.fft_plot.findChild(
+        QDialog, "pyqtLabGraphCustomizeDialog"
+    )
+    assert fft_dialog is not None
     fft_dialog.accept()
     app.processEvents()
     assert time_section.height() == initial_time_height

@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from PySide6.QtWidgets import QApplication, QVBoxLayout, QWidget
 
 from pyqtlabgraph import AxisMode, PyQtLabGraphWidget
-from pyqtlabgraph.axis import SmartAxisItem, resolve_axis_mode
+from pyqtlabgraph.axis import SmartAxisItem, format_relative_time, resolve_axis_mode
 
 
 def main() -> None:
@@ -55,6 +55,9 @@ def main() -> None:
     assert axis.tickStrings([1.25], scale=1.0, spacing=0.0005) == ["1.250 s"]
     assert axis.tickStrings([60000.0], scale=0.001, spacing=60000.0) == ["1 min"]
     assert axis.tickStrings([1250.0], scale=0.001, spacing=5.0) == ["1.25 s"]
+    assert format_relative_time(65.25) == "1 min 5.25 s"
+    assert format_relative_time(-90061.125) == "-1 d 1 h 1 min 1.125 s"
+    assert format_relative_time(0.000125) == "0.000125 s"
 
     axis.setLabel("Elapsed", units="s")
     axis.set_mode(AxisMode.AUTO)
@@ -73,10 +76,7 @@ def main() -> None:
     container = QWidget()
     container.setLayout(QVBoxLayout())
     graph = PyQtLabGraphWidget(
-        container,
         plot_identifier="axis-formatting-time-log",
-        show_toolbar=False,
-        show_legend=False,
     )
     graph.plot("sensor", [1.0, 10.0], [1.0, 10.0])
     graph.set_x_log(True)

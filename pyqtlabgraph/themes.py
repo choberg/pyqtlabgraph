@@ -5,7 +5,6 @@ from typing import Mapping
 
 from PySide6.QtGui import QColor
 
-
 ZOOM_SELECTION_COLOR = "#1f77b4"
 ZOOM_SELECTION_FILL_ALPHA = 85
 ZOOM_SELECTION_BORDER_ALPHA = 180
@@ -19,6 +18,8 @@ class PyQtLabGraphTheme:
     border: str
 
     def __post_init__(self) -> None:
+        if not self.name.strip():
+            raise ValueError("PyQtLabGraph theme name must not be empty.")
         if not QColor(self.plot_background).isValid():
             raise ValueError(f"Invalid plot_background color: {self.plot_background}")
         if not self.grid.isValid():
@@ -36,9 +37,9 @@ LIGHT_THEME = PyQtLabGraphTheme(
 
 DARK_THEME = PyQtLabGraphTheme(
     name="dark",
-    plot_background="#181c20",
-    grid=QColor(216, 222, 233, 38),
-    border="#3a4048",
+    plot_background="#202a33",
+    grid=QColor(214, 226, 237, 42),
+    border="#526270",
 )
 
 LIGHT_SOLARIZED_THEME = PyQtLabGraphTheme(
@@ -61,17 +62,3 @@ BUILTIN_THEMES: Mapping[str, PyQtLabGraphTheme] = {
     LIGHT_SOLARIZED_THEME.name: LIGHT_SOLARIZED_THEME,
     DARK_SOLARIZED_THEME.name: DARK_SOLARIZED_THEME,
 }
-
-
-def resolve_theme(theme: str | PyQtLabGraphTheme | None) -> PyQtLabGraphTheme:
-    if theme is None:
-        return LIGHT_THEME
-    if isinstance(theme, PyQtLabGraphTheme):
-        return theme
-
-    key = theme.lower()
-    try:
-        return BUILTIN_THEMES[key]
-    except KeyError as exc:
-        available = ", ".join(sorted(BUILTIN_THEMES))
-        raise ValueError(f'Unknown PyQtLabGraph theme "{theme}". Available themes: {available}.') from exc
