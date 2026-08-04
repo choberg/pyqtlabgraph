@@ -9,6 +9,7 @@ import numpy as np
 import pyqtgraph as pg
 from numpy.typing import ArrayLike
 from PySide6.QtCore import QPointF, Signal
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QDialog,
     QFileDialog,
@@ -106,6 +107,7 @@ class PyQtLabGraphWidget(QWidget):
         rolling_window_size: float = 300.0,
         theme: str | PyQtLabGraphTheme | None = None,
         curve_palette: str | PyQtLabGraphCurvePalette = _DEFAULT_CURVE_PALETTE_NAME,
+        curve_palette_reverse: bool = False,
         style_registry: PyQtLabGraphStyleRegistry | None = None,
         parent: QWidget | None = None,
         show_frame: bool = True,
@@ -172,6 +174,9 @@ class PyQtLabGraphWidget(QWidget):
         self._curve_manager = CurveManager(self._plot_item)
         self._trace_persistence = TracePersistenceManager(self._plot_item)
         self._curve_palette = self._style_registry.resolve_curve_palette(curve_palette)
+        if not isinstance(curve_palette_reverse, bool):
+            raise TypeError("curve_palette_reverse must be a bool.")
+        self._curve_palette_reverse = curve_palette_reverse
         self._range_controller = RangeController(
             view_box=self._view_box,
             curves_provider=self._curve_manager.ordered_curves,
@@ -290,7 +295,7 @@ class PyQtLabGraphWidget(QWidget):
         style: CurveStyle | None = None,
     ) -> pg.PlotDataItem:
         index = len(self._curve_manager.curve_order)
-        curve_style = style or CurveStyle(line_color=self._curve_palette.color(index).name())
+        curve_style = style or CurveStyle(line_color=self._curve_palette_color(index).name())
         with self._change_dispatcher.batch():
             item = self._curve_manager.add_curve(
                 key,
@@ -363,7 +368,7 @@ class PyQtLabGraphWidget(QWidget):
         style: CurveStyle | None = None,
     ) -> pg.PlotDataItem:
         index = len(self._curve_manager.curve_order)
-        curve_style = style or CurveStyle(line_color=self._curve_palette.color(index).name())
+        curve_style = style or CurveStyle(line_color=self._curve_palette_color(index).name())
         with self._change_dispatcher.batch():
             item = self._curve_manager.plot(
                 key,
@@ -943,24 +948,48 @@ class PyQtLabGraphWidget(QWidget):
     def curve_palette(self) -> PyQtLabGraphCurvePalette:
         return self._curve_palette
 
-    def set_curve_palette(self, palette: str | PyQtLabGraphCurvePalette) -> None:
+    @property
+    def curve_palette_reversed(self) -> bool:
+        return self._curve_palette_reverse
+
+    def _curve_palette_color(self, index: int) -> QColor:
+        palette_index = -index - 1 if self._curve_palette_reverse else index
+        return self._curve_palette.color(palette_index)
+
+    def set_curve_palette(
+        self,
+        palette: str | PyQtLabGraphCurvePalette,
+        *,
+        reverse: bool | None = None,
+    ) -> None:
         resolved = self._style_registry.resolve_curve_palette(palette)
+        if reverse is not None and not isinstance(reverse, bool):
+            raise TypeError("reverse must be a bool or None.")
+        next_reverse = self._curve_palette_reverse if reverse is None else reverse
         palette_changed = resolved != self._curve_palette
+        reverse_changed = next_reverse != self._curve_palette_reverse
         recolor = tuple(
             (index, curve)
             for index, curve in enumerate(self._curve_manager.ordered_curves())
-            if curve.style.line_color != resolved.color(index).name()
+            if curve.style.line_color
+            != resolved.color(-index - 1 if next_reverse else index).name()
         )
-        if not palette_changed and not recolor:
+        if not palette_changed and not reverse_changed and not recolor:
             return
         self._curve_palette = resolved
+        self._curve_palette_reverse = next_reverse
         with self._change_dispatcher.batch():
             for index, curve in recolor:
                 self.set_curve_style(
                     curve.key,
-                    replace(curve.style, line_color=resolved.color(index).name()),
+                    replace(
+                        curve.style,
+                        line_color=resolved.color(
+                            -index - 1 if next_reverse else index
+                        ).name(),
+                    ),
                 )
-            if palette_changed:
+            if palette_changed or reverse_changed:
                 self._publish_presentation_changed()
 
     def apply_curve_gradient(
@@ -1077,7 +1106,10 @@ class PyQtLabGraphWidget(QWidget):
         self.set_clip_to_view_enabled(snapshot.clip_to_view)
         self.set_adaptive_performance_enabled(snapshot.adaptive_performance)
         self.set_theme(snapshot.theme)
-        self.set_curve_palette(snapshot.curve_palette)
+        self.set_curve_palette(
+            snapshot.curve_palette,
+            reverse=snapshot.curve_palette_reverse,
+        )
         for curve in snapshot.curves:
             self.set_curve_visible(curve.key, curve.visible)
             self.set_curve_style(curve.key, curve.style)

@@ -4,29 +4,33 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Callable
 
 from PySide6.QtCore import QSize, Qt
-from PySide6.QtGui import QColor, QIcon, QLinearGradient, QPainter, QPixmap
+from PySide6.QtGui import (
+    QColor,
+    QIcon,
+    QLinearGradient,
+    QPainter,
+    QPixmap,
+    QStandardItem,
+    QStandardItemModel,
+)
 from PySide6.QtWidgets import (
-    QButtonGroup,
     QCheckBox,
     QComboBox,
     QDoubleSpinBox,
     QFormLayout,
-    QFrame,
     QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QPushButton,
-    QSizePolicy,
     QSpinBox,
     QTabWidget,
-    QToolButton,
     QVBoxLayout,
     QWidget,
 )
 
 from .axis import AxisMode
-from .colormaps import PyQtLabGraphColorGradient
+from .colormaps import PyQtLabGraphColorGradient, PyQtLabGraphCurvePalette
 from .persistence import TracePersistenceConfig
 from .styles import CurveStyle
 from .themes import PyQtLabGraphTheme
@@ -69,6 +73,10 @@ _GRADIENT_LABELS = {
     "rdbu": "RdBu",
     "brbg": "BrBG",
 }
+_CURVE_COLOR_KIND_ROLE = Qt.ItemDataRole.UserRole + 1
+_CURVE_COLOR_PALETTE = "palette"
+_CURVE_COLOR_GRADIENT = "gradient"
+_CURVE_COLOR_HEADER = "header"
 _MARKER_OPTIONS = [
     ("Circle", "o"),
     ("Square", "s"),
@@ -152,13 +160,8 @@ class GlobalControls:
     clip_to_view: QCheckBox
     adaptive_performance: QCheckBox
     plot_background: QComboBox
-    curve_palette_selector: QToolButton
-    curve_gradient_selector: QToolButton
-    curve_palette_card: QFrame
-    curve_gradient_card: QFrame
-    curve_palette: QComboBox
-    gradient: QComboBox
-    gradient_reverse: QCheckBox
+    curve_colors: QComboBox
+    curve_color_reverse: QCheckBox
     restore_view_state_on_load: QCheckBox
     x_min: QDoubleSpinBox
     x_max: QDoubleSpinBox
@@ -219,91 +222,44 @@ def build_global_tab(
         name = theme.name
         plot_background.addItem(_THEME_LABELS.get(name, name.title()), name)
     plot_background.setCurrentIndex(max(plot_background.findData(plot.theme.name), 0))
-    curve_palette = QComboBox(parent)
-    curve_palette.setObjectName("pyqtLabGraphCurvePaletteCombo")
-    curve_palette.setIconSize(_COLOR_MAP_ICON_SIZE)
+    curve_colors = QComboBox(parent)
+    curve_colors.setObjectName("pyqtLabGraphCurveColorCombo")
+    curve_colors.setIconSize(_COLOR_MAP_ICON_SIZE)
+    curve_color_model = QStandardItemModel(curve_colors)
+    curve_colors.setModel(curve_color_model)
+    _add_curve_color_header(curve_color_model, "Categorical palettes")
     for palette in plot.style_registry.curve_palettes:
-        curve_palette.addItem(
+        item = QStandardItem(
             _palette_icon(palette.colors),
             palette.name.replace("-", " ").title(),
-            palette.name,
         )
-        index = curve_palette.count() - 1
+        item.setData(palette.name, Qt.ItemDataRole.UserRole)
+        item.setData(_CURVE_COLOR_PALETTE, _CURVE_COLOR_KIND_ROLE)
         color_names = ", ".join(QColor(color).name() for color in palette.colors)
-        curve_palette.setItemData(
-            index,
-            f"Colors: {color_names}",
-            Qt.ItemDataRole.ToolTipRole,
+        item.setData(f"Colors: {color_names}", Qt.ItemDataRole.ToolTipRole)
+        curve_color_model.appendRow(item)
+    _add_curve_color_header(curve_color_model, "Continuous gradients")
+    for gradient in plot.style_registry.color_gradients:
+        item = QStandardItem(
+            _gradient_icon(gradient.positions, gradient.colors, reverse=False),
+            _GRADIENT_LABELS.get(gradient.name, gradient.name.title()),
         )
-    curve_palette.setCurrentIndex(max(curve_palette.findData(plot.curve_palette.name), 0))
-    gradient = QComboBox(parent)
-    gradient.setObjectName("pyqtLabGraphGradientCombo")
-    gradient.setIconSize(_COLOR_MAP_ICON_SIZE)
-    for value in plot.style_registry.color_gradients:
-        gradient.addItem(_GRADIENT_LABELS.get(value.name, value.name.title()), value.name)
-    _update_gradient_combo_icons(gradient, plot.style_registry.color_gradients, reverse=False)
-    gradient_reverse = _check_box(False, "pyqtLabGraphGradientReverseCheckbox", parent)
-
-    palette_selector = QToolButton(parent)
-    palette_selector.setObjectName("pyqtLabGraphCurvePaletteSelector")
-    palette_selector.setIcon(_palette_icon(plot.curve_palette.colors))
-    palette_selector.setIconSize(_COLOR_MAP_ICON_SIZE)
-    palette_selector.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-    palette_selector.setCheckable(True)
-    palette_selector.setAutoExclusive(True)
-    palette_selector.setSizePolicy(
-        QSizePolicy.Policy.Expanding,
-        QSizePolicy.Policy.Fixed,
-    )
-
-    palette_hint = QLabel(
-        "Distinct colors repeat cyclically and become the default for new curves.",
+        item.setData(gradient.name, Qt.ItemDataRole.UserRole)
+        item.setData(_CURVE_COLOR_GRADIENT, _CURVE_COLOR_KIND_ROLE)
+        item.setData("Continuous color gradient", Qt.ItemDataRole.ToolTipRole)
+        curve_color_model.appendRow(item)
+    palette_index = curve_colors.findData(plot.curve_palette.name)
+    curve_colors.setCurrentIndex(max(palette_index, 0))
+    curve_color_reverse = _check_box(
+        plot.curve_palette_reversed,
+        "pyqtLabGraphCurveColorReverseCheckbox",
         parent,
     )
-    palette_hint.setWordWrap(True)
-
-    gradient_selector = QToolButton(parent)
-    gradient_selector.setObjectName("pyqtLabGraphCurveGradientSelector")
-    gradient_selector.setIcon(_gradient_icon(
-        plot.style_registry.color_gradients[0].positions,
-        plot.style_registry.color_gradients[0].colors,
-        reverse=False,
-    ))
-    gradient_selector.setIconSize(_COLOR_MAP_ICON_SIZE)
-    gradient_selector.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-    gradient_selector.setCheckable(True)
-    gradient_selector.setAutoExclusive(True)
-    gradient_selector.setSizePolicy(
-        QSizePolicy.Policy.Expanding,
-        QSizePolicy.Policy.Fixed,
-    )
-    gradient_hint = QLabel(
-        "Colors current curves continuously by curve order; new curves still use the active "
-        "palette.",
-        parent,
-    )
-    gradient_hint.setWordWrap(True)
-
-    method_group = QButtonGroup(parent)
-    method_group.setExclusive(True)
-    method_group.addButton(palette_selector)
-    method_group.addButton(gradient_selector)
-
-    curve_palette_card = _color_method_card(
-        parent,
-        object_name="pyqtLabGraphCurvePaletteCard",
-        title="Categorical palette",
-        selector=palette_selector,
-        rows=(("Palette:", curve_palette),),
-        hint=palette_hint,
-    )
-    curve_gradient_card = _color_method_card(
-        parent,
-        object_name="pyqtLabGraphCurveGradientCard",
-        title="Continuous gradient",
-        selector=gradient_selector,
-        rows=(("Gradient:", gradient), ("Reverse:", gradient_reverse)),
-        hint=gradient_hint,
+    _update_curve_color_combo_icons(
+        curve_colors,
+        plot.style_registry.curve_palettes,
+        plot.style_registry.color_gradients,
+        reverse=curve_color_reverse.isChecked(),
     )
     restore_view = _check_box(True, "pyqtLabGraphRestoreViewStateOnLoadCheckbox", parent)
     restore_view.setToolTip(
@@ -349,13 +305,8 @@ def build_global_tab(
     curve_colors_group, curve_colors_layout = _form_group(
         "Curve colors", "pyqtLabGraphCurveColorsGroup", tab
     )
-    cards = QWidget(tab)
-    cards_layout = QVBoxLayout(cards)
-    cards_layout.setContentsMargins(*_ROW_LAYOUT_MARGINS)
-    cards_layout.setSpacing(6)
-    cards_layout.addWidget(curve_palette_card)
-    cards_layout.addWidget(curve_gradient_card)
-    curve_colors_layout.addRow(cards)
+    curve_colors_layout.addRow("Color map:", curve_colors)
+    curve_colors_layout.addRow("Reverse:", curve_color_reverse)
     layout.addWidget(curve_colors_group)
     rendering_group, rendering_layout = _form_group("Rendering", "pyqtLabGraphRenderingGroup", tab)
     rendering_layout.addRow("Anti-aliasing:", antialiasing)
@@ -381,13 +332,8 @@ def build_global_tab(
         clip_to_view,
         adaptive_performance,
         plot_background,
-        palette_selector,
-        gradient_selector,
-        curve_palette_card,
-        curve_gradient_card,
-        curve_palette,
-        gradient,
-        gradient_reverse,
+        curve_colors,
+        curve_color_reverse,
         restore_view,
         x_min,
         x_max,
@@ -416,29 +362,11 @@ def _palette_icon(colors: tuple[str | QColor, ...]) -> QIcon:
     return QIcon(pixmap)
 
 
-def _color_method_card(
-    parent: QWidget,
-    *,
-    object_name: str,
-    title: str,
-    selector: QToolButton,
-    rows: tuple[tuple[str, QWidget], ...],
-    hint: QLabel,
-) -> QFrame:
-    card = QFrame(parent)
-    card.setObjectName(object_name)
-    card.setFrameShape(QFrame.Shape.StyledPanel)
-    card.setFrameShadow(QFrame.Shadow.Plain)
-    selector.setText(title)
-    selector.setToolTip(f"Use {title.lower()} to assign curve colors.")
-    layout = QFormLayout(card)
-    layout.setContentsMargins(8, 6, 8, 6)
-    layout.setSpacing(4)
-    layout.addRow(selector)
-    for label, control in rows:
-        layout.addRow(label, control)
-    layout.addRow(hint)
-    return card
+def _add_curve_color_header(model: QStandardItemModel, title: str) -> None:
+    item = QStandardItem(title)
+    item.setData(_CURVE_COLOR_HEADER, _CURVE_COLOR_KIND_ROLE)
+    item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsSelectable)
+    model.appendRow(item)
 
 
 def _gradient_icon(
@@ -465,17 +393,28 @@ def _gradient_icon(
     return QIcon(pixmap)
 
 
-def _update_gradient_combo_icons(
+def _update_curve_color_combo_icons(
     combo: QComboBox,
+    palettes: tuple[PyQtLabGraphCurvePalette, ...],
     gradients: tuple[PyQtLabGraphColorGradient, ...],
     *,
     reverse: bool,
 ) -> None:
-    for index, gradient in enumerate(gradients):
-        combo.setItemIcon(
-            index,
-            _gradient_icon(gradient.positions, gradient.colors, reverse=reverse),
-        )
+    palette_by_name = {str(palette.name): palette for palette in palettes}
+    gradient_by_name = {gradient.name: gradient for gradient in gradients}
+    for index in range(combo.count()):
+        kind = combo.itemData(index, _CURVE_COLOR_KIND_ROLE)
+        name = combo.itemData(index, Qt.ItemDataRole.UserRole)
+        if kind == _CURVE_COLOR_PALETTE:
+            palette = palette_by_name[str(name)]
+            colors = tuple(reversed(palette.colors)) if reverse else palette.colors
+            combo.setItemIcon(index, _palette_icon(colors))
+        elif kind == _CURVE_COLOR_GRADIENT:
+            gradient = gradient_by_name[str(name)]
+            combo.setItemIcon(
+                index,
+                _gradient_icon(gradient.positions, gradient.colors, reverse=reverse),
+            )
 
 
 def build_curve_tabs(

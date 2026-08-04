@@ -81,11 +81,12 @@ def test_palette_combo_shows_six_discrete_colors_and_full_tooltip(
     plot = PyQtLabGraphWidget(plot_identifier="palette-combo")
     parent = QWidget()
     controls = customize_controls.build_global_tab(plot, parent, QTabWidget(parent))
-    combo = controls.curve_palette
+    combo = controls.curve_colors
     index = combo.findData("plotly-safe")
     palette = BUILTIN_CURVE_PALETTES["plotly-safe"]
 
     assert index >= 0
+    assert combo.itemData(index, customize_controls._CURVE_COLOR_KIND_ROLE) == "palette"
     assert combo.currentData() == "default-light"
     assert not combo.itemIcon(index).isNull()
     image = combo.itemIcon(index).pixmap(combo.iconSize()).toImage()
@@ -107,11 +108,12 @@ def test_gradient_combo_shows_continuous_gradients_and_reverses_icons(
     plot = PyQtLabGraphWidget(plot_identifier="gradient-combo")
     parent = QWidget()
     controls = customize_controls.build_global_tab(plot, parent, QTabWidget(parent))
-    combo = controls.gradient
+    combo = controls.curve_colors
     index = combo.findData("viridis")
     gradient = BUILTIN_COLOR_GRADIENTS["viridis"]
 
     assert index >= 0
+    assert combo.itemData(index, customize_controls._CURVE_COLOR_KIND_ROLE) == "gradient"
     assert combo.itemText(index) == "Viridis"
     assert not combo.itemIcon(index).isNull()
     image = combo.itemIcon(index).pixmap(combo.iconSize()).toImage()
@@ -120,8 +122,9 @@ def test_gradient_combo_shows_continuous_gradients_and_reverses_icons(
     assert _color_distance(left, QColor(gradient.colors[0])) <= 5
     assert _color_distance(right, QColor(gradient.colors[-1])) <= 5
 
-    customize_controls._update_gradient_combo_icons(
+    customize_controls._update_curve_color_combo_icons(
         combo,
+        plot.style_registry.curve_palettes,
         plot.style_registry.color_gradients,
         reverse=True,
     )
@@ -152,41 +155,29 @@ def test_curve_color_methods_start_neutral_and_preview_live(
     dialog = dialogs._CustomizeDialog(plot, None)
     controls = dialog.global_controls
 
-    assert not controls.curve_palette_selector.isChecked()
-    assert not controls.curve_gradient_selector.isChecked()
+    assert controls.curve_colors.currentData() == "default-light"
+    assert not controls.curve_color_reverse.isChecked()
 
-    baseline = tuple(plot.curve_style(key).line_color for key in ("first", "second", "third"))
-    controls.curve_palette.setCurrentIndex(controls.curve_palette.findData("okabe-ito"))
-    assert tuple(plot.curve_style(key).line_color for key in ("first", "second", "third")) == baseline
-
-    controls.curve_palette_selector.click()
     palette = BUILTIN_CURVE_PALETTES["okabe-ito"]
-    for index, key in enumerate(("first", "second", "third")):
-        assert plot.curve_style(key).line_color == palette.color(index).name()
-
-    controls.gradient.setCurrentIndex(controls.gradient.findData("viridis"))
-    assert tuple(plot.curve_style(key).line_color for key in ("first", "second", "third")) == tuple(
-        palette.color(index).name() for index in range(3)
-    )
-
-    controls.curve_gradient_selector.click()
+    controls.curve_colors.setCurrentIndex(controls.curve_colors.findData("viridis"))
     gradient = BUILTIN_COLOR_GRADIENTS["viridis"]
-    assert controls.curve_gradient_selector.isChecked()
-    assert not controls.curve_palette_selector.isChecked()
     for index, key in enumerate(("first", "second", "third")):
         assert plot.curve_style(key).line_color == gradient.color_at(index / 2).name()
 
-    controls.gradient_reverse.setChecked(True)
+    controls.curve_color_reverse.setChecked(True)
     for index, key in enumerate(("first", "second", "third")):
         assert plot.curve_style(key).line_color == gradient.color_at(
             index / 2,
             reverse=True,
         ).name()
 
-    controls.curve_palette_selector.click()
-    assert not controls.curve_gradient_selector.isChecked()
+    controls.curve_colors.setCurrentIndex(controls.curve_colors.findData("okabe-ito"))
+    assert plot.curve_palette_reversed is True
     for index, key in enumerate(("first", "second", "third")):
-        assert plot.curve_style(key).line_color == palette.color(index).name()
+        assert plot.curve_style(key).line_color == palette.color(-index - 1).name()
+
+    plot.add_curve("fourth")
+    assert plot.curve_style("fourth").line_color == palette.color(-4).name()
 
 
 def test_curve_color_menu_uses_color_swatch_icons_without_hex_labels(
@@ -278,7 +269,7 @@ def test_layout_round_trips_palette_and_persistence(qapp: QApplication, tmp_path
     path = tmp_path / "appearance.layout.json"
     source = PyQtLabGraphWidget(plot_identifier="plot", layout_path=path)
     source.add_curve("signal")
-    source.set_curve_palette("tol-bright")
+    source.set_curve_palette("tol-bright", reverse=True)
     config = TracePersistenceConfig(history_length=7, decay=2.0)
     source.set_curve_persistence("signal", config)
     source.save_layout()
@@ -287,6 +278,8 @@ def test_layout_round_trips_palette_and_persistence(qapp: QApplication, tmp_path
     target.add_curve("signal")
     assert target.load_layout()
     assert target.curve_palette.name == "tol-bright"
+    assert target.curve_palette_reversed is True
+    assert target.curve_style("signal").line_color == BUILTIN_CURVE_PALETTES["tol-bright"].color(-1).name()
     assert target.curve_persistence("signal") == config
 
     raw = json.loads(path.read_text(encoding="utf-8"))

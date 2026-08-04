@@ -192,8 +192,8 @@ def test_customize_controls_enumerate_the_widget_registry(
 
     assert controls.plot_background.findData(theme.name) >= 0
     assert controls.plot_background.currentData() == theme.name
-    assert controls.curve_palette.findData(curve_palette.name) >= 0
-    assert controls.curve_palette.currentData() == curve_palette.name
+    assert controls.curve_colors.findData(curve_palette.name) >= 0
+    assert controls.curve_colors.currentData() == curve_palette.name
 
 
 def test_customize_curve_tabs_keep_their_curve_labels(qapp: QApplication) -> None:

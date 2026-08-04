@@ -19,7 +19,6 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QPushButton,
     QSpinBox,
-    QToolButton,
 )
 
 from pyqtlabgraph import AxisMode, CurveStyle
@@ -41,9 +40,8 @@ def main() -> None:
         child(dialog, QCheckBox, "pyqtLabGraphGridCheckbox").setChecked(False)
         child(dialog, QCheckBox, "pyqtLabGraphAntialiasingCheckbox").setChecked(False)
         set_combo_data(child(dialog, QComboBox, "pyqtLabGraphPlotBackgroundCombo"), "dark")
-        child(dialog, QToolButton, "pyqtLabGraphCurvePaletteSelector").click()
         set_combo_data(
-            child(dialog, QComboBox, "pyqtLabGraphCurvePaletteCombo"),
+            child(dialog, QComboBox, "pyqtLabGraphCurveColorCombo"),
             "default-dark",
         )
         child(dialog, QCheckBox, "pyqtLabGraphCurveVisible_sensor").setChecked(False)

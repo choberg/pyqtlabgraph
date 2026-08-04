@@ -28,6 +28,7 @@ self.plot = PyQtLabGraphWidget(
     rolling_window_size=300.0,                   # Initial rolling X window size (default: 300.0)
     theme="dark",                                # Initial theme (default: light)
     curve_palette="okabe-ito",                   # Initial line-color palette (default: default-light)
+    curve_palette_reverse=True,                   # Reverse the palette cycle (default: False)
     style_registry=style_registry,               # Optional explicit style registry
     show_frame=True,                             # Draw the component frame
 )
@@ -57,6 +58,7 @@ for placeholder, component in (
 | `rolling_window_size` | `float` | `300.0` | Initial width of the rolling X-window. |
 | `theme` | `str` \| `PyQtLabGraphTheme` | `None` | Active background/grid theme name (`"light"`, `"dark"`, `"light-solarized"`, `"dark-solarized"`). |
 | `curve_palette` | `str` \| `PyQtLabGraphCurvePalette` | `"default-light"` | Active line-color palette for current and new curves. |
+| `curve_palette_reverse` | `bool` | `False` | Reverses the active palette cycle for current and new curves. |
 | `style_registry` | `PyQtLabGraphStyleRegistry` | `None` | Registry for built-in and host-registered themes, curve palettes, and color gradients. A widget-owned built-in registry is created when omitted. |
 | `parent` | `QWidget` | `None` | Optional Qt parent. |
 | `show_frame` | `bool` | `True` | Draw the component-owned palette-aware frame. |
@@ -97,8 +99,10 @@ Explicit X/Y calls may use the named `x=` and `y=` parameters.
   Applies a new `CurveStyle` to the given curve.
 * **`set_curve_visible(key: str, visible: bool)`**
   Toggles rendering of the curve in the canvas and marks its checkbox state in the legend.
-* **`set_curve_palette(palette)`**
-  Changes only current curve line colors and provides the color cycle for new curves.
+* **`set_curve_palette(palette, *, reverse=None)`**
+  Changes current curve line colors, provides the color cycle for new curves, and
+  optionally sets the persistent palette direction. `None` keeps the current
+  direction.
 * **`apply_curve_gradient(gradient, *, values=None, value_range=None, reverse=False)`**
   Atomically performs a one-shot gradient color assignment.
 * **`set_curve_persistence(key, config)`**, **`curve_persistence(key)`**, and

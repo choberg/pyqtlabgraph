@@ -54,6 +54,7 @@ def _layout(
         "restore_view_state_on_load": True,
         "theme": theme,
         "curve_palette": curve_palette,
+        "curve_palette_reverse": False,
         "axes": {
             "x": {"label": "Time", "units": "s", "mode": "linear", "log": False},
             "y": {"label": "Value", "units": None, "mode": "auto", "log": False},
@@ -167,6 +168,7 @@ def test_layout_codec_runs_without_qapplication() -> None:
         (("rendering", "antialiasing"), "false", "Boolean"),
         (("axes", "x", "log"), 0, "Boolean"),
         (("curve_palette",), None, "must be a string"),
+        (("curve_palette_reverse",), 1, "Boolean"),
         (("interaction", "active_tool"), "invalid", "active_tool"),
         (
             ("interaction",),
@@ -219,6 +221,7 @@ def test_layout_codec_rejects_duplicate_json_keys() -> None:
         ((), "plots", "missing required field"),
         (("plots", "plot"), "theme", "missing required field"),
         (("plots", "plot"), "curve_palette", "missing required field"),
+        (("plots", "plot"), "curve_palette_reverse", "missing required field"),
         (("plots", "plot", "axes", "x"), "mode", "missing required field"),
         (("plots", "plot", "rendering"), "antialiasing", "missing required field"),
         (("plots", "plot", "interaction"), "active_tool", "missing required field"),

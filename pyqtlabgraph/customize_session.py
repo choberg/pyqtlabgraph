@@ -2,7 +2,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .customize_controls import CurveStyleEditor, GlobalControls, optional_text
+from .customize_controls import (
+    _CURVE_COLOR_KIND_ROLE,
+    _CURVE_COLOR_PALETTE,
+    CurveStyleEditor,
+    GlobalControls,
+    optional_text,
+)
 from .runtime_state import PlotSnapshot
 
 if TYPE_CHECKING:
@@ -71,8 +77,13 @@ class CustomizeSession:
         self.preview_axes(controls)
         self.preview_rendering(controls)
         self.preview_theme(controls)
-        palette_name = controls.curve_palette.currentData()
-        self.plot.set_curve_palette(str(palette_name))
+        kind = controls.curve_colors.currentData(_CURVE_COLOR_KIND_ROLE)
+        if kind == _CURVE_COLOR_PALETTE:
+            palette_name = controls.curve_colors.currentData()
+            self.plot.set_curve_palette(
+                str(palette_name),
+                reverse=controls.curve_color_reverse.isChecked(),
+            )
         for key, editor in curve_editors.items():
             self.preview_curve(key, editor)
             self.plot.set_curve_persistence(key, editor.persistence_config())

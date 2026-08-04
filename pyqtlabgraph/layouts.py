@@ -34,6 +34,7 @@ _PLOT_FIELDS = frozenset(
         "restore_view_state_on_load",
         "theme",
         "curve_palette",
+        "curve_palette_reverse",
         "axes",
         "grid_visible",
         "rendering",
@@ -136,6 +137,7 @@ class PlotLayoutState:
     restore_view_state_on_load: bool
     theme: str
     curve_palette: str
+    curve_palette_reverse: bool
     x_axis: AxisLayoutState
     y_axis: AxisLayoutState
     grid_visible: bool
@@ -247,6 +249,7 @@ def capture_plot_layout(
         restore_view_state_on_load=restore_view_state_on_load,
         theme=snapshot.theme.name,
         curve_palette=snapshot.curve_palette.name,
+        curve_palette_reverse=snapshot.curve_palette_reverse,
         x_axis=AxisLayoutState(
             snapshot.x_label,
             snapshot.x_units,
@@ -366,6 +369,7 @@ def _reconcile_layout(
     return PlotSnapshot(
         theme=theme,
         curve_palette=curve_palette,
+        curve_palette_reverse=layout.curve_palette_reverse,
         x_label=layout.x_axis.label,
         y_label=layout.y_axis.label,
         x_units=layout.x_axis.units,
@@ -468,6 +472,7 @@ def _parse_plot_layout(raw: dict[str, Any]) -> PlotLayoutState:
         curve_palette=_non_empty_string(
             raw["curve_palette"], 'layout field "curve_palette"'
         ),
+        curve_palette_reverse=_boolean(raw, "curve_palette_reverse"),
         x_axis=_parse_axis(
             _mapping(axes["x"], 'layout axis "x"'),
             axis="x",
@@ -772,6 +777,7 @@ def _plot_layout_to_mapping(layout: PlotLayoutState) -> dict[str, object]:
         "restore_view_state_on_load": layout.restore_view_state_on_load,
         "theme": layout.theme,
         "curve_palette": layout.curve_palette,
+        "curve_palette_reverse": layout.curve_palette_reverse,
         "axes": {
             "x": _axis_to_mapping(layout.x_axis),
             "y": _axis_to_mapping(layout.y_axis),

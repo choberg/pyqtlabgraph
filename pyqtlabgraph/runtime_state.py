@@ -28,6 +28,7 @@ class PlotSnapshot:
 
     theme: PyQtLabGraphTheme
     curve_palette: PyQtLabGraphCurvePalette
+    curve_palette_reverse: bool
     x_label: str
     y_label: str
     x_units: str | None
@@ -54,6 +55,7 @@ class PlotSnapshot:
         return cls(
             theme=plot.theme,
             curve_palette=plot.curve_palette,
+            curve_palette_reverse=plot.curve_palette_reversed,
             x_label=plot.x_label_text,
             y_label=plot.y_label_text,
             x_units=plot.x_label_units,

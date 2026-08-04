@@ -11,12 +11,11 @@ from customize_smoke_helpers import child, graph, group_sections, show_with_call
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QApplication,
+    QCheckBox,
     QComboBox,
     QDialog,
-    QFrame,
     QLabel,
     QPushButton,
-    QToolButton,
 )
 
 
@@ -56,7 +55,7 @@ def main() -> None:
                 "Appearance",
                 ["Plot background:", "Grid:"],
             ),
-            ("Curve colors", [""]),
+            ("Curve colors", ["Color map:", "Reverse:"]),
             (
                 "Rendering",
                 ["Anti-aliasing:", "Downsampling:", "Clip to view:", "Adaptive rendering:"],
@@ -103,27 +102,15 @@ def main() -> None:
         assert dialog.findChild(QLabel, "pyqtLabGraphCurvePalettePreview") is None
         assert dialog.findChild(QLabel, "pyqtLabGraphGradientPreview") is None
         assert dialog.findChild(QPushButton, "pyqtLabGraphApplyGradientButton") is None
-        palette_selector = child(
-            dialog, QToolButton, "pyqtLabGraphCurvePaletteSelector"
-        )
-        gradient_selector = child(
-            dialog, QToolButton, "pyqtLabGraphCurveGradientSelector"
-        )
-        assert palette_selector.text() == "Categorical palette"
-        assert gradient_selector.text() == "Continuous gradient"
-        assert palette_selector.isCheckable()
-        assert gradient_selector.isCheckable()
-        assert not palette_selector.isChecked()
-        assert not gradient_selector.isChecked()
-        palette_card = child(dialog, QFrame, "pyqtLabGraphCurvePaletteCard")
-        gradient_card = child(dialog, QFrame, "pyqtLabGraphCurveGradientCard")
-        assert not palette_card.isHidden()
-        assert not gradient_card.isHidden()
-        assert not child(dialog, QComboBox, "pyqtLabGraphCurvePaletteCombo").isHidden()
-        assert not child(dialog, QComboBox, "pyqtLabGraphGradientCombo").isHidden()
-        assert dialog.findChild(QToolButton, "pyqtLabGraphCurvePaletteMethodRadio") is None
-        assert dialog.findChild(QToolButton, "pyqtLabGraphCurveGradientMethodRadio") is None
-        assert dialog.findChild(QLabel, "pyqtLabGraphCurveColorMethodHint") is None
+        combo = child(dialog, QComboBox, "pyqtLabGraphCurveColorCombo")
+        reverse = child(dialog, QCheckBox, "pyqtLabGraphCurveColorReverseCheckbox")
+        assert combo.count() == 22
+        assert combo.currentData() == "default-light"
+        assert reverse.isChecked() is False
+        assert combo.itemText(0) == "Categorical palettes"
+        assert combo.itemText(11) == "Continuous gradients"
+        assert dialog.findChild(QComboBox, "pyqtLabGraphCurvePaletteCombo") is None
+        assert dialog.findChild(QComboBox, "pyqtLabGraphGradientCombo") is None
 
     show_with_callback(plot, inspect)
     assert not hasattr(plot, "_pyqt_lab_graph_customize_dialogs")
