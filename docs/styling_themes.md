@@ -32,9 +32,9 @@ plot.set_curve_palette("default-light")
 
 Built-ins include Default Light/Dark, Solarized, Okabe–Ito, Matplotlib Tab10
 and Petroff10, Seaborn Colorblind, Paul Tol Bright/Muted, and Plotly Safe.
-The Customize dialog groups palettes and gradients as alternative curve-color
-assignment methods. It starts without claiming which method produced existing
-curve colors, then previews the selected method live. Palette entries show the
+The Customize dialog shows palettes and gradients as two visual, alternative
+curve-color cards. It starts without claiming which method produced existing
+curve colors, then previews the selected card live. Palette entries show the
 first six categorical colors as discrete swatches directly beside each name.
 Their published values come from the
 [Matplotlib](https://matplotlib.org/stable/gallery/color/color_sequences.html),

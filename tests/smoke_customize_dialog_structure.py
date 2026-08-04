@@ -13,10 +13,10 @@ from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
     QDialog,
+    QFrame,
     QLabel,
     QPushButton,
-    QRadioButton,
-    QStackedWidget,
+    QToolButton,
 )
 
 
@@ -56,7 +56,7 @@ def main() -> None:
                 "Appearance",
                 ["Plot background:", "Grid:"],
             ),
-            ("Curve colors", ["Assign by:", ""]),
+            ("Curve colors", [""]),
             (
                 "Rendering",
                 ["Anti-aliasing:", "Downsampling:", "Clip to view:", "Adaptive rendering:"],
@@ -103,17 +103,27 @@ def main() -> None:
         assert dialog.findChild(QLabel, "pyqtLabGraphCurvePalettePreview") is None
         assert dialog.findChild(QLabel, "pyqtLabGraphGradientPreview") is None
         assert dialog.findChild(QPushButton, "pyqtLabGraphApplyGradientButton") is None
-        palette_method = child(
-            dialog, QRadioButton, "pyqtLabGraphCurvePaletteMethodRadio"
+        palette_selector = child(
+            dialog, QToolButton, "pyqtLabGraphCurvePaletteSelector"
         )
-        gradient_method = child(
-            dialog, QRadioButton, "pyqtLabGraphCurveGradientMethodRadio"
+        gradient_selector = child(
+            dialog, QToolButton, "pyqtLabGraphCurveGradientSelector"
         )
-        assert palette_method.text() == "Categorical palette"
-        assert gradient_method.text() == "Continuous gradient"
-        assert not palette_method.isChecked()
-        assert not gradient_method.isChecked()
-        assert child(dialog, QStackedWidget, "pyqtLabGraphCurveColorStack").currentIndex() == 0
+        assert palette_selector.text() == "Categorical palette"
+        assert gradient_selector.text() == "Continuous gradient"
+        assert palette_selector.isCheckable()
+        assert gradient_selector.isCheckable()
+        assert not palette_selector.isChecked()
+        assert not gradient_selector.isChecked()
+        palette_card = child(dialog, QFrame, "pyqtLabGraphCurvePaletteCard")
+        gradient_card = child(dialog, QFrame, "pyqtLabGraphCurveGradientCard")
+        assert not palette_card.isHidden()
+        assert not gradient_card.isHidden()
+        assert not child(dialog, QComboBox, "pyqtLabGraphCurvePaletteCombo").isHidden()
+        assert not child(dialog, QComboBox, "pyqtLabGraphGradientCombo").isHidden()
+        assert dialog.findChild(QToolButton, "pyqtLabGraphCurvePaletteMethodRadio") is None
+        assert dialog.findChild(QToolButton, "pyqtLabGraphCurveGradientMethodRadio") is None
+        assert dialog.findChild(QLabel, "pyqtLabGraphCurveColorMethodHint") is None
 
     show_with_callback(plot, inspect)
     assert not hasattr(plot, "_pyqt_lab_graph_customize_dialogs")

@@ -152,13 +152,27 @@ def test_curve_color_methods_start_neutral_and_preview_live(
     dialog = dialogs._CustomizeDialog(plot, None)
     controls = dialog.global_controls
 
-    assert not controls.curve_palette_method.isChecked()
-    assert not controls.curve_gradient_method.isChecked()
-    assert controls.curve_color_stack.currentIndex() == 0
+    assert not controls.curve_palette_selector.isChecked()
+    assert not controls.curve_gradient_selector.isChecked()
 
-    controls.curve_gradient_method.click()
+    baseline = tuple(plot.curve_style(key).line_color for key in ("first", "second", "third"))
+    controls.curve_palette.setCurrentIndex(controls.curve_palette.findData("okabe-ito"))
+    assert tuple(plot.curve_style(key).line_color for key in ("first", "second", "third")) == baseline
+
+    controls.curve_palette_selector.click()
+    palette = BUILTIN_CURVE_PALETTES["okabe-ito"]
+    for index, key in enumerate(("first", "second", "third")):
+        assert plot.curve_style(key).line_color == palette.color(index).name()
+
+    controls.gradient.setCurrentIndex(controls.gradient.findData("viridis"))
+    assert tuple(plot.curve_style(key).line_color for key in ("first", "second", "third")) == tuple(
+        palette.color(index).name() for index in range(3)
+    )
+
+    controls.curve_gradient_selector.click()
     gradient = BUILTIN_COLOR_GRADIENTS["viridis"]
-    assert controls.curve_color_stack.currentWidget() is controls.curve_gradient_page
+    assert controls.curve_gradient_selector.isChecked()
+    assert not controls.curve_palette_selector.isChecked()
     for index, key in enumerate(("first", "second", "third")):
         assert plot.curve_style(key).line_color == gradient.color_at(index / 2).name()
 
@@ -169,11 +183,10 @@ def test_curve_color_methods_start_neutral_and_preview_live(
             reverse=True,
         ).name()
 
-    controls.curve_palette_method.click()
-    assert controls.curve_color_stack.currentWidget() is controls.curve_palette_page
-    assert not controls.curve_gradient_method.isChecked()
+    controls.curve_palette_selector.click()
+    assert not controls.curve_gradient_selector.isChecked()
     for index, key in enumerate(("first", "second", "third")):
-        assert plot.curve_style(key).line_color == plot.curve_palette.color(index).name()
+        assert plot.curve_style(key).line_color == palette.color(index).name()
 
 
 def test_curve_color_menu_uses_color_swatch_icons_without_hex_labels(
