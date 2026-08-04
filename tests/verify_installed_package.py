@@ -9,7 +9,6 @@ import pyqtlabgraph
 REPO_ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_EXPORTS = {
     "AxisMode",
-    "BUILTIN_PLOT_STYLES",
     "BUILTIN_CURVE_PALETTES",
     "BUILTIN_COLOR_GRADIENTS",
     "BUILTIN_THEMES",
@@ -25,7 +24,6 @@ EXPECTED_EXPORTS = {
     "PyQtLabGraphColorGradient",
     "PyQtLabGraphCurvePalette",
     "PyQtLabGraphLegend",
-    "PyQtLabGraphPlotStyle",
     "PyQtLabGraphStyleRegistry",
     "PyQtLabGraphTheme",
     "PyQtLabGraphToolbar",

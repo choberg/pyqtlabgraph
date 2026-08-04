@@ -9,7 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from customize_smoke_helpers import child, graph, group_sections, show_with_callback
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication, QDialog, QLabel, QPushButton
+from PySide6.QtWidgets import QApplication, QComboBox, QDialog, QLabel, QPushButton
 
 
 def main() -> None:
@@ -48,9 +48,7 @@ def main() -> None:
                 "Appearance",
                 [
                     "Plot background:",
-                    "Plot style:",
                     "Curve palette:",
-                    "Palette preview:",
                     "Gradient:",
                     "Gradient preview:",
                     "Reverse gradient:",
@@ -100,6 +98,8 @@ def main() -> None:
         assert dialog.styleSheet() == ""
         assert dialog.findChild(QPushButton, "pyqtLabGraphApplyAndSaveLayoutButton") is None
         assert dialog.findChild(QPushButton, "pyqtLabGraphApplyXRangeButton") is None
+        assert dialog.findChild(QComboBox, "pyqtLabGraphPlotStyleCombo") is None
+        assert dialog.findChild(QLabel, "pyqtLabGraphCurvePalettePreview") is None
 
     show_with_callback(plot, inspect)
     assert not hasattr(plot, "_pyqt_lab_graph_customize_dialogs")

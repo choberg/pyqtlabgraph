@@ -158,30 +158,30 @@ def test_curve_style_and_visibility_no_ops_publish_no_signal(
     assert changed == [("sensor",), ("sensor",)]
 
 
-def test_set_plot_style_updates_all_curves_and_has_clean_signals(
+def test_set_curve_palette_updates_all_curves_and_has_clean_signals(
     qapp: QApplication,
 ) -> None:
-    graph = PyQtLabGraphWidget(plot_identifier="plot-style-signals")
+    graph = PyQtLabGraphWidget(plot_identifier="curve-palette-signals")
     graph.add_curve("first")
     graph.add_curve("second")
     changed = _record_signal(graph.curve_changed)
     presented = _record_signal(graph.presentation_changed)
 
-    graph.set_plot_style("dark")
+    graph.set_curve_palette("default-dark")
 
     assert changed == [("first",), ("second",)]
     assert presented == [()]
-    assert graph.curve_style("first") == graph.plot_style.curve_style(0)
-    assert graph.curve_style("second") == graph.plot_style.curve_style(1)
+    assert graph.curve_style("first").line_color == graph.curve_palette.color(0).name()
+    assert graph.curve_style("second").line_color == graph.curve_palette.color(1).name()
 
     changed.clear()
     presented.clear()
-    graph.set_plot_style("dark")
+    graph.set_curve_palette("default-dark")
     assert changed == []
     assert presented == []
 
     graph.add_curve("third")
-    assert graph.curve_style("third") == graph.plot_style.curve_style(2)
+    assert graph.curve_style("third").line_color == graph.curve_palette.color(2).name()
 
 
 def test_theme_and_rendering_repaints_are_not_curve_mutations(

@@ -6,7 +6,9 @@ from dataclasses import FrozenInstanceError
 from pathlib import Path
 
 import pytest
-from PySide6.QtWidgets import QApplication
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor
+from PySide6.QtWidgets import QApplication, QTabWidget, QWidget
 
 from pyqtlabgraph import (
     BUILTIN_COLOR_GRADIENTS,
@@ -18,6 +20,7 @@ from pyqtlabgraph import (
     PyQtLabGraphStyleRegistry,
     PyQtLabGraphWidget,
     TracePersistenceConfig,
+    customize_controls,
 )
 
 
@@ -51,6 +54,7 @@ def test_registry_exposes_ten_palettes_and_gradients() -> None:
 
 def test_palette_cycles_and_preserves_non_color_style(qapp: QApplication) -> None:
     plot = PyQtLabGraphWidget(plot_identifier="palette")
+    assert plot.curve_palette.name == "default-light"
     original = CurveStyle(line_color="#112233", line_width=3.0, marker_symbol="d", marker_size=9)
     plot.add_curve("first", style=original)
     for index in range(1, 9):
@@ -63,6 +67,37 @@ def test_palette_cycles_and_preserves_non_color_style(qapp: QApplication) -> Non
     assert updated.marker_symbol == original.marker_symbol
     assert updated.marker_size == original.marker_size
     assert plot.curve_style("8").line_color == updated.line_color
+
+    plot.set_theme("dark")
+    assert plot.curve_palette.name == "okabe-ito"
+    with pytest.raises(TypeError, match="palette"):
+        plot.set_curve_palette(None)  # type: ignore[arg-type]
+
+
+def test_palette_combo_shows_six_discrete_colors_and_full_tooltip(
+    qapp: QApplication,
+) -> None:
+    plot = PyQtLabGraphWidget(plot_identifier="palette-combo")
+    parent = QWidget()
+    controls = customize_controls.build_global_tab(plot, parent, QTabWidget(parent))
+    combo = controls.curve_palette
+    index = combo.findData("plotly-safe")
+    palette = BUILTIN_CURVE_PALETTES["plotly-safe"]
+
+    assert index >= 0
+    assert combo.currentData() == "default-light"
+    assert not combo.itemIcon(index).isNull()
+    image = combo.itemIcon(index).pixmap(combo.iconSize()).toImage()
+    swatch_width = combo.iconSize().width() // 6
+    for color_index, color in enumerate(palette.colors[:6]):
+        sampled = image.pixelColor(
+            color_index * swatch_width + swatch_width // 2,
+            combo.iconSize().height() // 2,
+        )
+        assert sampled == QColor(color)
+    tooltip = str(combo.itemData(index, Qt.ItemDataRole.ToolTipRole))
+    assert tooltip.startswith("Colors: ")
+    assert QColor(palette.colors[-1]).name() in tooltip
 
 
 def test_gradient_order_scalars_reverse_clamping_and_atomic_errors(
@@ -137,7 +172,6 @@ def test_layout_round_trips_palette_and_persistence(qapp: QApplication, tmp_path
     target = PyQtLabGraphWidget(plot_identifier="plot", layout_path=path)
     target.add_curve("signal")
     assert target.load_layout()
-    assert target.curve_palette is not None
     assert target.curve_palette.name == "tol-bright"
     assert target.curve_persistence("signal") == config
 

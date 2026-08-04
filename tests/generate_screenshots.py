@@ -49,7 +49,7 @@ def generate():
     plot = PyQtLabGraphWidget(
         plot_identifier="screenshot_gen",
         theme="dark",
-        plot_style="dark",
+        curve_palette="default-dark",
     )
     toolbar = PyQtLabGraphToolbar(plot)
     legend = PyQtLabGraphLegend(plot, orientation=Qt.Orientation.Horizontal)
@@ -128,7 +128,7 @@ def generate():
     plot_alt = PyQtLabGraphWidget(
         plot_identifier="screenshot_alt",
         theme="light",
-        plot_style="light",
+        curve_palette="default-light",
     )
     toolbar_alt = PyQtLabGraphToolbar(plot_alt)
     legend_alt = PyQtLabGraphLegend(plot_alt, orientation=Qt.Orientation.Vertical)

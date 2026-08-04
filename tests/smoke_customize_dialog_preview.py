@@ -40,7 +40,10 @@ def main() -> None:
         child(dialog, QCheckBox, "pyqtLabGraphGridCheckbox").setChecked(False)
         child(dialog, QCheckBox, "pyqtLabGraphAntialiasingCheckbox").setChecked(False)
         set_combo_data(child(dialog, QComboBox, "pyqtLabGraphPlotBackgroundCombo"), "dark")
-        set_combo_data(child(dialog, QComboBox, "pyqtLabGraphPlotStyleCombo"), "dark")
+        set_combo_data(
+            child(dialog, QComboBox, "pyqtLabGraphCurvePaletteCombo"),
+            "default-dark",
+        )
         child(dialog, QCheckBox, "pyqtLabGraphCurveVisible_sensor").setChecked(False)
         child(dialog, QDoubleSpinBox, "pyqtLabGraphCurveLineWidth_sensor").setValue(3.5)
         child(dialog, QCheckBox, "pyqtLabGraphPersistenceEnabled_sensor").setChecked(True)
@@ -54,6 +57,7 @@ def main() -> None:
         assert plot.get_x_range() == (10.0, 20.0)
         assert plot.x_label_text == "Preview X"
         assert plot.theme.name == "dark"
+        assert plot.curve_palette.name == "default-dark"
         assert plot.grid_item.isVisible() is False
         assert plot.curve_item("sensor").isVisible() is False
         dialog.reject()
@@ -62,6 +66,7 @@ def main() -> None:
     assert plot.x_label_text == "Before X"
     assert plot.x_label_units == "s"
     assert plot.theme.name == "light"
+    assert plot.curve_palette.name == "default-light"
     assert plot.grid_item.isVisible() is True
     assert plot._render_optimizer.antialiasing_enabled is True
     assert plot.get_x_range() == (-1.0, 3.0)

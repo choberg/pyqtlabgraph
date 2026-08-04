@@ -4,13 +4,14 @@ import inspect
 import os
 from dataclasses import FrozenInstanceError
 
+import pyqtlabgraph
 import pytest
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QApplication, QTabWidget, QWidget
 
 from pyqtlabgraph import (
     CurveStyle,
-    PyQtLabGraphPlotStyle,
+    PyQtLabGraphCurvePalette,
     PyQtLabGraphStyleRegistry,
     PyQtLabGraphTheme,
     PyQtLabGraphWidget,
@@ -19,7 +20,7 @@ from pyqtlabgraph import (
     legend,
 )
 from pyqtlabgraph.models import InteractionState, InteractionTool
-from pyqtlabgraph.styles import BUILTIN_PLOT_STYLES
+from pyqtlabgraph.colormaps import BUILTIN_CURVE_PALETTES
 from pyqtlabgraph.themes import BUILTIN_THEMES
 
 
@@ -38,11 +39,8 @@ def _custom_theme(name: str = "laboratory") -> PyQtLabGraphTheme:
     )
 
 
-def _custom_plot_style(name: str = "laboratory") -> PyQtLabGraphPlotStyle:
-    return PyQtLabGraphPlotStyle(
-        name=name,
-        curve_styles=(CurveStyle(line_color="#abcdef", marker_symbol="d"),),
-    )
+def _custom_curve_palette(name: str = "laboratory") -> PyQtLabGraphCurvePalette:
+    return PyQtLabGraphCurvePalette(name=name, colors=("#abcdef", "#fedcba"))
 
 
 @pytest.mark.parametrize(
@@ -63,72 +61,83 @@ def test_named_style_values_require_nonempty_names(name: str) -> None:
     with pytest.raises(ValueError, match="name"):
         _custom_theme(name)
     with pytest.raises(ValueError, match="name"):
-        _custom_plot_style(name)
-
-
-def test_plot_style_requires_a_nonempty_curve_palette() -> None:
-    with pytest.raises(ValueError, match="curve style"):
-        PyQtLabGraphPlotStyle(name="empty", curve_styles=())
+        _custom_curve_palette(name)
 
 
 def test_registry_contains_builtins_and_is_case_insensitive() -> None:
     registry = PyQtLabGraphStyleRegistry()
 
     assert registry.resolve_theme(" DARK ") is BUILTIN_THEMES["dark"]
-    assert registry.resolve_plot_style("SoLaRiZeD") is BUILTIN_PLOT_STYLES["solarized"]
+    assert registry.resolve_curve_palette("SoLaRiZeD") is BUILTIN_CURVE_PALETTES["solarized"]
     assert tuple(value.name for value in registry.themes) == tuple(BUILTIN_THEMES)
-    assert tuple(value.name for value in registry.plot_styles) == tuple(BUILTIN_PLOT_STYLES)
+    assert tuple(value.name for value in registry.curve_palettes) == tuple(
+        BUILTIN_CURVE_PALETTES
+    )
+
+
+def test_plot_style_contract_is_removed(qapp: QApplication) -> None:
+    graph = PyQtLabGraphWidget(plot_identifier="no-plot-style")
+    registry = PyQtLabGraphStyleRegistry()
+
+    assert "plot_style" not in inspect.signature(PyQtLabGraphWidget).parameters
+    assert "PyQtLabGraphPlotStyle" not in pyqtlabgraph.__all__
+    assert not hasattr(pyqtlabgraph, "PyQtLabGraphPlotStyle")
+    assert not hasattr(graph, "plot_style")
+    assert not hasattr(graph, "set_plot_style")
+    assert not hasattr(registry, "plot_styles")
+    assert not hasattr(registry, "register_plot_style")
+    assert not hasattr(registry, "resolve_plot_style")
 
 
 def test_registry_registration_is_explicit_isolated_and_duplicate_safe() -> None:
     first = PyQtLabGraphStyleRegistry()
     second = PyQtLabGraphStyleRegistry()
     theme = _custom_theme()
-    plot_style = _custom_plot_style()
+    curve_palette = _custom_curve_palette()
 
     first.register_theme(theme)
-    first.register_plot_style(plot_style)
+    first.register_curve_palette(curve_palette)
 
     assert first.resolve_theme("LABORATORY") is theme
-    assert first.resolve_plot_style(" laboratory ") is plot_style
+    assert first.resolve_curve_palette(" laboratory ") is curve_palette
     with pytest.raises(ValueError, match="Unknown"):
         second.resolve_theme(theme.name)
     with pytest.raises(ValueError, match="Unknown"):
-        second.resolve_plot_style(plot_style.name)
+        second.resolve_curve_palette(curve_palette.name)
     with pytest.raises(ValueError, match="already registered"):
         first.register_theme(_custom_theme("LABORATORY"))
     with pytest.raises(ValueError, match="already registered"):
-        first.register_plot_style(_custom_plot_style(" Laboratory "))
+        first.register_curve_palette(_custom_curve_palette(" Laboratory "))
     assert "laboratory" not in BUILTIN_THEMES
-    assert "laboratory" not in BUILTIN_PLOT_STYLES
+    assert "laboratory" not in BUILTIN_CURVE_PALETTES
 
 
 def test_registry_rejects_unregistered_or_unequal_objects() -> None:
     registry = PyQtLabGraphStyleRegistry()
     theme = _custom_theme()
-    plot_style = _custom_plot_style()
+    curve_palette = _custom_curve_palette()
 
     with pytest.raises(ValueError, match="not registered"):
         registry.resolve_theme(theme)
     with pytest.raises(ValueError, match="not registered"):
-        registry.resolve_plot_style(plot_style)
+        registry.resolve_curve_palette(curve_palette)
 
     registry.register_theme(theme)
-    registry.register_plot_style(plot_style)
+    registry.register_curve_palette(curve_palette)
     unequal_theme = PyQtLabGraphTheme(
         name=theme.name.upper(),
         plot_background="#ffffff",
         grid=QColor("#777777"),
         border="#000000",
     )
-    unequal_plot_style = PyQtLabGraphPlotStyle(
-        name=plot_style.name.upper(),
-        curve_styles=(CurveStyle(line_color="#123456"),),
+    unequal_curve_palette = PyQtLabGraphCurvePalette(
+        name=curve_palette.name.upper(),
+        colors=("#123456",),
     )
     with pytest.raises(ValueError, match="does not match"):
         registry.resolve_theme(unequal_theme)
     with pytest.raises(ValueError, match="does not match"):
-        registry.resolve_plot_style(unequal_plot_style)
+        registry.resolve_curve_palette(unequal_curve_palette)
 
 
 def test_widget_uses_injected_registry_without_partial_style_mutation(
@@ -136,30 +145,30 @@ def test_widget_uses_injected_registry_without_partial_style_mutation(
 ) -> None:
     registry = PyQtLabGraphStyleRegistry()
     theme = _custom_theme()
-    plot_style = _custom_plot_style()
+    curve_palette = _custom_curve_palette()
     registry.register_theme(theme)
-    registry.register_plot_style(plot_style)
+    registry.register_curve_palette(curve_palette)
     graph = PyQtLabGraphWidget(
         plot_identifier="custom-registry",
         style_registry=registry,
         theme=theme,
-        plot_style=plot_style,
+        curve_palette=curve_palette,
     )
 
     assert graph.style_registry is registry
     assert graph.theme is theme
-    assert graph.plot_style is plot_style
+    assert graph.curve_palette is curve_palette
     graph.add_curve("sensor")
-    assert graph.curve_style("sensor") == plot_style.curve_style(0)
+    assert graph.curve_style("sensor").line_color == "#abcdef"
 
     previous_theme = graph.theme
-    previous_plot_style = graph.plot_style
+    previous_curve_palette = graph.curve_palette
     with pytest.raises(ValueError, match="not registered"):
         graph.set_theme(_custom_theme("unregistered"))
     with pytest.raises(ValueError, match="not registered"):
-        graph.set_plot_style(_custom_plot_style("unregistered"))
+        graph.set_curve_palette(_custom_curve_palette("unregistered"))
     assert graph.theme is previous_theme
-    assert graph.plot_style is previous_plot_style
+    assert graph.curve_palette is previous_curve_palette
 
 
 def test_customize_controls_enumerate_the_widget_registry(
@@ -167,14 +176,14 @@ def test_customize_controls_enumerate_the_widget_registry(
 ) -> None:
     registry = PyQtLabGraphStyleRegistry()
     theme = _custom_theme()
-    plot_style = _custom_plot_style()
+    curve_palette = _custom_curve_palette()
     registry.register_theme(theme)
-    registry.register_plot_style(plot_style)
+    registry.register_curve_palette(curve_palette)
     graph = PyQtLabGraphWidget(
         plot_identifier="custom-registry-controls",
         style_registry=registry,
         theme=theme.name,
-        plot_style=plot_style.name,
+        curve_palette=curve_palette.name,
     )
     parent = QWidget()
     tabs = QTabWidget(parent)
@@ -183,8 +192,8 @@ def test_customize_controls_enumerate_the_widget_registry(
 
     assert controls.plot_background.findData(theme.name) >= 0
     assert controls.plot_background.currentData() == theme.name
-    assert controls.plot_style.findData(plot_style.name) >= 0
-    assert controls.plot_style.currentData() == plot_style.name
+    assert controls.curve_palette.findData(curve_palette.name) >= 0
+    assert controls.curve_palette.currentData() == curve_palette.name
 
 
 def test_customize_curve_tabs_keep_their_curve_labels(qapp: QApplication) -> None:

@@ -18,8 +18,9 @@ intents through the facade and project facade-owned state.
   host-created curve set.
 - Cursor selection belongs to the plot. Any attached cursor panels project the
   same canonical selection through their Qt selection models.
-- Themes control the ViewBox background and grid. Plot styles control curve
-  lines and markers. Host Qt palettes and styles control axes and UI chrome.
+- Themes control the ViewBox background and grid. Curve palettes provide the
+  default line-color cycle, while each curve owns its complete `CurveStyle`.
+  Host Qt palettes and styles control axes and UI chrome.
 
 Internal collaborators receive explicit plot items, view boxes, providers, and
 callbacks instead of using the public widget as a service locator. Productive

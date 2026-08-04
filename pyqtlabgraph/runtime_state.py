@@ -7,7 +7,7 @@ from .axis import AxisMode
 from .colormaps import PyQtLabGraphCurvePalette
 from .models import CursorPairState, CursorState, InteractionState
 from .persistence import TracePersistenceConfig
-from .styles import CurveStyle, PyQtLabGraphPlotStyle
+from .styles import CurveStyle
 from .themes import PyQtLabGraphTheme
 
 if TYPE_CHECKING:
@@ -27,8 +27,7 @@ class PlotSnapshot:
     """Exact layout-relevant runtime state used for rollback and replacement."""
 
     theme: PyQtLabGraphTheme
-    plot_style: PyQtLabGraphPlotStyle
-    curve_palette: PyQtLabGraphCurvePalette | None
+    curve_palette: PyQtLabGraphCurvePalette
     x_label: str
     y_label: str
     x_units: str | None
@@ -54,7 +53,6 @@ class PlotSnapshot:
     def capture(cls, plot: PyQtLabGraphWidget) -> PlotSnapshot:
         return cls(
             theme=plot.theme,
-            plot_style=plot.plot_style,
             curve_palette=plot.curve_palette,
             x_label=plot.x_label_text,
             y_label=plot.y_label_text,

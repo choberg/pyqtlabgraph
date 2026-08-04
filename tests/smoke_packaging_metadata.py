@@ -24,7 +24,6 @@ CURSOR_PUBLIC_EXPORTS = {
 }
 STYLE_PUBLIC_EXPORTS = {
     "CurveStyle",
-    "PyQtLabGraphPlotStyle",
     "PyQtLabGraphStyleRegistry",
     "PyQtLabGraphTheme",
 }

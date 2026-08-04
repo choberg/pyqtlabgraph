@@ -19,30 +19,21 @@ self.plot.set_theme("dark-solarized")
 
 ---
 
-## Plot Styles
-
-A plot style determines the palette (line colors, markers, widths) mapped to curves:
-* `light`: Highly visible color cycle optimized for light background themes.
-* `dark`: Vibrant color cycle optimized for dark background themes.
-* `solarized`: Palette adhering to the solarized styling standard.
-
-To apply a plot style to all current curves and use it for new curves:
-```python
-self.plot.set_plot_style("solarized")
-```
-
 ## Curve Palettes and Continuous Gradients
 
 Curve palettes change only line colors. They are independent of the plot theme
-and plot style, and cycle when there are more curves than colors:
+and cycle when there are more curves than colors. `default-light` is active
+unless the host selects another palette:
 
 ```python
 plot.set_curve_palette("okabe-ito")
-plot.set_curve_palette(None)  # return to colors from the plot style
+plot.set_curve_palette("default-light")
 ```
 
 Built-ins include Default Light/Dark, Solarized, Okabe–Ito, Matplotlib Tab10
 and Petroff10, Seaborn Colorblind, Paul Tol Bright/Muted, and Plotly Safe.
+The Customize dialog shows the first six categorical colors as discrete
+swatches directly beside each palette name.
 Their published values come from the
 [Matplotlib](https://matplotlib.org/stable/gallery/color/color_sequences.html),
 [Seaborn](https://seaborn.pydata.org/tutorial/color_palettes.html),
@@ -67,7 +58,7 @@ cyclic Twilight gradient are built in. Hosts can also use a gradient's
 
 ---
 
-## Custom Themes and Plot Styles
+## Custom Themes and Curve Palettes
 
 Host-defined appearance values use an explicit registry. Every registry starts
 with the built-ins and remains independent from other registries:
@@ -75,9 +66,7 @@ with the built-ins and remains independent from other registries:
 ```python
 from PySide6.QtGui import QColor
 from pyqtlabgraph import (
-    CurveStyle,
     PyQtLabGraphCurvePalette,
-    PyQtLabGraphPlotStyle,
     PyQtLabGraphStyleRegistry,
     PyQtLabGraphTheme,
     PyQtLabGraphWidget,
@@ -92,12 +81,6 @@ registry.register_theme(
         border="#405060",
     )
 )
-registry.register_plot_style(
-    PyQtLabGraphPlotStyle(
-        name="laboratory",
-        curve_styles=(CurveStyle(line_color="#abcdef"),),
-    )
-)
 registry.register_curve_palette(
     PyQtLabGraphCurvePalette(name="laboratory-curves", colors=("#abcdef", "#fedcba"))
 )
@@ -106,7 +89,7 @@ plot = PyQtLabGraphWidget(
     plot_identifier="custom-style",
     style_registry=registry,
     theme="LABORATORY",
-    plot_style="laboratory",
+    curve_palette="laboratory-curves",
 )
 ```
 
@@ -114,7 +97,7 @@ Names resolve case-insensitively. Duplicate names are rejected, and an object
 passed directly to a widget must equal the registered value under its name.
 Registered values appear in the Customize dialog.
 
-Layout restoration resolves saved theme and plot-style names through the
+Layout restoration resolves saved theme and curve-palette names through the
 target widget's registry. A custom registered appearance therefore round-trips
 when the host supplies the same registry configuration before loading.
 

@@ -32,7 +32,7 @@ def main() -> None:
         action.setChecked(True)
         app.processEvents()
         assert window.graph.theme.name == "dark"
-        assert window.graph.plot_style.name == "dark"
+        assert window.graph.curve_palette.name == "default-dark"
         window.close()
         app.processEvents()
 

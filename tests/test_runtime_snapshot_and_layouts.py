@@ -14,9 +14,9 @@ from PySide6.QtWidgets import QApplication, QWidget
 from pyqtlabgraph import (
     CursorStyle,
     LayoutFileError,
+    PyQtLabGraphCurvePalette,
     PyQtLabGraphCursorWidget,
     PyQtLabGraphLegend,
-    PyQtLabGraphPlotStyle,
     PyQtLabGraphStyleRegistry,
     PyQtLabGraphTheme,
     PyQtLabGraphToolbar,
@@ -45,12 +45,15 @@ def _dispose(qapp: QApplication, *widgets: QWidget) -> None:
     qapp.processEvents()
 
 
-def _layout(*, theme: str = "light", plot_style: str = "light") -> dict[str, object]:
+def _layout(
+    *,
+    theme: str = "light",
+    curve_palette: str = "default-light",
+) -> dict[str, object]:
     return {
         "restore_view_state_on_load": True,
         "theme": theme,
-        "plot_style": plot_style,
-        "curve_palette": None,
+        "curve_palette": curve_palette,
         "axes": {
             "x": {"label": "Time", "units": "s", "mode": "linear", "log": False},
             "y": {"label": "Value", "units": None, "mode": "auto", "log": False},
@@ -163,6 +166,7 @@ def test_layout_codec_runs_without_qapplication() -> None:
         (("grid_visible",), 1, "Boolean"),
         (("rendering", "antialiasing"), "false", "Boolean"),
         (("axes", "x", "log"), 0, "Boolean"),
+        (("curve_palette",), None, "must be a string"),
         (("interaction", "active_tool"), "invalid", "active_tool"),
         (
             ("interaction",),
@@ -214,6 +218,7 @@ def test_layout_codec_rejects_duplicate_json_keys() -> None:
     [
         ((), "plots", "missing required field"),
         (("plots", "plot"), "theme", "missing required field"),
+        (("plots", "plot"), "curve_palette", "missing required field"),
         (("plots", "plot", "axes", "x"), "mode", "missing required field"),
         (("plots", "plot", "rendering"), "antialiasing", "missing required field"),
         (("plots", "plot", "interaction"), "active_tool", "missing required field"),
@@ -261,6 +266,14 @@ def test_layout_codec_rejects_unknown_fixed_fields(
         decode_layout_document(json.dumps(document))
 
 
+def test_layout_codec_rejects_removed_plot_style_field() -> None:
+    document = _document()
+    document["plots"]["plot"]["plot_style"] = "light"  # type: ignore[index]
+
+    with pytest.raises(LayoutFileError, match="unknown field.*plot_style"):
+        decode_layout_document(json.dumps(document))
+
+
 def test_layout_codec_rejects_invalid_cursor_pairs_without_widget() -> None:
     layout = _layout()
     layout["cursors"] = [
@@ -304,7 +317,7 @@ def test_plot_snapshot_restores_exact_runtime_state(qapp: QApplication) -> None:
     before = PlotSnapshot.capture(plot)
 
     plot.set_theme("dark")
-    plot.set_plot_style("dark")
+    plot.set_curve_palette("default-dark")
     plot.set_curve_visible("sensor", True)
     plot.set_axis_labels("Changed X", "Changed Y")
     plot.request_show_all()
@@ -323,7 +336,7 @@ def test_layout_load_is_atomic_and_emits_only_state_reset(
     tmp_path: Path,
 ) -> None:
     path = tmp_path / "layout.json"
-    layout = _layout(theme="dark", plot_style="dark")
+    layout = _layout(theme="dark", curve_palette="default-dark")
     layout["curves"] = {
         "sensor": {
             "visible": False,
@@ -455,19 +468,19 @@ def test_custom_registered_appearance_roundtrips(
         grid=QColor("#405060"),
         border="#708090",
     )
-    plot_style = PyQtLabGraphPlotStyle(
+    curve_palette = PyQtLabGraphCurvePalette(
         name="laboratory",
-        curve_styles=(CurveStyle(line_color="#ABCDEF"),),
+        colors=("#ABCDEF", "#FEDCBA"),
     )
     registry.register_theme(theme)
-    registry.register_plot_style(plot_style)
+    registry.register_curve_palette(curve_palette)
 
     source = PyQtLabGraphWidget(
         plot_identifier="plot",
         layout_path=path,
         style_registry=registry,
         theme=theme,
-        plot_style=plot_style,
+        curve_palette=curve_palette,
     )
     source.save_layout()
     target = PyQtLabGraphWidget(
@@ -478,7 +491,7 @@ def test_custom_registered_appearance_roundtrips(
 
     assert target.load_layout()
     assert target.theme is theme
-    assert target.plot_style is plot_style
+    assert target.curve_palette is curve_palette
     _dispose(qapp, target, source)
 
 

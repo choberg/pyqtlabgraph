@@ -27,8 +27,7 @@ self.plot = PyQtLabGraphWidget(
     layout_path=Path("plot_layouts.json"),       # Target layout file (optional)
     rolling_window_size=300.0,                   # Initial rolling X window size (default: 300.0)
     theme="dark",                                # Initial theme (default: light)
-    plot_style="dark",                           # Initial curve style palette (default: light)
-    curve_palette="okabe-ito",                   # Optional line-color-only palette
+    curve_palette="okabe-ito",                   # Initial line-color palette (default: default-light)
     style_registry=style_registry,               # Optional explicit style registry
     show_frame=True,                             # Draw the component frame
 )
@@ -57,9 +56,8 @@ for placeholder, component in (
 | `layout_path` | `str` \| `Path` | `None` | Path to the layout save file. Activates auto layout features. |
 | `rolling_window_size` | `float` | `300.0` | Initial width of the rolling X-window. |
 | `theme` | `str` \| `PyQtLabGraphTheme` | `None` | Active background/grid theme name (`"light"`, `"dark"`, `"light-solarized"`, `"dark-solarized"`). |
-| `plot_style` | `str` \| `PyQtLabGraphPlotStyle` | `None` | Active curve styling palette name (`"light"`, `"dark"`, `"solarized"`). |
-| `curve_palette` | `str` \| `PyQtLabGraphCurvePalette` | `None` | Optional line-color palette; `None` uses plot-style colors. |
-| `style_registry` | `PyQtLabGraphStyleRegistry` | `None` | Registry for built-in and host-registered themes and plot styles. A widget-owned built-in registry is created when omitted. |
+| `curve_palette` | `str` \| `PyQtLabGraphCurvePalette` | `"default-light"` | Active line-color palette for current and new curves. |
+| `style_registry` | `PyQtLabGraphStyleRegistry` | `None` | Registry for built-in and host-registered themes, curve palettes, and color gradients. A widget-owned built-in registry is created when omitted. |
 | `parent` | `QWidget` | `None` | Optional Qt parent. |
 | `show_frame` | `bool` | `True` | Draw the component-owned palette-aware frame. |
 
@@ -250,15 +248,13 @@ Configure views, axes, limits, and serialize settings:
   Rescales both axes to fit all data.
 * **`set_theme(theme: str | PyQtLabGraphTheme)`**
   Applies a background/grid theme.
-* **`set_plot_style(style: str | PyQtLabGraphPlotStyle)`**
-  Applies the plot style palette to all existing curves and uses it for new curves.
 * **`save_layout()`** / **`load_layout()`**
   Manually writes/restores layout state to/from the file set in `layout_path`.
   Layout format version 1 requires the complete current field set and rejects
   unknown fields before the widget changes. Booleans are not coerced, numeric
   values must be finite, and invalid enums, styles, interaction combinations,
   duplicate keys, cursor targets, and cursor pairs are rejected. Application
-  is atomic and resolves theme and plot-style names through the widget's
+  is atomic and resolves theme and curve-palette names through the widget's
   `style_registry`.
   Host applications must create curves before calling `load_layout()` so saved
   cursor snap targets and curve-matched styling can be resolved by key. Unknown

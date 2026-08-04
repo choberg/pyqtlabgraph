@@ -39,7 +39,7 @@ def main() -> None:
         dark_mode_action.setChecked(True)
         app.processEvents()
         assert window.live_plot.theme.name == "dark"
-        assert window.live_plot.plot_style.name == "dark"
+        assert window.live_plot.curve_palette.name == "default-dark"
 
         window.window.close()
         app.processEvents()

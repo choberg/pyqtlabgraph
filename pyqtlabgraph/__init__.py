@@ -16,11 +16,7 @@ from .models import CursorLineStyle, CursorPairState, CursorState, CursorStyle, 
 from .persistence import TracePersistenceConfig
 from .runtime_state import PlotSnapshot
 from .style_registry import PyQtLabGraphStyleRegistry
-from .styles import (
-    BUILTIN_PLOT_STYLES,
-    CurveStyle,
-    PyQtLabGraphPlotStyle,
-)
+from .styles import CurveStyle
 from .themes import (
     BUILTIN_THEMES,
     PyQtLabGraphTheme,
@@ -35,7 +31,6 @@ except PackageNotFoundError:
 
 __all__ = [
     "AxisMode",
-    "BUILTIN_PLOT_STYLES",
     "BUILTIN_CURVE_PALETTES",
     "BUILTIN_COLOR_GRADIENTS",
     "BUILTIN_THEMES",
@@ -47,7 +42,6 @@ __all__ = [
     "CurveStyle",
     "LayoutFileError",
     "PlotSnapshot",
-    "PyQtLabGraphPlotStyle",
     "PyQtLabGraphCurvePalette",
     "PyQtLabGraphColorGradient",
     "PyQtLabGraphStyleRegistry",

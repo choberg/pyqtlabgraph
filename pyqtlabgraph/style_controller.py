@@ -11,7 +11,6 @@ from .constants import _AXIS_PEN_WIDTH, _GRID_LINE_WIDTH
 from .interaction import _ZOOM_SELECTION_BORDER_WIDTH
 from .models import CurveState
 from .style_registry import PyQtLabGraphStyleRegistry
-from .styles import CurveStyle, PyQtLabGraphPlotStyle
 from .themes import (
     ZOOM_SELECTION_BORDER_ALPHA,
     ZOOM_SELECTION_COLOR,
@@ -46,7 +45,6 @@ class StyleController(QObject):
         self._adaptive_mode_provider = adaptive_mode_provider
         self._palette_widgets: set[QWidget] = {plot_widget}
         self.theme = registry.resolve_theme(None)
-        self.plot_style = registry.resolve_plot_style(None)
         plot_widget.installEventFilter(self)
 
     def watch_palette_widget(self, widget: QWidget) -> None:
@@ -64,30 +62,6 @@ class StyleController(QObject):
         for curve in self._curves_provider():
             self.apply_curve_style(curve)
         self.apply_host_axis_style()
-
-    def set_plot_style(
-        self,
-        plot_style: str | PyQtLabGraphPlotStyle | None,
-    ) -> tuple[bool, tuple[str, ...]]:
-        resolved = self._registry.resolve_plot_style(plot_style)
-        plot_style_changed = resolved != self.plot_style
-        self.plot_style = resolved
-
-        changed_keys: list[str] = []
-        for index, curve in enumerate(self._curves_provider()):
-            style = self.plot_style_curve_style(index)
-            if curve.style == style:
-                continue
-            curve.style = style
-            self.apply_curve_style(curve)
-            changed_keys.append(curve.key)
-        return plot_style_changed, tuple(changed_keys)
-
-    def default_curve_style(self, index: int) -> CurveStyle:
-        return self.plot_style_curve_style(index)
-
-    def plot_style_curve_style(self, index: int) -> CurveStyle:
-        return self.plot_style.curve_style(index)
 
     def apply_curve_style(self, curve: CurveState) -> None:
         style = curve.style

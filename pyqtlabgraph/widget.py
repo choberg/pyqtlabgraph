@@ -54,13 +54,14 @@ from .render_optimizer import RenderOptimizer
 from .runtime_state import PlotSnapshot
 from .style_controller import StyleController
 from .style_registry import PyQtLabGraphStyleRegistry
-from .styles import CurveStyle, PyQtLabGraphPlotStyle
+from .styles import CurveStyle
 from .themes import (
     PyQtLabGraphTheme,
 )
 
 _DEFAULT_X_RANGE = (0.0, 1.0)
 _DEFAULT_Y_RANGE = (0.0, 1.0)
+_DEFAULT_CURVE_PALETTE_NAME = "default-light"
 
 _PLOT_LAYOUT_MARGINS = (8, 8, 12, 8)
 _PRIMARY_AXIS_TICK_LENGTH = 8
@@ -104,8 +105,7 @@ class PyQtLabGraphWidget(QWidget):
         layout_path: str | Path | None = None,
         rolling_window_size: float = 300.0,
         theme: str | PyQtLabGraphTheme | None = None,
-        plot_style: str | PyQtLabGraphPlotStyle | None = None,
-        curve_palette: str | PyQtLabGraphCurvePalette | None = None,
+        curve_palette: str | PyQtLabGraphCurvePalette = _DEFAULT_CURVE_PALETTE_NAME,
         style_registry: PyQtLabGraphStyleRegistry | None = None,
         parent: QWidget | None = None,
         show_frame: bool = True,
@@ -171,7 +171,7 @@ class PyQtLabGraphWidget(QWidget):
 
         self._curve_manager = CurveManager(self._plot_item)
         self._trace_persistence = TracePersistenceManager(self._plot_item)
-        self._curve_palette: PyQtLabGraphCurvePalette | None = None
+        self._curve_palette = self._style_registry.resolve_curve_palette(curve_palette)
         self._range_controller = RangeController(
             view_box=self._view_box,
             curves_provider=self._curve_manager.ordered_curves,
@@ -247,9 +247,6 @@ class PyQtLabGraphWidget(QWidget):
 
         self._view_box.sigRangeChanged.connect(self._handle_view_range_changed)
         self._style_controller.set_theme(theme)
-        self._style_controller.set_plot_style(plot_style)
-        if curve_palette is not None:
-            self.set_curve_palette(curve_palette)
         self._range_controller._set_x_range(*_DEFAULT_X_RANGE)
         self._range_controller._set_y_range(*_DEFAULT_Y_RANGE)
         self._cursor_controller.refresh_presentation()
@@ -293,9 +290,7 @@ class PyQtLabGraphWidget(QWidget):
         style: CurveStyle | None = None,
     ) -> pg.PlotDataItem:
         index = len(self._curve_manager.curve_order)
-        curve_style = style or self._style_controller.default_curve_style(index)
-        if style is None and self._curve_palette is not None:
-            curve_style = replace(curve_style, line_color=self._curve_palette.color(index).name())
+        curve_style = style or CurveStyle(line_color=self._curve_palette.color(index).name())
         with self._change_dispatcher.batch():
             item = self._curve_manager.add_curve(
                 key,
@@ -368,9 +363,7 @@ class PyQtLabGraphWidget(QWidget):
         style: CurveStyle | None = None,
     ) -> pg.PlotDataItem:
         index = len(self._curve_manager.curve_order)
-        curve_style = style or self._style_controller.default_curve_style(index)
-        if style is None and self._curve_palette is not None:
-            curve_style = replace(curve_style, line_color=self._curve_palette.color(index).name())
+        curve_style = style or CurveStyle(line_color=self._curve_palette.color(index).name())
         with self._change_dispatcher.batch():
             item = self._curve_manager.plot(
                 key,
@@ -890,10 +883,6 @@ class PyQtLabGraphWidget(QWidget):
         return self._style_controller.theme
 
     @property
-    def plot_style(self) -> PyQtLabGraphPlotStyle:
-        return self._style_controller.plot_style
-
-    @property
     def style_registry(self) -> PyQtLabGraphStyleRegistry:
         return self._style_registry
 
@@ -950,47 +939,21 @@ class PyQtLabGraphWidget(QWidget):
         except (OSError, ValueError) as exc:
             raise RuntimeError(f"Could not save PyQtGraph plot to {filename}: {exc}") from exc
 
-    def set_plot_style(
-        self,
-        plot_style: str | PyQtLabGraphPlotStyle,
-    ) -> None:
-        with self._change_dispatcher.batch():
-            style_changed, changed_keys = self._style_controller.set_plot_style(plot_style)
-            if self._curve_palette is not None:
-                palette_changed: list[str] = []
-                for index, curve in enumerate(self._curve_manager.ordered_curves()):
-                    target = replace(
-                        curve.style,
-                        line_color=self._curve_palette.color(index).name(),
-                    )
-                    if self._curve_manager.set_curve_style(curve.key, target):
-                        self._style_controller.apply_curve_style(curve)
-                        palette_changed.append(curve.key)
-                changed_keys = tuple(dict.fromkeys((*changed_keys, *palette_changed)))
-            for key in changed_keys:
-                curve = self._curve_manager.get_curve(key)
-                self._trace_persistence.update_curve(key, curve.style, curve.visible)
-                self._publish_curve_changed(key)
-            if style_changed or changed_keys:
-                self._publish_presentation_changed()
-
     @property
-    def curve_palette(self) -> PyQtLabGraphCurvePalette | None:
+    def curve_palette(self) -> PyQtLabGraphCurvePalette:
         return self._curve_palette
 
-    def set_curve_palette(self, palette: str | PyQtLabGraphCurvePalette | None) -> None:
-        resolved = None if palette is None else self._style_registry.resolve_curve_palette(palette)
+    def set_curve_palette(self, palette: str | PyQtLabGraphCurvePalette) -> None:
+        resolved = self._style_registry.resolve_curve_palette(palette)
         if resolved == self._curve_palette:
             return
         self._curve_palette = resolved
         with self._change_dispatcher.batch():
             for index, curve in enumerate(self._curve_manager.ordered_curves()):
-                color = (
-                    self._style_controller.plot_style_curve_style(index).line_color
-                    if resolved is None
-                    else resolved.color(index).name()
+                self.set_curve_style(
+                    curve.key,
+                    replace(curve.style, line_color=resolved.color(index).name()),
                 )
-                self.set_curve_style(curve.key, replace(curve.style, line_color=color))
             self._publish_presentation_changed()
 
     def apply_curve_gradient(
@@ -1107,7 +1070,6 @@ class PyQtLabGraphWidget(QWidget):
         self.set_clip_to_view_enabled(snapshot.clip_to_view)
         self.set_adaptive_performance_enabled(snapshot.adaptive_performance)
         self.set_theme(snapshot.theme)
-        self.set_plot_style(snapshot.plot_style)
         self.set_curve_palette(snapshot.curve_palette)
         for curve in snapshot.curves:
             self.set_curve_visible(curve.key, curve.visible)

@@ -33,7 +33,6 @@ _PLOT_FIELDS = frozenset(
     {
         "restore_view_state_on_load",
         "theme",
-        "plot_style",
         "curve_palette",
         "axes",
         "grid_visible",
@@ -136,8 +135,7 @@ class CursorPairLayoutState:
 class PlotLayoutState:
     restore_view_state_on_load: bool
     theme: str
-    plot_style: str
-    curve_palette: str | None
+    curve_palette: str
     x_axis: AxisLayoutState
     y_axis: AxisLayoutState
     grid_visible: bool
@@ -248,8 +246,7 @@ def capture_plot_layout(
     return PlotLayoutState(
         restore_view_state_on_load=restore_view_state_on_load,
         theme=snapshot.theme.name,
-        plot_style=snapshot.plot_style.name,
-        curve_palette=(snapshot.curve_palette.name if snapshot.curve_palette is not None else None),
+        curve_palette=snapshot.curve_palette.name,
         x_axis=AxisLayoutState(
             snapshot.x_label,
             snapshot.x_units,
@@ -325,12 +322,7 @@ def _reconcile_layout(
     current = PlotSnapshot.capture(plot)
     try:
         theme = plot.style_registry.resolve_theme(layout.theme)
-        plot_style = plot.style_registry.resolve_plot_style(layout.plot_style)
-        curve_palette = (
-            None
-            if layout.curve_palette is None
-            else plot.style_registry.resolve_curve_palette(layout.curve_palette)
-        )
+        curve_palette = plot.style_registry.resolve_curve_palette(layout.curve_palette)
     except ValueError as exc:
         raise LayoutFileError(str(exc)) from exc
 
@@ -373,7 +365,6 @@ def _reconcile_layout(
 
     return PlotSnapshot(
         theme=theme,
-        plot_style=plot_style,
         curve_palette=curve_palette,
         x_label=layout.x_axis.label,
         y_label=layout.y_axis.label,
@@ -474,11 +465,7 @@ def _parse_plot_layout(raw: dict[str, Any]) -> PlotLayoutState:
     return PlotLayoutState(
         restore_view_state_on_load=_boolean(raw, "restore_view_state_on_load"),
         theme=_non_empty_string(raw["theme"], 'layout field "theme"'),
-        plot_style=_non_empty_string(
-            raw["plot_style"],
-            'layout field "plot_style"',
-        ),
-        curve_palette=_optional_non_empty_string(
+        curve_palette=_non_empty_string(
             raw["curve_palette"], 'layout field "curve_palette"'
         ),
         x_axis=_parse_axis(
@@ -784,7 +771,6 @@ def _plot_layout_to_mapping(layout: PlotLayoutState) -> dict[str, object]:
     return {
         "restore_view_state_on_load": layout.restore_view_state_on_load,
         "theme": layout.theme,
-        "plot_style": layout.plot_style,
         "curve_palette": layout.curve_palette,
         "axes": {
             "x": _axis_to_mapping(layout.x_axis),
@@ -941,12 +927,6 @@ def _optional_string(value: object, owner: str) -> str | None:
         return None
     result = _string(value, owner)
     return result or None
-
-
-def _optional_non_empty_string(value: object, owner: str) -> str | None:
-    if value is None:
-        return None
-    return _non_empty_string(value, owner)
 
 
 def _finite_number(value: object, owner: str) -> float:

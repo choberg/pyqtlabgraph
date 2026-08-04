@@ -3,7 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Callable
 
-from PySide6.QtGui import QColor
+from PySide6.QtCore import QSize, Qt
+from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -49,17 +50,15 @@ _COLOR_BUTTON_LIGHTNESS_THRESHOLD = 128
 _COLOR_BUTTON_BORDER_WIDTH = 1
 _COLOR_BUTTON_BORDER_RADIUS = 4
 _COLOR_BUTTON_PADDING = (4, 8)
+_PALETTE_ICON_SIZE = QSize(72, 14)
+_PALETTE_ICON_COLOR_COUNT = 6
+_PALETTE_SWATCH_WIDTH = _PALETTE_ICON_SIZE.width() // _PALETTE_ICON_COLOR_COUNT
 
 _THEME_LABELS = {
     "light": "Light",
     "dark": "Dark",
     "light-solarized": "Light Solarized",
     "dark-solarized": "Dark Solarized",
-}
-_PLOT_STYLE_LABELS = {
-    "light": "Light",
-    "dark": "Dark",
-    "solarized": "Solarized",
 }
 _MARKER_OPTIONS = [
     ("Circle", "o"),
@@ -144,9 +143,7 @@ class GlobalControls:
     clip_to_view: QCheckBox
     adaptive_performance: QCheckBox
     plot_background: QComboBox
-    plot_style: QComboBox
     curve_palette: QComboBox
-    palette_preview: QLabel
     gradient: QComboBox
     gradient_preview: QLabel
     gradient_reverse: QCheckBox
@@ -211,22 +208,23 @@ def build_global_tab(
         name = theme.name
         plot_background.addItem(_THEME_LABELS.get(name, name.title()), name)
     plot_background.setCurrentIndex(max(plot_background.findData(plot.theme.name), 0))
-    plot_style = QComboBox(parent)
-    plot_style.setObjectName("pyqtLabGraphPlotStyleCombo")
-    for registered_plot_style in plot.style_registry.plot_styles:
-        name = registered_plot_style.name
-        plot_style.addItem(_PLOT_STYLE_LABELS.get(name, name.title()), name)
-    plot_style.setCurrentIndex(max(plot_style.findData(plot.plot_style.name), 0))
     curve_palette = QComboBox(parent)
     curve_palette.setObjectName("pyqtLabGraphCurvePaletteCombo")
-    curve_palette.addItem("From plot style", None)
+    curve_palette.setIconSize(_PALETTE_ICON_SIZE)
     for palette in plot.style_registry.curve_palettes:
-        curve_palette.addItem(palette.name.replace("-", " ").title(), palette.name)
-    active_palette = plot.curve_palette.name if plot.curve_palette is not None else None
-    curve_palette.setCurrentIndex(max(curve_palette.findData(active_palette), 0))
-    palette_preview = QLabel(parent)
-    palette_preview.setObjectName("pyqtLabGraphCurvePalettePreview")
-    palette_preview.setAccessibleName("Curve palette color preview")
+        curve_palette.addItem(
+            _palette_icon(palette.colors),
+            palette.name.replace("-", " ").title(),
+            palette.name,
+        )
+        index = curve_palette.count() - 1
+        color_names = ", ".join(QColor(color).name() for color in palette.colors)
+        curve_palette.setItemData(
+            index,
+            f"Colors: {color_names}",
+            Qt.ItemDataRole.ToolTipRole,
+        )
+    curve_palette.setCurrentIndex(max(curve_palette.findData(plot.curve_palette.name), 0))
     gradient = QComboBox(parent)
     gradient.setObjectName("pyqtLabGraphGradientCombo")
     for value in plot.style_registry.color_gradients:
@@ -276,9 +274,7 @@ def build_global_tab(
         "Appearance", "pyqtLabGraphAppearanceGroup", tab
     )
     appearance_layout.addRow("Plot background:", plot_background)
-    appearance_layout.addRow("Plot style:", plot_style)
     appearance_layout.addRow("Curve palette:", curve_palette)
-    appearance_layout.addRow("Palette preview:", palette_preview)
     appearance_layout.addRow("Gradient:", gradient)
     appearance_layout.addRow("Gradient preview:", gradient_preview)
     appearance_layout.addRow("Reverse gradient:", gradient_reverse)
@@ -309,9 +305,7 @@ def build_global_tab(
         clip_to_view,
         adaptive_performance,
         plot_background,
-        plot_style,
         curve_palette,
-        palette_preview,
         gradient,
         gradient_preview,
         gradient_reverse,
@@ -326,6 +320,22 @@ def build_global_tab(
         x_log,
         y_log,
     )
+
+
+def _palette_icon(colors: tuple[str | QColor, ...]) -> QIcon:
+    pixmap = QPixmap(_PALETTE_ICON_SIZE)
+    pixmap.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(pixmap)
+    for index, color in enumerate(colors[:_PALETTE_ICON_COLOR_COUNT]):
+        painter.fillRect(
+            index * _PALETTE_SWATCH_WIDTH,
+            0,
+            _PALETTE_SWATCH_WIDTH,
+            _PALETTE_ICON_SIZE.height(),
+            QColor(color),
+        )
+    painter.end()
+    return QIcon(pixmap)
 
 
 def build_curve_tabs(

@@ -39,7 +39,7 @@ def apply_demo_theme(
     _apply_application_theme(app, dark_mode)
     for plot in plots:
         plot.set_theme(theme_name)
-        plot.set_plot_style(theme_name)
+        plot.set_curve_palette(f"default-{theme_name}")
 
 
 def _apply_application_theme(app: QApplication, dark_mode: bool) -> None:

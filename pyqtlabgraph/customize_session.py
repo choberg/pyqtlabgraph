@@ -71,9 +71,8 @@ class CustomizeSession:
         self.preview_axes(controls)
         self.preview_rendering(controls)
         self.preview_theme(controls)
-        self.plot.set_plot_style(str(controls.plot_style.currentData()))
         palette_name = controls.curve_palette.currentData()
-        self.plot.set_curve_palette(None if palette_name is None else str(palette_name))
+        self.plot.set_curve_palette(str(palette_name))
         for key, editor in curve_editors.items():
             self.preview_curve(key, editor)
             self.plot.set_curve_persistence(key, editor.persistence_config())

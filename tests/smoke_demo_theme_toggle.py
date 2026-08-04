@@ -41,7 +41,7 @@ def main() -> None:
     assert action is window.findChild(QAction, "demoDarkModeAction")
     assert not action.isChecked()
     assert first_plot.theme.name == "light"
-    assert second_plot.plot_style.name == "light"
+    assert second_plot.curve_palette.name == "default-light"
     assert app.palette().color(QPalette.ColorRole.Window) == QColor("#f1f3f5")
     assert app.palette().color(QPalette.ColorRole.Base) == QColor("#ffffff")
     window.resize(900, 900)
@@ -51,9 +51,9 @@ def main() -> None:
     action.setChecked(True)
     app.processEvents()
     assert first_plot.theme.name == "dark"
-    assert first_plot.plot_style.name == "dark"
+    assert first_plot.curve_palette.name == "default-dark"
     assert second_plot.theme.name == "dark"
-    assert second_plot.plot_style.name == "dark"
+    assert second_plot.curve_palette.name == "default-dark"
     assert app.style().objectName() == "fusion"
     assert app.palette().color(QPalette.ColorRole.Window) == QColor("#28323c")
     assert toolbar.palette().color(QPalette.ColorRole.ButtonText) == QColor("#e6edf3")
@@ -86,9 +86,9 @@ def main() -> None:
     action.setChecked(False)
     app.processEvents()
     assert first_plot.theme.name == "light"
-    assert first_plot.plot_style.name == "light"
+    assert first_plot.curve_palette.name == "default-light"
     assert second_plot.theme.name == "light"
-    assert second_plot.plot_style.name == "light"
+    assert second_plot.curve_palette.name == "default-light"
     assert app.palette().color(QPalette.ColorRole.Window) == QColor("#f1f3f5")
     assert app.palette().color(QPalette.ColorRole.Base) == QColor("#ffffff")
     assert toolbar.palette().color(QPalette.ColorRole.Button) == QColor("#e7ecf0")

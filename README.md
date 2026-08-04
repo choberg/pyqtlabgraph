@@ -209,7 +209,7 @@ consistent across supported platforms.
 
 - 📖 [API Reference](https://github.com/choberg/pyqtlabgraph/blob/main/docs/api_reference.md): Complete details on classes, parameters, and methods.
 - 🧭 [Architecture](https://github.com/choberg/pyqtlabgraph/blob/main/docs/architecture.md): Ownership, component boundaries, update flow, and regression guardrails.
-- 🎨 [Visual Styling & Themes](https://github.com/choberg/pyqtlabgraph/blob/main/docs/styling_themes.md): Built-in themes, plot styles, and integrating with host stylesheets.
+- 🎨 [Visual Styling & Themes](https://github.com/choberg/pyqtlabgraph/blob/main/docs/styling_themes.md): Built-in themes, curve palettes, and integrating with host stylesheets.
 - ⚡ [Performance Optimization](https://github.com/choberg/pyqtlabgraph/blob/main/docs/performance.md): Downsampling, clip-to-view, and adaptive rendering mechanics.
 
 ---
@@ -244,9 +244,10 @@ consistent across supported platforms.
 │   ├── legend.py            # External interactive PyQtLabGraphLegend
 │   ├── axis.py              # SmartAxisItem tick formatting implementation
 │   ├── models.py            # Core dataclasses (CurveState, InteractionState)
-│   ├── styles.py            # Curve style configurations and palettes
+│   ├── styles.py            # Individual curve style configuration
+│   ├── colormaps.py          # Categorical palettes and continuous gradients
 │   ├── themes.py            # Background themes and color registries
-│   ├── style_registry.py     # Explicit built-in and custom style resolution
+│   ├── style_registry.py     # Explicit appearance-value resolution
 │   ├── qt_styles.py         # Palette-aware native frame painting
 │   └── assets/              # PNG icon assets used by the toolbar
 ├── docs/                    # Detailed user-facing documentation
