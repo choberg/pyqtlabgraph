@@ -9,7 +9,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from customize_smoke_helpers import child, graph, group_sections, show_with_callback
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication, QComboBox, QDialog, QLabel, QPushButton
+from PySide6.QtWidgets import (
+    QApplication,
+    QComboBox,
+    QDialog,
+    QLabel,
+    QPushButton,
+    QRadioButton,
+    QStackedWidget,
+)
 
 
 def main() -> None:
@@ -46,16 +54,9 @@ def main() -> None:
             ("View ranges", ["X range:", "Y range:"]),
             (
                 "Appearance",
-                [
-                    "Plot background:",
-                    "Curve palette:",
-                    "Gradient:",
-                    "Gradient preview:",
-                    "Reverse gradient:",
-                    "",
-                    "Grid:",
-                ],
+                ["Plot background:", "Grid:"],
             ),
+            ("Curve colors", ["Assign by:", ""]),
             (
                 "Rendering",
                 ["Anti-aliasing:", "Downsampling:", "Clip to view:", "Adaptive rendering:"],
@@ -100,6 +101,19 @@ def main() -> None:
         assert dialog.findChild(QPushButton, "pyqtLabGraphApplyXRangeButton") is None
         assert dialog.findChild(QComboBox, "pyqtLabGraphPlotStyleCombo") is None
         assert dialog.findChild(QLabel, "pyqtLabGraphCurvePalettePreview") is None
+        assert dialog.findChild(QLabel, "pyqtLabGraphGradientPreview") is None
+        assert dialog.findChild(QPushButton, "pyqtLabGraphApplyGradientButton") is None
+        palette_method = child(
+            dialog, QRadioButton, "pyqtLabGraphCurvePaletteMethodRadio"
+        )
+        gradient_method = child(
+            dialog, QRadioButton, "pyqtLabGraphCurveGradientMethodRadio"
+        )
+        assert palette_method.text() == "Categorical palette"
+        assert gradient_method.text() == "Continuous gradient"
+        assert not palette_method.isChecked()
+        assert not gradient_method.isChecked()
+        assert child(dialog, QStackedWidget, "pyqtLabGraphCurveColorStack").currentIndex() == 0
 
     show_with_callback(plot, inspect)
     assert not hasattr(plot, "_pyqt_lab_graph_customize_dialogs")

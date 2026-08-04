@@ -183,6 +183,16 @@ def test_set_curve_palette_updates_all_curves_and_has_clean_signals(
     graph.add_curve("third")
     assert graph.curve_style("third").line_color == graph.curve_palette.color(2).name()
 
+    graph.apply_curve_gradient("viridis")
+    changed.clear()
+    presented.clear()
+    graph.set_curve_palette("default-dark")
+
+    assert changed == [("first",), ("second",), ("third",)]
+    assert presented == []
+    for index, key in enumerate(("first", "second", "third")):
+        assert graph.curve_style(key).line_color == graph.curve_palette.color(index).name()
+
 
 def test_theme_and_rendering_repaints_are_not_curve_mutations(
     qapp: QApplication,

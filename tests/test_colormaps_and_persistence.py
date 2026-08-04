@@ -101,6 +101,81 @@ def test_palette_combo_shows_six_discrete_colors_and_full_tooltip(
     assert QColor(palette.colors[-1]).name() in tooltip
 
 
+def test_gradient_combo_shows_continuous_gradients_and_reverses_icons(
+    qapp: QApplication,
+) -> None:
+    plot = PyQtLabGraphWidget(plot_identifier="gradient-combo")
+    parent = QWidget()
+    controls = customize_controls.build_global_tab(plot, parent, QTabWidget(parent))
+    combo = controls.gradient
+    index = combo.findData("viridis")
+    gradient = BUILTIN_COLOR_GRADIENTS["viridis"]
+
+    assert index >= 0
+    assert combo.itemText(index) == "Viridis"
+    assert not combo.itemIcon(index).isNull()
+    image = combo.itemIcon(index).pixmap(combo.iconSize()).toImage()
+    left = image.pixelColor(0, combo.iconSize().height() // 2)
+    right = image.pixelColor(combo.iconSize().width() - 1, combo.iconSize().height() // 2)
+    assert _color_distance(left, QColor(gradient.colors[0])) <= 5
+    assert _color_distance(right, QColor(gradient.colors[-1])) <= 5
+
+    customize_controls._update_gradient_combo_icons(
+        combo,
+        plot.style_registry.color_gradients,
+        reverse=True,
+    )
+    reversed_image = combo.itemIcon(index).pixmap(combo.iconSize()).toImage()
+    reversed_left = reversed_image.pixelColor(0, combo.iconSize().height() // 2)
+    reversed_right = reversed_image.pixelColor(
+        combo.iconSize().width() - 1,
+        combo.iconSize().height() // 2,
+    )
+    assert _color_distance(reversed_left, QColor(gradient.colors[-1])) <= 5
+    assert _color_distance(reversed_right, QColor(gradient.colors[0])) <= 5
+
+
+def _color_distance(first: QColor, second: QColor) -> int:
+    return max(
+        abs(first.red() - second.red()),
+        abs(first.green() - second.green()),
+        abs(first.blue() - second.blue()),
+    )
+
+
+def test_curve_color_methods_start_neutral_and_preview_live(
+    qapp: QApplication,
+) -> None:
+    plot = PyQtLabGraphWidget(plot_identifier="curve-color-methods")
+    for key in ("first", "second", "third"):
+        plot.add_curve(key)
+    dialog = dialogs._CustomizeDialog(plot, None)
+    controls = dialog.global_controls
+
+    assert not controls.curve_palette_method.isChecked()
+    assert not controls.curve_gradient_method.isChecked()
+    assert controls.curve_color_stack.currentIndex() == 0
+
+    controls.curve_gradient_method.click()
+    gradient = BUILTIN_COLOR_GRADIENTS["viridis"]
+    assert controls.curve_color_stack.currentWidget() is controls.curve_gradient_page
+    for index, key in enumerate(("first", "second", "third")):
+        assert plot.curve_style(key).line_color == gradient.color_at(index / 2).name()
+
+    controls.gradient_reverse.setChecked(True)
+    for index, key in enumerate(("first", "second", "third")):
+        assert plot.curve_style(key).line_color == gradient.color_at(
+            index / 2,
+            reverse=True,
+        ).name()
+
+    controls.curve_palette_method.click()
+    assert controls.curve_color_stack.currentWidget() is controls.curve_palette_page
+    assert not controls.curve_gradient_method.isChecked()
+    for index, key in enumerate(("first", "second", "third")):
+        assert plot.curve_style(key).line_color == plot.curve_palette.color(index).name()
+
+
 def test_curve_color_menu_uses_color_swatch_icons_without_hex_labels(
     qapp: QApplication,
 ) -> None:

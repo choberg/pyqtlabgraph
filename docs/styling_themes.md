@@ -32,8 +32,10 @@ plot.set_curve_palette("default-light")
 
 Built-ins include Default Light/Dark, Solarized, Okabe–Ito, Matplotlib Tab10
 and Petroff10, Seaborn Colorblind, Paul Tol Bright/Muted, and Plotly Safe.
-The Customize dialog shows the first six categorical colors as discrete
-swatches directly beside each palette name.
+The Customize dialog groups palettes and gradients as alternative curve-color
+assignment methods. It starts without claiming which method produced existing
+curve colors, then previews the selected method live. Palette entries show the
+first six categorical colors as discrete swatches directly beside each name.
 Their published values come from the
 [Matplotlib](https://matplotlib.org/stable/gallery/color/color_sequences.html),
 [Seaborn](https://seaborn.pydata.org/tutorial/color_palettes.html),
@@ -53,8 +55,9 @@ plot.apply_curve_gradient(
 
 Without `values`, current curves are distributed evenly by curve order.
 Viridis, Cividis, Plasma, Inferno, Magma, Turbo, Coolwarm, RdBu, BrBG, and the
-cyclic Twilight gradient are built in. Hosts can also use a gradient's
-`color_at()` and `sample()` methods directly.
+cyclic Twilight gradient are built in. The Customize dropdown shows each
+continuous gradient directly and can reverse both its preview and assignment.
+Hosts can also use a gradient's `color_at()` and `sample()` methods directly.
 
 ---
 

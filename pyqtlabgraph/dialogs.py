@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 
 from .axis import AxisMode
 from .customize_controls import (
+    _update_gradient_combo_icons,
     build_curve_tabs,
     build_global_tab,
     set_color_button_style,
@@ -118,7 +119,6 @@ class _CustomizeDialog(QDialog):
         )
         self.select_initial_curve_tab(curve_key)
         self._sync_log_checkbox_availability()
-        self._update_gradient_preview()
         self.session.sync_ranges_from_plot()
 
         hint = QLabel(_PREVIEW_HINT, self)
@@ -186,10 +186,11 @@ class _CustomizeDialog(QDialog):
         ):
             checkbox.toggled.connect(self._preview_rendering)
         controls.plot_background.currentIndexChanged.connect(self._preview_plot_background)
+        controls.curve_palette_method.toggled.connect(self._select_curve_palette_method)
+        controls.curve_gradient_method.toggled.connect(self._select_curve_gradient_method)
         controls.curve_palette.currentIndexChanged.connect(self._preview_curve_palette)
-        controls.gradient.currentIndexChanged.connect(self._update_gradient_preview)
-        controls.gradient_reverse.toggled.connect(self._update_gradient_preview)
-        controls.apply_gradient.clicked.connect(self._apply_gradient)
+        controls.gradient.currentIndexChanged.connect(self._preview_curve_gradient)
+        controls.gradient_reverse.toggled.connect(self._reverse_curve_gradient)
         controls.preview_x_range_button.clicked.connect(self._preview_x_range)
         controls.preview_y_range_button.clicked.connect(self._preview_y_range)
         for key, editor in self.curve_editors.items():
@@ -288,42 +289,47 @@ class _CustomizeDialog(QDialog):
             set_color_button_style(editor.line_color_button, editor.line_color, self.plot.theme)
 
     def _preview_curve_palette(self, *_args: object) -> None:
-        if not self._preview_enabled:
-            return
-        name = self.global_controls.curve_palette.currentData()
-        self.plot.set_curve_palette(str(name))
-        for key, _label in self.plot.curve_choices():
-            self.curve_editors[key].set_curve_style(self.plot.curve_style(key), self.plot.theme)
-
-    def _apply_gradient(self, *_args: object) -> None:
-        name = str(self.global_controls.gradient.currentData())
-        self.plot.apply_curve_gradient(
-            name, reverse=self.global_controls.gradient_reverse.isChecked()
-        )
-        for key, _label in self.plot.curve_choices():
-            self.curve_editors[key].set_curve_style(self.plot.curve_style(key), self.plot.theme)
-
-    def _update_gradient_preview(self, *_args: object) -> None:
         controls = self.global_controls
-        gradient = self.plot.style_registry.resolve_color_gradient(
-            str(controls.gradient.currentData())
-        )
-        sampled = gradient.sample(7, reverse=controls.gradient_reverse.isChecked())
-        controls.gradient_preview.setText(" ")
-        controls.gradient_preview.setMinimumHeight(18)
-        controls.gradient_preview.setStyleSheet(
-            self._color_strip(tuple(color.name() for color in sampled))
-        )
+        if not self._preview_enabled or not controls.curve_palette_method.isChecked():
+            return
+        name = controls.curve_palette.currentData()
+        self.plot.set_curve_palette(str(name))
+        self._sync_curve_editors()
 
-    @staticmethod
-    def _color_strip(colors: tuple[str, ...]) -> str:
-        if not colors:
-            return ""
-        stops = ", ".join(
-            f"stop:{index / max(len(colors) - 1, 1):.3f} {color}"
-            for index, color in enumerate(colors)
+    def _select_curve_palette_method(self, checked: bool) -> None:
+        if not checked:
+            return
+        controls = self.global_controls
+        controls.curve_color_stack.setCurrentWidget(controls.curve_palette_page)
+        self._preview_curve_palette()
+
+    def _select_curve_gradient_method(self, checked: bool) -> None:
+        if not checked:
+            return
+        controls = self.global_controls
+        controls.curve_color_stack.setCurrentWidget(controls.curve_gradient_page)
+        self._preview_curve_gradient()
+
+    def _preview_curve_gradient(self, *_args: object) -> None:
+        controls = self.global_controls
+        if not self._preview_enabled or not controls.curve_gradient_method.isChecked():
+            return
+        name = str(controls.gradient.currentData())
+        self.plot.apply_curve_gradient(name, reverse=controls.gradient_reverse.isChecked())
+        self._sync_curve_editors()
+
+    def _reverse_curve_gradient(self, *_args: object) -> None:
+        controls = self.global_controls
+        _update_gradient_combo_icons(
+            controls.gradient,
+            self.plot.style_registry.color_gradients,
+            reverse=controls.gradient_reverse.isChecked(),
         )
-        return f"background: qlineargradient(x1:0,y1:0,x2:1,y2:0,{stops});"
+        self._preview_curve_gradient()
+
+    def _sync_curve_editors(self) -> None:
+        for key, _label in self.plot.curve_choices():
+            self.curve_editors[key].set_curve_style(self.plot.curve_style(key), self.plot.theme)
 
     def _preview_x_range(self, *_args: object) -> None:
         if self._preview_enabled:

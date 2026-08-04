@@ -945,16 +945,23 @@ class PyQtLabGraphWidget(QWidget):
 
     def set_curve_palette(self, palette: str | PyQtLabGraphCurvePalette) -> None:
         resolved = self._style_registry.resolve_curve_palette(palette)
-        if resolved == self._curve_palette:
+        palette_changed = resolved != self._curve_palette
+        recolor = tuple(
+            (index, curve)
+            for index, curve in enumerate(self._curve_manager.ordered_curves())
+            if curve.style.line_color != resolved.color(index).name()
+        )
+        if not palette_changed and not recolor:
             return
         self._curve_palette = resolved
         with self._change_dispatcher.batch():
-            for index, curve in enumerate(self._curve_manager.ordered_curves()):
+            for index, curve in recolor:
                 self.set_curve_style(
                     curve.key,
                     replace(curve.style, line_color=resolved.color(index).name()),
                 )
-            self._publish_presentation_changed()
+            if palette_changed:
+                self._publish_presentation_changed()
 
     def apply_curve_gradient(
         self,
