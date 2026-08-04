@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
-from PySide6.QtWidgets import QApplication, QTabWidget, QWidget
+from PySide6.QtWidgets import QApplication, QDialog, QTabWidget, QWidget
 
 from pyqtlabgraph import (
     BUILTIN_COLOR_GRADIENTS,
@@ -21,6 +21,7 @@ from pyqtlabgraph import (
     PyQtLabGraphWidget,
     TracePersistenceConfig,
     customize_controls,
+    dialogs,
 )
 
 
@@ -98,6 +99,31 @@ def test_palette_combo_shows_six_discrete_colors_and_full_tooltip(
     tooltip = str(combo.itemData(index, Qt.ItemDataRole.ToolTipRole))
     assert tooltip.startswith("Colors: ")
     assert QColor(palette.colors[-1]).name() in tooltip
+
+
+def test_curve_color_menu_uses_color_swatch_icons_without_hex_labels(
+    qapp: QApplication,
+) -> None:
+    palette = BUILTIN_CURVE_PALETTES["okabe-ito"]
+    colors = tuple(QColor(color).name() for color in palette.colors)
+    parent = QDialog()
+    menu = dialogs._curve_color_menu(
+        parent,
+        object_name="testCurveColorMenu",
+        colors=colors,
+    )
+
+    assert menu.objectName() == "testCurveColorMenu"
+    assert len(menu.actions()) == len(colors)
+    for index, (action, color_name) in enumerate(zip(menu.actions(), colors, strict=True)):
+        assert action.text() == ""
+        assert action.toolTip() == f"Palette color {index + 1}"
+        assert "#" not in action.toolTip()
+        assert action.data() == color_name
+        assert action.isIconVisibleInMenu()
+        assert not action.icon().isNull()
+        icon = action.icon().pixmap(18, 18).toImage()
+        assert icon.pixelColor(icon.width() // 2, icon.height() // 2) == QColor(color_name)
 
 
 def test_gradient_order_scalars_reverse_clamping_and_atomic_errors(

@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QEvent, QObject, Qt
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QAction, QColor, QIcon, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QCheckBox,
     QColorDialog,
@@ -30,10 +30,49 @@ if TYPE_CHECKING:
 
 
 _CUSTOMIZE_DIALOG_SIZE = (430, 690)
+_CURVE_COLOR_SWATCH_SIZE = 18
+_CURVE_COLOR_SWATCH_BORDER = "#888888"
 _PREVIEW_HINT = (
     "Changes are previewed live. Cancel restores the state from when the dialog "
     "was opened or last saved."
 )
+
+
+def _curve_color_swatch_icon(color: QColor) -> QIcon:
+    pixmap = QPixmap(_CURVE_COLOR_SWATCH_SIZE, _CURVE_COLOR_SWATCH_SIZE)
+    pixmap.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+    painter.setPen(QPen(QColor(_CURVE_COLOR_SWATCH_BORDER), 1))
+    painter.setBrush(color)
+    painter.drawRoundedRect(
+        1,
+        1,
+        _CURVE_COLOR_SWATCH_SIZE - 2,
+        _CURVE_COLOR_SWATCH_SIZE - 2,
+        3,
+        3,
+    )
+    painter.end()
+    return QIcon(pixmap)
+
+
+def _curve_color_menu(
+    parent: QDialog,
+    *,
+    object_name: str,
+    colors: tuple[str, ...],
+) -> QMenu:
+    menu = QMenu(parent)
+    menu.setObjectName(object_name)
+    for index, color_name in enumerate(colors):
+        action = QAction("", menu)
+        action.setIcon(_curve_color_swatch_icon(QColor(color_name)))
+        action.setIconVisibleInMenu(True)
+        action.setToolTip(f"Palette color {index + 1}")
+        action.setData(color_name)
+        menu.addAction(action)
+    return menu
 
 
 def prepare_customize_dialog(
@@ -316,13 +355,12 @@ class _CustomizeDialog(QDialog):
         curve_labels = dict(self.plot.curve_choices())
         if key not in curve_labels:
             return
-        menu = QMenu(self)
-        menu.setObjectName(f"pyqtLabGraphColorSwatches_{key}")
         colors = tuple(QColor(color).name() for color in self.plot.curve_palette.colors)
-        for color_name in colors:
-            action = menu.addAction(f"●  {color_name}")
-            action.setData(color_name)
-            action.setIconVisibleInMenu(False)
+        menu = _curve_color_menu(
+            self,
+            object_name=f"pyqtLabGraphColorSwatches_{key}",
+            colors=colors,
+        )
         menu.addSeparator()
         custom = menu.addAction("Custom color…")
         selected_action = menu.exec(
