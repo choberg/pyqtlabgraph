@@ -962,6 +962,7 @@ class PyQtLabGraphWidget(QWidget):
         *,
         reverse: bool | None = None,
     ) -> None:
+        """Assign palette colors to all current curves and future curves."""
         resolved = self._style_registry.resolve_curve_palette(palette)
         if reverse is not None and not isinstance(reverse, bool):
             raise TypeError("reverse must be a bool or None.")

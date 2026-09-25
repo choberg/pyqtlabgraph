@@ -102,9 +102,10 @@ X window ignore them; on logarithmic axes non-positive values are ignored too.
 * **`set_curve_visible(key: str, visible: bool)`**
   Toggles rendering of the curve in the canvas and marks its checkbox state in the legend.
 * **`set_curve_palette(palette, *, reverse=None)`**
-  Changes current curve line colors, provides the color cycle for new curves, and
+  Assigns palette colors to every current curve by curve order, replacing
+  custom or gradient line colors, provides the color cycle for new curves, and
   optionally sets the persistent palette direction. `None` keeps the current
-  direction.
+  direction. Calling it again with the active palette re-applies its colors.
 * **`apply_curve_gradient(gradient, *, values=None, value_range=None, reverse=False)`**
   Atomically performs a one-shot gradient color assignment.
 * **`set_curve_persistence(key, config)`**, **`curve_persistence(key)`**, and
