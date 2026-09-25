@@ -87,6 +87,8 @@ Use these methods to manage curves and feed data into the widget:
   before the underlying `PlotDataItem` is mutated.
 
 Explicit X/Y calls may use the named `x=` and `y=` parameters.
+NaN and infinite values are accepted as data gaps. Autoscale and the rolling
+X window ignore them; on logarithmic axes non-positive values are ignored too.
 * **`add_point(key: str, x: float, y: float)`**
   Appends a single data point to the curve. Extremely useful for real-time live sensor updates.
 * **`curve_data(key: str) -> tuple[np.ndarray, np.ndarray]`**

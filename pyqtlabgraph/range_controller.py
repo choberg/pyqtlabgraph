@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from collections.abc import Callable, Sequence
 
 import numpy as np
@@ -64,85 +65,43 @@ class RangeController:
         self._set_y_range(min(ymin, ymax), max(ymin, ymax))
 
     def _apply_x_autoscale(self) -> None:
-        x_arrays = [
-            self._curve_data_provider(curve)[0]
-            for curve in self._curves_provider()
-            if curve.visible
-        ]
-        if self._x_log_provider():
-            x_arrays = [values[values > 0] for values in x_arrays if len(values) > 0]
-            x_arrays = [values for values in x_arrays if len(values) > 0]
-            if not x_arrays:
-                return
-            xmin = np.log10(min(float(np.min(values)) for values in x_arrays))
-            xmax = np.log10(max(float(np.max(values)) for values in x_arrays))
-        else:
-            x_arrays = [values for values in x_arrays if len(values) > 0]
-            if not x_arrays:
-                return
-            xmin = min(float(np.min(values)) for values in x_arrays)
-            xmax = max(float(np.max(values)) for values in x_arrays)
-
+        bounds = _finite_bounds(self._visible_values(0), log=self._x_log_provider())
+        if bounds is None:
+            return
+        xmin, xmax = bounds
         if xmin == xmax:
             xmin -= _X_AUTOSCALE_EQUAL_VALUE_MARGIN
             xmax += _X_AUTOSCALE_EQUAL_VALUE_MARGIN
         self._set_x_range(xmin, xmax)
 
     def _apply_x_rolling_window(self) -> None:
-        x_arrays = [
-            self._curve_data_provider(curve)[0]
-            for curve in self._curves_provider()
-            if curve.visible
-        ]
-        x_arrays = [values for values in x_arrays if len(values) > 0]
-        if not x_arrays:
+        bounds = _finite_bounds(self._visible_values(0), log=self._x_log_provider())
+        if bounds is None:
             return
-
-        if self._x_log_provider():
-            maxima = [float(np.max(values)) for values in x_arrays if np.max(values) > 0]
-            if not maxima:
-                return
-            right = np.log10(max(maxima))
-        else:
-            right = max(float(np.max(values)) for values in x_arrays)
-        left = right - self._rolling_window_size_provider()
-        self._set_x_range(left, right)
+        right = bounds[1]
+        self._set_x_range(right - self._rolling_window_size_provider(), right)
 
     def _apply_y_autoscale(self) -> None:
-        visible_arrays = self._visible_y_values()
-        if not visible_arrays:
-            for curve in self._curves_provider():
-                if not curve.visible:
-                    continue
-                y_values = self._curve_data_provider(curve)[1]
-                if len(y_values) > 0:
-                    visible_arrays.append(y_values)
-        if not visible_arrays:
+        log = self._y_log_provider()
+        bounds = _finite_bounds(self._visible_y_values(), log=log)
+        if bounds is None:
+            bounds = _finite_bounds(self._visible_values(1), log=log)
+        if bounds is None:
             return
-
-        if self._y_log_provider():
-            visible_arrays = [
-                values[values > 0] for values in visible_arrays if len(values) > 0
-            ]
-            visible_arrays = [values for values in visible_arrays if len(values) > 0]
-            if not visible_arrays:
-                return
-            all_y = np.concatenate(visible_arrays)
-            minimum = np.log10(float(all_y.min()))
-            maximum = np.log10(float(all_y.max()))
-        else:
-            all_y = np.concatenate(visible_arrays)
-            if len(all_y) == 0:
-                return
-            minimum = float(all_y.min())
-            maximum = float(all_y.max())
-
+        minimum, maximum = bounds
         margin = (
             _Y_AUTOSCALE_EQUAL_VALUE_MARGIN
             if minimum == maximum
             else (maximum - minimum) * _Y_AUTOSCALE_MARGIN_RATIO
         )
         self._set_y_range(minimum - margin, maximum + margin)
+
+    def _visible_values(self, axis: int) -> list[np.ndarray]:
+        return [
+            self._curve_data_provider(curve)[axis]
+            for curve in self._curves_provider()
+            if curve.visible
+        ]
 
     def _visible_y_values(self) -> list[np.ndarray]:
         xmin, xmax = self.get_x_range()
@@ -188,3 +147,20 @@ class RangeController:
             setter()
         finally:
             self.applying_range = False
+
+
+def _finite_bounds(arrays: Sequence[np.ndarray], *, log: bool) -> tuple[float, float] | None:
+    """Return finite data bounds in view coordinates, ignoring NaN and Inf."""
+    minimum = math.inf
+    maximum = -math.inf
+    for values in arrays:
+        values = np.asarray(values, dtype=float)
+        valid = values[np.isfinite(values) & (values > 0)] if log else values[np.isfinite(values)]
+        if len(valid) > 0:
+            minimum = min(minimum, float(valid.min()))
+            maximum = max(maximum, float(valid.max()))
+    if minimum > maximum:
+        return None
+    if log:
+        return math.log10(minimum), math.log10(maximum)
+    return minimum, maximum
