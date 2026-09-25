@@ -594,91 +594,47 @@ class PyQtLabGraphWidget(QWidget):
         return self._y_log
 
     def set_x_log(self, enabled: bool) -> None:
-        if self._x_log == enabled:
+        self._set_axis_log(CursorType.X, enabled)
+
+    def set_y_log(self, enabled: bool) -> None:
+        self._set_axis_log(CursorType.Y, enabled)
+
+    def _set_axis_log(self, axis: CursorType, enabled: bool) -> None:
+        is_x = axis is CursorType.X
+        if (self._x_log if is_x else self._y_log) == enabled:
             return
         with self._change_dispatcher.batch():
-            if enabled and self.x_axis_mode == AxisMode.TIME:
+            if enabled and is_x and self.x_axis_mode == AxisMode.TIME:
                 self.x_axis_mode = AxisMode.LINEAR
-                self.bottom_axis.set_mode(self.x_axis_mode)
-                self.bottom_axis.setLabel(
-                    self.x_label_text,
-                    units=self.x_label_units,
-                    **{
-                        "color": self._style_controller.host_axis_color_name(),
-                        "margin-top": _AXIS_LABEL_TOP_MARGIN,
-                    },
-                )
+                self._apply_axis_label(CursorType.X)
+            elif enabled and not is_x and self.y_axis_mode == AxisMode.TIME:
+                self.y_axis_mode = AxisMode.LINEAR
+                self._apply_axis_label(CursorType.Y)
             self.applying_axis_scaling = True
             try:
-                xmin, xmax = self.get_x_range()
-                self._x_log = enabled
+                minimum, maximum = self.get_x_range() if is_x else self.get_y_range()
+                if is_x:
+                    self._x_log = enabled
+                else:
+                    self._y_log = enabled
                 self._plot_item.setLogMode(x=self._x_log, y=self._y_log)
 
-                if (
-                    not self._interaction_state.autoscale_x
-                    and not self._interaction_state.rolling_x
-                ):
-                    if enabled:
-                        if xmin <= 0:
-                            xmin = 0.1
-                        if xmax <= 0:
-                            xmax = 10.0
-                        xmin_new = np.log10(xmin)
-                        xmax_new = np.log10(xmax)
-                    else:
-                        xmin = np.clip(xmin, -20.0, 20.0)
-                        xmax = np.clip(xmax, -20.0, 20.0)
-                        xmin_new = 10**xmin
-                        xmax_new = 10**xmax
-                    self._range_controller.set_x_range(xmin_new, xmax_new)
-                else:
+                state = self._interaction_state
+                autoscaled = (
+                    state.autoscale_x or state.rolling_x if is_x else state.autoscale_y
+                )
+                if autoscaled:
                     self._range_controller.apply_axis_scaling()
+                else:
+                    converted = _convert_log_range(minimum, maximum, enabled)
+                    if is_x:
+                        self._range_controller.set_x_range(*converted)
+                    else:
+                        self._range_controller.set_y_range(*converted)
             finally:
                 self.applying_axis_scaling = False
             if self._render_optimizer.update_adaptive_performance(force=True):
                 self._reapply_curve_styles()
-            self._cursor_controller.refresh_presentation()
-            self._publish_presentation_changed()
-
-    def set_y_log(self, enabled: bool) -> None:
-        if self._y_log == enabled:
-            return
-        with self._change_dispatcher.batch():
-            if enabled and self.y_axis_mode == AxisMode.TIME:
-                self.y_axis_mode = AxisMode.LINEAR
-                self.left_axis.set_mode(self.y_axis_mode)
-                self.left_axis.setLabel(
-                    self.y_label_text,
-                    units=self.y_label_units,
-                    **{
-                        "color": self._style_controller.host_axis_color_name(),
-                        "margin-right": _AXIS_LABEL_RIGHT_MARGIN,
-                    },
-                )
-            self.applying_axis_scaling = True
-            try:
-                ymin, ymax = self.get_y_range()
-                self._y_log = enabled
-                self._plot_item.setLogMode(x=self._x_log, y=self._y_log)
-
-                if not self._interaction_state.autoscale_y:
-                    if enabled:
-                        if ymin <= 0:
-                            ymin = 0.1
-                        if ymax <= 0:
-                            ymax = 10.0
-                        ymin_new = np.log10(ymin)
-                        ymax_new = np.log10(ymax)
-                    else:
-                        ymin = np.clip(ymin, -20.0, 20.0)
-                        ymax = np.clip(ymax, -20.0, 20.0)
-                        ymin_new = 10**ymin
-                        ymax_new = 10**ymax
-                    self._range_controller.set_y_range(ymin_new, ymax_new)
-                else:
-                    self._range_controller.apply_axis_scaling()
-            finally:
-                self.applying_axis_scaling = False
             self._cursor_controller.refresh_presentation()
             self._publish_presentation_changed()
 
@@ -1266,26 +1222,32 @@ class PyQtLabGraphWidget(QWidget):
         if self.y_axis_mode == AxisMode.TIME and self._y_log:
             self.set_y_log(False)
 
-        self.bottom_axis.set_mode(self.x_axis_mode)
-        self.bottom_axis.setLabel(
-            x_label,
-            units=x_units,
-            **{
-                "color": self._style_controller.host_axis_color_name(),
-                "margin-top": _AXIS_LABEL_TOP_MARGIN,
-            },
-        )
-        self.left_axis.set_mode(self.y_axis_mode)
-        self.left_axis.setLabel(
-            y_label,
-            units=y_units,
-            **{
-                "color": self._style_controller.host_axis_color_name(),
-                "margin-right": _AXIS_LABEL_RIGHT_MARGIN,
-            },
-        )
+        self._apply_axis_label(CursorType.X)
+        self._apply_axis_label(CursorType.Y)
         self._cursor_controller.refresh_presentation()
         self._publish_presentation_changed()
+
+    def _apply_axis_label(self, axis: CursorType) -> None:
+        if axis is CursorType.X:
+            self.bottom_axis.set_mode(self.x_axis_mode)
+            self.bottom_axis.setLabel(
+                self.x_label_text,
+                units=self.x_label_units,
+                **{
+                    "color": self._style_controller.host_axis_color_name(),
+                    "margin-top": _AXIS_LABEL_TOP_MARGIN,
+                },
+            )
+        else:
+            self.left_axis.set_mode(self.y_axis_mode)
+            self.left_axis.setLabel(
+                self.y_label_text,
+                units=self.y_label_units,
+                **{
+                    "color": self._style_controller.host_axis_color_name(),
+                    "margin-right": _AXIS_LABEL_RIGHT_MARGIN,
+                },
+            )
 
     def _handle_view_range_changed(self, *_args: object) -> None:
         if self.applying_axis_scaling or self._range_controller.applying_range:
@@ -1317,3 +1279,20 @@ class PyQtLabGraphWidget(QWidget):
         layout.setSpacing(_FRAME_LAYOUT_SPACING)
         layout.addWidget(child)
         return frame
+
+
+def _convert_log_range(
+    minimum: float,
+    maximum: float,
+    to_log: bool,
+) -> tuple[float, float]:
+    """Convert a manual view range between linear and log10 view coordinates."""
+    if to_log:
+        return (
+            float(np.log10(minimum if minimum > 0 else 0.1)),
+            float(np.log10(maximum if maximum > 0 else 10.0)),
+        )
+    return (
+        float(10 ** np.clip(minimum, -20.0, 20.0)),
+        float(10 ** np.clip(maximum, -20.0, 20.0)),
+    )

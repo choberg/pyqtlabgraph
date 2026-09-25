@@ -43,12 +43,25 @@ class RangeController:
 
     def apply_axis_scaling(self) -> None:
         state = self._interaction_state_provider()
+        x_range: tuple[float, float] | None = None
         if state.autoscale_x:
-            self._apply_x_autoscale()
+            x_range = self._x_autoscale_range()
         elif state.rolling_x:
-            self._apply_x_rolling_window()
-        if state.autoscale_y:
-            self._apply_y_autoscale()
+            x_range = self._x_rolling_range()
+        y_range = (
+            self._y_autoscale_range(x_range or self.get_x_range())
+            if state.autoscale_y
+            else None
+        )
+        if x_range is None and y_range is None:
+            return
+        self._set_range(
+            lambda: self._view_box.setRange(
+                xRange=x_range,
+                yRange=y_range,
+                padding=_RANGE_PADDING,
+            )
+        )
 
     def get_x_range(self) -> tuple[float, float]:
         xmin, xmax = self._view_box.viewRange()[0]
@@ -64,37 +77,37 @@ class RangeController:
     def apply_manual_y_limits(self, ymin: float, ymax: float) -> None:
         self._set_y_range(min(ymin, ymax), max(ymin, ymax))
 
-    def _apply_x_autoscale(self) -> None:
+    def _x_autoscale_range(self) -> tuple[float, float] | None:
         bounds = _finite_bounds(self._visible_values(0), log=self._x_log_provider())
         if bounds is None:
-            return
+            return None
         xmin, xmax = bounds
         if xmin == xmax:
             xmin -= _X_AUTOSCALE_EQUAL_VALUE_MARGIN
             xmax += _X_AUTOSCALE_EQUAL_VALUE_MARGIN
-        self._set_x_range(xmin, xmax)
+        return xmin, xmax
 
-    def _apply_x_rolling_window(self) -> None:
+    def _x_rolling_range(self) -> tuple[float, float] | None:
         bounds = _finite_bounds(self._visible_values(0), log=self._x_log_provider())
         if bounds is None:
-            return
+            return None
         right = bounds[1]
-        self._set_x_range(right - self._rolling_window_size_provider(), right)
+        return right - self._rolling_window_size_provider(), right
 
-    def _apply_y_autoscale(self) -> None:
+    def _y_autoscale_range(self, x_range: tuple[float, float]) -> tuple[float, float] | None:
         log = self._y_log_provider()
-        bounds = _finite_bounds(self._visible_y_values(), log=log)
+        bounds = _finite_bounds(self._visible_y_values(x_range), log=log)
         if bounds is None:
             bounds = _finite_bounds(self._visible_values(1), log=log)
         if bounds is None:
-            return
+            return None
         minimum, maximum = bounds
         margin = (
             _Y_AUTOSCALE_EQUAL_VALUE_MARGIN
             if minimum == maximum
             else (maximum - minimum) * _Y_AUTOSCALE_MARGIN_RATIO
         )
-        self._set_y_range(minimum - margin, maximum + margin)
+        return minimum - margin, maximum + margin
 
     def _visible_values(self, axis: int) -> list[np.ndarray]:
         return [
@@ -103,22 +116,16 @@ class RangeController:
             if curve.visible
         ]
 
-    def _visible_y_values(self) -> list[np.ndarray]:
-        xmin, xmax = self.get_x_range()
+    def _visible_y_values(self, x_range: tuple[float, float]) -> list[np.ndarray]:
+        xmin, xmax = x_range
+        if self._x_log_provider():
+            xmin, xmax = 10**xmin, 10**xmax
         arrays: list[np.ndarray] = []
         for curve in self._curves_provider():
             if not curve.visible:
                 continue
             x_values, y_values = self._curve_data_provider(curve)
-            if len(x_values) == 0:
-                continue
-            if self._x_log_provider():
-                raw_xmin = 10**xmin
-                raw_xmax = 10**xmax
-                mask = (x_values >= raw_xmin) & (x_values <= raw_xmax)
-            else:
-                mask = (x_values >= xmin) & (x_values <= xmax)
-            visible_y = y_values[mask]
+            visible_y = y_values[(x_values >= xmin) & (x_values <= xmax)]
             if len(visible_y) > 0:
                 arrays.append(visible_y)
         return arrays
