@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+
 from PySide6.QtGui import QColor
 
 

@@ -4,11 +4,11 @@ import inspect
 import os
 from dataclasses import FrozenInstanceError
 
-import pyqtlabgraph
 import pytest
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QApplication, QTabWidget, QWidget
 
+import pyqtlabgraph
 from pyqtlabgraph import (
     CurveStyle,
     PyQtLabGraphCurvePalette,
@@ -19,8 +19,8 @@ from pyqtlabgraph import (
     dialogs,
     legend,
 )
-from pyqtlabgraph.models import InteractionState, InteractionTool
 from pyqtlabgraph.colormaps import BUILTIN_CURVE_PALETTES
+from pyqtlabgraph.models import InteractionState, InteractionTool
 from pyqtlabgraph.themes import BUILTIN_THEMES
 
 

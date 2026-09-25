@@ -14,8 +14,8 @@ from PySide6.QtWidgets import QApplication, QWidget
 from pyqtlabgraph import (
     CursorStyle,
     LayoutFileError,
-    PyQtLabGraphCurvePalette,
     PyQtLabGraphCursorWidget,
+    PyQtLabGraphCurvePalette,
     PyQtLabGraphLegend,
     PyQtLabGraphStyleRegistry,
     PyQtLabGraphTheme,

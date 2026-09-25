@@ -378,15 +378,8 @@ def _gradient_icon(
     pixmap = QPixmap(_COLOR_MAP_ICON_SIZE)
     pixmap.fill(Qt.GlobalColor.transparent)
     fill = QLinearGradient(0, 0, _COLOR_MAP_ICON_SIZE.width(), 0)
-    if reverse:
-        stops = (
-            (1.0 - position, color)
-            for position, color in zip(reversed(positions), reversed(colors))
-        )
-    else:
-        stops = zip(positions, colors)
-    for position, color in stops:
-        fill.setColorAt(position, QColor(color))
+    for position, color in zip(positions, colors):
+        fill.setColorAt(1.0 - position if reverse else position, QColor(color))
     painter = QPainter(pixmap)
     painter.fillRect(pixmap.rect(), fill)
     painter.end()
