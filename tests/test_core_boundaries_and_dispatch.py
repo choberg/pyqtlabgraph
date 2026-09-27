@@ -205,8 +205,8 @@ def test_dispatcher_coalesces_public_notifications(
         graph.cursors.set_name("cursor", "Second")
         graph._publish_curve_changed("sensor")
         graph._publish_curve_changed("sensor")
-        graph._change_dispatcher.curve_data_changed("sensor")
-        graph._change_dispatcher.curve_data_changed("sensor")
+        graph._change_dispatcher.publish("curve_data_changed", "sensor")
+        graph._change_dispatcher.publish("curve_data_changed", "sensor")
         graph._publish_presentation_changed()
         graph._publish_presentation_changed()
 
@@ -239,3 +239,20 @@ def test_dispatcher_discards_notifications_after_a_failed_nested_batch(
         graph._publish_curve_changed("after-failure")
 
     assert events == []
+
+
+def test_failed_batch_still_refreshes_cursor_graphics(qapp: QApplication) -> None:
+    graph = PyQtLabGraphWidget(plot_identifier="failed-batch-refresh")
+    graph.cursors.add("x", key="cursor", value=1.0)
+    moved: list[str] = []
+    graph.cursor_moved.connect(lambda key, _value: moved.append(key))
+
+    with pytest.raises(RuntimeError, match="injected failure"):
+        with graph._change_dispatcher.batch():
+            graph.cursors.set_value("cursor", 5.0)
+            raise RuntimeError("injected failure")
+
+    line = graph.cursors.presenter.cursor_items["cursor"].item
+    assert graph.cursors.state("cursor").value == 5.0
+    assert line.value() == pytest.approx(5.0)
+    assert moved == []

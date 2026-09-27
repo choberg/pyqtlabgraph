@@ -226,8 +226,7 @@ consistent across supported platforms.
 │   ├── range_controller.py  # Autoscale, rolling, and manual range policy
 │   ├── render_optimizer.py  # Rendering flags and Adaptive Performance
 │   ├── style_controller.py  # Plot-owned theme and curve appearance
-│   ├── cursor_controller.py # Cursor commands, selection, batching, and signals
-│   ├── cursor_manager.py    # Cursor state, snapping, pairs, and data caches
+│   ├── cursors.py           # plot.cursors: cursor state, pairs, snapping, and selection
 │   ├── cursor_presenter.py  # Plot graphics, annotations, and label layout
 │   ├── cursor_plot_items.py # PyQtGraph InfiniteLine cursor adapters
 │   ├── cursor_widget.py     # Public cursor panel and user-intent handling

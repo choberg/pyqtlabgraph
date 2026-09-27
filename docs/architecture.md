@@ -31,10 +31,12 @@ components must not access another component's private attributes.
 
 ## Updates and Signals
 
-Widget commands pass through a dispatcher that orders dependent updates,
-coalesces notifications, and supports atomic state replacement. The public
-widget is the only publisher of public state-change signals. Failed commands
-and effective no-ops do not emit semantic change signals.
+Widget and cursor commands pass through one dispatcher that coalesces
+notifications and deferred presentation refreshes and supports atomic state
+replacement. All public state-change signals, including the cursor signals,
+are signals of the plot widget; `plot.cursors` publishes them through the
+dispatcher. Failed commands and effective no-ops do not emit semantic change
+signals, but a failed batch still refreshes graphics from the current state.
 
 Curve data updates follow this order:
 

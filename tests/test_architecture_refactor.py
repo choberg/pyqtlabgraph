@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 
-import numpy as np
 import pytest
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QVBoxLayout, QWidget
@@ -16,29 +15,30 @@ from pyqtlabgraph import (
     PyQtLabGraphToolbar,
     PyQtLabGraphWidget,
 )
-from pyqtlabgraph.cursor_manager import CursorManager
 from pyqtlabgraph.customize_session import CustomizeSession
 
 
-def test_cursor_domain_uses_canonical_snap_state_and_enum() -> None:
-    data = {"sensor": (np.array([0.0, 2.0, 4.0]), np.array([1.0, 3.0, 5.0]))}
-    manager = CursorManager(curve_data_provider=data.__getitem__)
-    key = manager.add_cursor(
+def test_cursor_domain_uses_canonical_snap_state_and_enum(qapp: QApplication) -> None:
+    plot = PyQtLabGraphWidget(plot_identifier="cursor-domain")
+    plot.plot("sensor", [0.0, 2.0, 4.0], [1.0, 3.0, 5.0])
+    cursors = plot.cursors
+    key = cursors.add(
         "x",
         value=1.6,
         snap_target_curve_key="sensor",
         style=CursorStyle(line_style=CursorLineStyle.DASH),
     )
-    assert manager.cursor_state(key).snap_target_curve_key == "sensor"
-    assert manager.cursor_state(key).value == 2.0
-    manager.set_cursor_snap_target(key, None)
-    assert manager.cursor_state(key).snap_target_curve_key is None
+    assert cursors.state(key).snap_target_curve_key == "sensor"
+    assert cursors.state(key).value == 2.0
+    cursors.set_snap_target(key, None)
+    assert cursors.state(key).snap_target_curve_key is None
     with pytest.raises(ValueError, match="Only X cursors"):
-        manager.add_cursor("y", snap_target_curve_key="sensor")
+        cursors.add("y", snap_target_curve_key="sensor")
     with pytest.raises(ValueError, match="visibility coupling"):
-        manager.add_cursor("x", follow_target_visibility=True)
+        cursors.add("x", follow_target_visibility=True)
     with pytest.raises(TypeError, match="CursorLineStyle"):
         CursorStyle(line_style="dash")  # type: ignore[arg-type]
+    assert [state.key for state in cursors.states()] == [key]
 
 
 def test_customize_rollback_restores_cursor_with_visibility_coupling(
@@ -64,28 +64,25 @@ def test_customize_rollback_restores_cursor_with_visibility_coupling(
     assert restored.follow_target_visibility
 
 
-def test_pair_indices_order_and_cache_invalidation() -> None:
-    calls = 0
+def test_pair_order_and_snap_cache_invalidation(qapp: QApplication) -> None:
+    plot = PyQtLabGraphWidget(plot_identifier="cursor-pairs")
+    plot.plot("sensor", [2.0, 1.0], [20.0, 10.0])
+    cursors = plot.cursors
+    first = cursors.add("x")
+    loose = cursors.add("x")
+    second = cursors.add("x", value=1.2, snap_target_curve_key="sensor")
+    pair = cursors.add_pair(first, second)
+    assert [state.key for state in cursors.states()] == [first, second, loose]
+    assert cursors.pair_for_cursor(first).key == pair  # type: ignore[union-attr]
+    assert cursors.pair_states()[0].key == pair
+    assert cursors.state(second).value == 1.0
 
-    def data(_key: str) -> tuple[np.ndarray, np.ndarray]:
-        nonlocal calls
-        calls += 1
-        return np.array([2.0, 1.0]), np.array([20.0, 10.0])
-
-    manager = CursorManager(curve_data_provider=data)
-    first = manager.add_cursor("x")
-    loose = manager.add_cursor("x")
-    second = manager.add_cursor("x")
-    pair = manager.add_cursor_pair(first, second)
-    assert [state.key for state in manager.cursor_states()] == [first, second, loose]
-    assert manager.cursor_pair_for_cursor(first).key == pair  # type: ignore[union-attr]
-    assert manager.cursor_pair_states()[0].key == pair
-    assert manager.sorted_finite_x_values("sensor").tolist() == [1.0, 2.0]
-    assert manager.sorted_finite_x_values("sensor").tolist() == [1.0, 2.0]
-    assert calls == 1
-    manager.invalidate_curve_data("sensor")
-    manager.sorted_finite_x_values("sensor")
-    assert calls == 2
+    cursors.nudge_group(second, selected_cursor_keys=[], direction=1, step_ratio=0.01)
+    assert cursors.state(second).value == 2.0
+    plot.set_data("sensor", [2.0, 3.0], [20.0, 30.0])
+    assert cursors.state(second).value == 2.0
+    cursors.nudge_group(second, selected_cursor_keys=[], direction=1, step_ratio=0.01)
+    assert cursors.state(second).value == 3.0
 
 
 def test_components_are_independent_and_signal_driven(qapp: QApplication) -> None:

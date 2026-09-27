@@ -25,8 +25,8 @@ def test_cursor_refresh() -> None:
         )
 
     provider_calls = 0
-    manager = graph.cursors.manager
-    original_provider = manager._curve_data_provider
+    cursors = graph.cursors
+    original_provider = cursors._curve_data_provider
 
     def counted_provider(curve_key: str):  # type: ignore[no-untyped-def]
         nonlocal provider_calls
@@ -34,7 +34,7 @@ def test_cursor_refresh() -> None:
         assert original_provider is not None
         return original_provider(curve_key)
 
-    manager._curve_data_provider = counted_provider
+    cursors._curve_data_provider = counted_provider
     graph.set_data("signal", list(range(30)), list(range(30)))
     assert provider_calls == 1
 

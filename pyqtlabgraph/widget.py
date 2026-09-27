@@ -119,12 +119,26 @@ class PyQtLabGraphWidget(QWidget):
             style_registry if style_registry is not None else PyQtLabGraphStyleRegistry()
         )
         self._change_dispatcher = PlotChangeDispatcher(
-            emit_curve_added=self.curve_added.emit,
-            emit_curve_removed=self.curve_removed.emit,
-            emit_curve_changed=self.curve_changed.emit,
-            emit_curve_data_changed=self.curve_data_changed.emit,
-            emit_interaction_state_changed=self.interaction_state_changed.emit,
-            emit_presentation_changed=self.presentation_changed.emit,
+            {
+                name: getattr(self, name).emit
+                for name in (
+                    "cursor_added",
+                    "cursor_removed",
+                    "cursor_moved",
+                    "cursor_changed",
+                    "cursor_pair_added",
+                    "cursor_pair_removed",
+                    "cursor_pair_changed",
+                    "cursor_order_changed",
+                    "cursor_selection_changed",
+                    "curve_added",
+                    "curve_removed",
+                    "curve_changed",
+                    "curve_data_changed",
+                    "interaction_state_changed",
+                    "presentation_changed",
+                )
+            },
             emit_state_reset=self.state_reset.emit,
         )
         self.setObjectName("pyqtLabGraphWidget")
@@ -207,12 +221,11 @@ class PyQtLabGraphWidget(QWidget):
         self._view_box.sigResized.connect(self._style_controller.extend_view_box_background)
 
         self._cursors = PyQtLabGraphCursors(
-            parent=self,
+            dispatcher=self._change_dispatcher,
             plot_item=self._plot_item,
             view_box=self._view_box,
             curve_data_provider=self.curve_data,
             curve_visible_provider=self._curve_manager.curve_visible,
-            curve_choices_provider=self._curve_manager.curve_choices,
             x_range_provider=self._range_controller.get_x_range,
             y_range_provider=self._range_controller.get_y_range,
             axis_mode_provider=lambda cursor_type: (
@@ -222,20 +235,6 @@ class PyQtLabGraphWidget(QWidget):
             x_log_provider=lambda: self._x_log,
             y_log_provider=lambda: self._y_log,
             plot_background_provider=lambda: self.theme.plot_background,
-        )
-        self._cursors.cursor_added.connect(self.cursor_added.emit)
-        self._cursors.cursor_removed.connect(self.cursor_removed.emit)
-        self._cursors.cursor_moved.connect(self.cursor_moved.emit)
-        self._cursors.cursor_changed.connect(self.cursor_changed.emit)
-        self._cursors.cursor_pair_added.connect(self.cursor_pair_added.emit)
-        self._cursors.cursor_pair_removed.connect(self.cursor_pair_removed.emit)
-        self._cursors.cursor_pair_changed.connect(self.cursor_pair_changed.emit)
-        self._cursors.cursor_order_changed.connect(self.cursor_order_changed.emit)
-        self._cursors.selection_changed.connect(self.cursor_selection_changed.emit)
-        self._change_dispatcher.set_batch_participant(
-            self._cursors.batch_changes,
-            discard_changes=self._cursors.discard_batched_changes,
-            suppress_events=self._cursors.suppress_batched_events,
         )
         self._setup_plot()
         component: QWidget = self._plot_widget
@@ -254,10 +253,10 @@ class PyQtLabGraphWidget(QWidget):
         self._cursors.refresh_presentation()
 
     def _publish_curve_changed(self, key: str) -> None:
-        self._change_dispatcher.curve_changed(key)
+        self._change_dispatcher.publish("curve_changed", key)
 
     def _publish_presentation_changed(self) -> None:
-        self._change_dispatcher.presentation_changed()
+        self._change_dispatcher.publish("presentation_changed")
 
     def _reapply_curve_styles(self) -> None:
         for curve in self._curve_manager.ordered_curves():
@@ -282,7 +281,7 @@ class PyQtLabGraphWidget(QWidget):
         self._cursors.refresh_for_curve(key)
         self._finish_range_and_presentation_update()
         if notify:
-            self._change_dispatcher.curve_data_changed(key)
+            self._change_dispatcher.publish("curve_data_changed", key)
 
     def add_curve(
         self,
@@ -306,7 +305,7 @@ class PyQtLabGraphWidget(QWidget):
             except Exception:
                 self._curve_manager._discard_curve(key)
                 raise
-            self._change_dispatcher.curve_added(key)
+            self._change_dispatcher.publish("curve_added", key)
             return item
 
     def add_point(self, key: str, x_value: float, y_value: float) -> None:
@@ -382,7 +381,7 @@ class PyQtLabGraphWidget(QWidget):
             except Exception:
                 self._curve_manager._discard_curve(key)
                 raise
-            self._change_dispatcher.curve_added(key)
+            self._change_dispatcher.publish("curve_added", key)
             return item
 
     def curve_data(self, key: str) -> tuple[np.ndarray, np.ndarray]:
@@ -415,7 +414,7 @@ class PyQtLabGraphWidget(QWidget):
             self._curve_manager.remove_curve(key)
             self._cursors.refresh_for_curve(key)
             self._finish_range_and_presentation_update()
-            self._change_dispatcher.curve_removed(key)
+            self._change_dispatcher.publish("curve_removed", key)
 
     def set_curve_style(self, key: str, style: CurveStyle) -> None:
         if self._curve_manager.set_curve_style(key, style):
@@ -439,7 +438,7 @@ class PyQtLabGraphWidget(QWidget):
         with self._change_dispatcher.batch():
             curve = self._curve_manager.get_curve(key)
             self._trace_persistence.update_curve(key, curve.style, curve.visible)
-            self._cursors.handle_curve_visibility_changed(key)
+            self._cursors.refresh_for_curve_visibility(key)
             self._finish_range_and_presentation_update()
             self._publish_curve_changed(key)
 
@@ -564,7 +563,7 @@ class PyQtLabGraphWidget(QWidget):
         return self._interaction_state
 
     def _emit_interaction_state(self) -> None:
-        self._change_dispatcher.interaction_state_changed(self.interaction_state)
+        self._change_dispatcher.publish("interaction_state_changed", self.interaction_state)
 
     def _set_interaction_state(self, state: InteractionState) -> bool:
         validated = InteractionState(

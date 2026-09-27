@@ -161,18 +161,7 @@ class CursorPlotPresenter:
         if raw_value is None:
             self.update_cursor(cursor_key)
             return
-        selected = self.controller.selected_keys()
-        move_selected_peers = cursor_key in selected
-        before_value = state.value
-        self.controller.set_value(cursor_key, raw_value)
-        if move_selected_peers:
-            after_value = self.controller.state(cursor_key).value
-            self.controller.move_selected_cursor_peers(
-                anchor_cursor_key=cursor_key,
-                selected_cursor_keys=selected,
-                cursor_type=state.cursor_type,
-                raw_delta=after_value - before_value,
-            )
+        self.controller.set_value(cursor_key, raw_value, move_selected=True)
 
     def handle_cursor_clicked(self, cursor_key: str) -> None:
         if cursor_key not in self.controller.selected_keys():
