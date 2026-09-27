@@ -236,3 +236,32 @@ def test_click_on_a_multi_selection_without_drag_selects_only_that_cursor(
 
     assert plot.cursors.selected_keys() == ["third"]
     widget.close()
+
+
+def test_drag_pixmap_is_held_at_the_press_position(qapp: QApplication) -> None:
+    from PySide6.QtTest import QTest
+
+    plot, widget, view, point = _three_cursor_list(qapp, "cursor-drag-hot-spot")
+    origins: list[object] = []
+    view.create_drag = lambda origin: origins.append(origin)  # type: ignore[method-assign]
+    left, none = Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier
+    press = point(2)
+    QTest.mousePress(view.viewport(), left, none, press)
+    QTest.mouseMove(view.viewport(), point(0))
+    QTest.mouseRelease(view.viewport(), left, none, point(0))
+    assert origins == [press]
+    del view.create_drag
+
+    third_row = view.visualRect(widget.model.index(2, 0))
+    drag = view.create_drag(press)
+    assert drag is not None
+    assert drag.hotSpot() == press - third_row.topLeft()
+    assert drag.pixmap().deviceIndependentSize().toSize() == third_row.size()
+
+    plot.cursors.set_selected_keys(["first", "third"])
+    first_row = view.visualRect(widget.model.index(0, 0))
+    drag = view.create_drag(press)
+    assert drag is not None
+    assert drag.hotSpot() == press - first_row.topLeft()
+    assert drag.pixmap().deviceIndependentSize().toSize() == first_row.united(third_row).size()
+    widget.close()

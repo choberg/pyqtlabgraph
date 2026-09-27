@@ -12,7 +12,16 @@ from PySide6.QtCore import (
     Qt,
     Signal,
 )
-from PySide6.QtGui import QAction, QColor, QKeyEvent, QMouseEvent, QPaintEvent
+from PySide6.QtGui import (
+    QAction,
+    QColor,
+    QDrag,
+    QKeyEvent,
+    QMouseEvent,
+    QPainter,
+    QPaintEvent,
+    QPixmap,
+)
 from PySide6.QtWidgets import (
     QApplication,
     QColorDialog,
@@ -94,6 +103,7 @@ class _CursorListView(QListView):
         self._owned_press: bool = False
         self._drag_start: QPoint | None = None
         self._deferred_press: Callable[[], None] | None = None
+        self._drag_origin = QPoint()
 
     def mousePressEvent(self, event) -> None:
         index = self.indexAt(event.position().toPoint())
@@ -161,12 +171,51 @@ class _CursorListView(QListView):
                 and (event.position().toPoint() - start).manhattanLength()
                 >= QApplication.startDragDistance()
             ):
+                self._drag_origin = start
                 self._drag_start = None
                 self._deferred_press = None
                 self.startDrag(Qt.DropAction.MoveAction)
             event.accept()
             return
         super().mouseMoveEvent(event)
+
+    def startDrag(self, supportedActions: Qt.DropAction) -> None:
+        drag = self.create_drag(self._drag_origin)
+        if drag is not None:
+            drag.exec(supportedActions, Qt.DropAction.MoveAction)
+
+    def create_drag(self, origin: QPoint) -> QDrag | None:
+        """Build a drag of the selected rows that is held at `origin`.
+
+        QAbstractItemView derives the drag hot spot from a press position it
+        only records for presses it handles itself, which this view does not
+        forward, so the pixmap would hang offset below the pointer.
+        """
+        rows = sorted({index.row() for index in self.selectedIndexes()})
+        indexes = [self.model().index(row, 0) for row in rows]
+        mime_data = self.model().mimeData(indexes)
+        if not rows or not mime_data.formats():
+            return None
+        viewport_rect = self.viewport().rect()
+        row_rects = [self.visualRect(index).intersected(viewport_rect) for index in indexes]
+        row_rects = [rect for rect in row_rects if not rect.isEmpty()]
+        drag = QDrag(self)
+        drag.setMimeData(mime_data)
+        if row_rects:
+            bounds = row_rects[0]
+            for rect in row_rects[1:]:
+                bounds = bounds.united(rect)
+            ratio = self.devicePixelRatioF()
+            pixmap = QPixmap(bounds.size() * ratio)
+            pixmap.setDevicePixelRatio(ratio)
+            pixmap.fill(Qt.GlobalColor.transparent)
+            painter = QPainter(pixmap)
+            for rect in row_rects:
+                painter.drawPixmap(rect.topLeft() - bounds.topLeft(), self.viewport().grab(rect))
+            painter.end()
+            drag.setPixmap(pixmap)
+            drag.setHotSpot(origin - bounds.topLeft())
+        return drag
 
     def mouseReleaseEvent(self, event) -> None:
         self._owned_press = False
