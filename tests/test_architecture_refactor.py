@@ -136,7 +136,7 @@ def test_layout_format_roundtrip_and_multi_plot_preservation(
     second = PyQtLabGraphWidget(plot_identifier="second", layout_path=path)
     second.save_layout()
     document = json.loads(path.read_text(encoding="utf-8"))
-    assert document["version"] == 1
+    assert document["version"] == 2
     assert set(document["plots"]) == {"first", "second"}
     assert isinstance(document["plots"]["first"]["cursors"], list)
     assert "cursor_order" not in document["plots"]["first"]
@@ -158,9 +158,9 @@ def test_unsupported_version_and_structurally_invalid_entries_are_rejected(
     tmp_path,
 ) -> None:
     path = tmp_path / "layout.json"
-    path.write_text(json.dumps({"version": 2, "plots": {}}), encoding="utf-8")
+    path.write_text(json.dumps({"version": 1, "plots": {}}), encoding="utf-8")
     plot = PyQtLabGraphWidget(plot_identifier="plot", layout_path=path)
-    with pytest.raises(LayoutFileError, match="version 1 is required"):
+    with pytest.raises(LayoutFileError, match="version 2 is required"):
         plot.load_layout()
 
     path.unlink()
@@ -176,7 +176,8 @@ def test_unsupported_version_and_structurally_invalid_entries_are_rejected(
     document["plots"]["plot"]["cursor_pairs"] = [
         {
             "key": "bad",
-            "members": ["missing-a", "missing-b"],
+            "first_cursor_key": "missing-a",
+            "second_cursor_key": "missing-b",
             "measurement_visible": True,
             "annotation_position": 0.08,
         }

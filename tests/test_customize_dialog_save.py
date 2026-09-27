@@ -44,11 +44,11 @@ def test_customize_dialog_save() -> None:
 
         show_with_callback(plot, save_then_cancel)
         saved = json.loads(layout_path.read_text(encoding="utf-8"))["plots"]["customize-save"]
-        assert saved["axes"]["x"]["label"] == "Saved X"
+        assert saved["x_label"] == "Saved X"
         assert saved["theme"] == "dark"
-        assert saved["ranges"]["y"] == [-4.0, 4.0]
+        assert saved["y_range"] == [-4.0, 4.0]
         assert saved["restore_view_state_on_load"] is False
-        assert saved["curves"]["sensor"]["persistence"]["history_length"] == 5
+        assert saved["curves"][0]["persistence"]["history_length"] == 5
         assert plot.x_label_text == "Saved X"
         assert plot.theme.name == "dark"
         assert plot.get_y_range() == (-4.0, 4.0)

@@ -362,14 +362,7 @@ class CursorManager:
 
     def _normalize_snap_state(self, state: CursorState) -> CursorState:
         if state.snap_target_curve_key is None:
-            if state.follow_target_visibility:
-                raise ValueError("Target visibility coupling requires a snap target.")
             return state
-        if state.cursor_type is not CursorType.X:
-            raise ValueError("Only X cursors support snapping.")
-        if not state.snap_target_curve_key:
-            raise ValueError("Snapping requires a target curve key.")
-
         curve_data = self._curve_data(state.snap_target_curve_key)
         if curve_data is None:
             return state

@@ -13,7 +13,10 @@ intents through the facade and project facade-owned state.
 - The range, rendering, style, interaction, cursor-domain, cursor-presentation,
   and layout subsystems have separate responsibilities.
 - Runtime rollback uses immutable `PlotSnapshot` values. Persisted layouts use
-  separate layout DTOs and a strict, complete version-1 JSON format. Saved
+  `PlotLayout`, which shares the snapshot's field names and its curve and
+  cursor state types, and a strict, complete version-2 JSON format decoded
+  from the dataclass type hints. Domain invariants live in the state types
+  themselves, so layouts and runtime commands enforce the same rules. Saved
   cursor state is authoritative, while curve settings reconcile against the
   host-created curve set.
 - Cursor selection belongs to the plot. Any attached cursor panels project the

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -20,6 +21,7 @@ from pyqtlabgraph import (
     PyQtLabGraphTheme,
     PyQtLabGraphToolbar,
     PyQtLabGraphWidget,
+    TracePersistenceConfig,
 )
 from pyqtlabgraph.customize_session import CustomizeSession
 from pyqtlabgraph.layouts import (
@@ -48,25 +50,28 @@ def _layout(
         "theme": theme,
         "curve_palette": curve_palette,
         "curve_palette_reverse": False,
-        "axes": {
-            "x": {"label": "Time", "units": "s", "mode": "linear", "log": False},
-            "y": {"label": "Value", "units": None, "mode": "auto", "log": False},
-        },
+        "x_label": "Time",
+        "y_label": "Value",
+        "x_units": "s",
+        "y_units": None,
+        "x_mode": "linear",
+        "y_mode": "auto",
+        "x_log": False,
+        "y_log": False,
         "grid_visible": True,
-        "rendering": {
-            "antialiasing": True,
-            "downsampling": True,
-            "clip_to_view": True,
-            "adaptive_performance": True,
-        },
-        "interaction": {
+        "antialiasing": True,
+        "downsampling": True,
+        "clip_to_view": True,
+        "adaptive_performance": True,
+        "interaction_state": {
             "autoscale_x": False,
             "autoscale_y": False,
             "rolling_x": False,
             "active_tool": "none",
         },
-        "ranges": {"x": [1.0, 3.0], "y": [-2.0, 4.0]},
-        "curves": {},
+        "x_range": [1.0, 3.0],
+        "y_range": [-2.0, 4.0],
+        "curves": [],
         "cursors": [],
         "cursor_pairs": [],
     }
@@ -94,6 +99,15 @@ def _curve_style(**overrides: object) -> dict[str, object]:
     return style
 
 
+def _curve(key: str, *, visible: bool = True, **style: object) -> dict[str, object]:
+    return {
+        "key": key,
+        "visible": visible,
+        "style": _curve_style(**style),
+        "persistence": None,
+    }
+
+
 def _cursor(
     key: str,
     *,
@@ -105,7 +119,7 @@ def _cursor(
     state = {
         "key": key,
         "name": name or key,
-        "type": cursor_type,
+        "cursor_type": cursor_type,
         "value": value,
         "visible": True,
         "style": {
@@ -129,7 +143,8 @@ def _cursor_pair(
 ) -> dict[str, object]:
     state = {
         "key": key,
-        "members": [first, second],
+        "first_cursor_key": first,
+        "second_cursor_key": second,
         "measurement_visible": True,
         "annotation_position": 0.08,
     }
@@ -141,146 +156,164 @@ def _write(path: Path, document: dict[str, object]) -> None:
     path.write_text(json.dumps(document), encoding="utf-8")
 
 
+def _decode_with(**changes: object) -> None:
+    layout = _layout()
+    layout.update(changes)
+    decode_layout_document(json.dumps(_document(layout)))
+
+
 def test_layout_codec_runs_without_qapplication() -> None:
     source = json.dumps(_document())
     code = (
         "from PySide6.QtWidgets import QApplication\n"
         "from pyqtlabgraph.layouts import decode_layout_document\n"
-        f"document = decode_layout_document({source!r})\n"
+        f"plots = decode_layout_document({source!r})\n"
         "assert QApplication.instance() is None\n"
-        "assert document.version == 1\n"
-        "assert document.plots['plot'].x_axis.label == 'Time'\n"
+        "assert plots['plot'].x_label == 'Time'\n"
     )
     subprocess.run([sys.executable, "-c", code], check=True)
 
 
 @pytest.mark.parametrize(
-    ("path", "value", "match"),
+    ("changes", "match"),
     [
-        (("grid_visible",), 1, "Boolean"),
-        (("rendering", "antialiasing"), "false", "Boolean"),
-        (("axes", "x", "log"), 0, "Boolean"),
-        (("curve_palette",), None, "must be a string"),
-        (("curve_palette_reverse",), 1, "Boolean"),
-        (("interaction", "active_tool"), "invalid", "active_tool"),
+        ({"grid_visible": 1}, "grid_visible must be a Boolean"),
+        ({"antialiasing": "false"}, "antialiasing must be a Boolean"),
+        ({"x_log": 0}, "x_log must be a Boolean"),
+        ({"curve_palette": None}, "curve_palette must be a string"),
+        ({"curve_palette": ""}, "curve_palette must not be empty"),
+        ({"x_mode": "invalid"}, "x_mode value 'invalid' is invalid"),
+        ({"x_mode": "time", "x_log": True}, "cannot combine time mode with log"),
         (
-            ("interaction",),
             {
-                "autoscale_x": True,
-                "autoscale_y": False,
-                "rolling_x": True,
-                "active_tool": "none",
+                "interaction_state": {
+                    "autoscale_x": False,
+                    "autoscale_y": False,
+                    "rolling_x": False,
+                    "active_tool": "invalid",
+                }
+            },
+            "active_tool value 'invalid' is invalid",
+        ),
+        (
+            {
+                "interaction_state": {
+                    "autoscale_x": True,
+                    "autoscale_y": False,
+                    "rolling_x": True,
+                    "active_tool": "none",
+                }
             },
             "Autoscale X and rolling X",
         ),
-        (("ranges", "x"), [0.0, float("inf")], "finite"),
-        (("curves", "unknown", "style", "line_width"), 0.0, "greater than zero"),
-        (("cursors",), [_cursor("cursor", value=float("nan"))], "finite"),
+        ({"x_range": [0.0, float("inf")]}, "must be finite"),
+        ({"x_range": [0.0]}, "x_range must contain 2 values"),
+        ({"y_range": [3.0, 1.0]}, "y_range must be strictly increasing"),
+        ({"curves": [_curve("sensor", line_width=0.0)]}, "greater than zero"),
+        ({"curves": [_curve("sensor"), _curve("sensor")]}, 'Duplicate curve key "sensor"'),
+        ({"cursors": [_cursor("cursor", value=float("nan"))]}, "must be finite"),
+        ({"cursors": [{**_cursor("cursor"), "name": ""}]}, "Cursor name must not be empty"),
+        (
+            {"cursors": [_cursor("cursor", cursor_type="y", snap_target_curve_key="c")]},
+            "Only X cursors support snapping",
+        ),
+        (
+            {"cursors": [_cursor("cursor", follow_target_visibility=True)]},
+            "visibility coupling requires a snap target",
+        ),
+        ({"cursors": [_cursor("a"), _cursor("a")]}, 'Duplicate cursor key "a"'),
+        ({"cursors": {"not": "a list"}}, "cursors must be a list"),
+        (
+            {"cursor_pairs": [_cursor_pair("bad", "missing-a", "missing-b")]},
+            "unknown cursor",
+        ),
+        (
+            {
+                "cursors": [_cursor("a"), _cursor("b")],
+                "cursor_pairs": [_cursor_pair("bad", "a", "b", annotation_position=2.0)],
+            },
+            "between 0 and 1",
+        ),
+        (
+            {
+                "cursors": [_cursor("a"), _cursor("b"), _cursor("c")],
+                "cursor_pairs": [_cursor_pair("bad", "a", "c")],
+            },
+            "adjacent and ordered",
+        ),
+        (
+            {
+                "cursors": [_cursor("x"), _cursor("y", cursor_type="y")],
+                "cursor_pairs": [_cursor_pair("bad", "x", "y")],
+            },
+            "same axis",
+        ),
     ],
 )
 def test_layout_codec_strictly_rejects_invalid_values(
-    path: tuple[str, ...],
-    value: object,
+    changes: dict[str, object],
     match: str,
 ) -> None:
-    document = _document()
-    target: object = document["plots"]["plot"]  # type: ignore[index]
-    for key in path[:-1]:
-        if key == "unknown":
-            assert isinstance(target, dict)
-            target[key] = {
-                "visible": True,
-                "style": _curve_style(),
-                "persistence": None,
-            }
-        assert isinstance(target, dict)
-        target = target[key]
-    assert isinstance(target, dict)
-    target[path[-1]] = value
-
     with pytest.raises(LayoutFileError, match=match):
-        decode_layout_document(json.dumps(document))
+        _decode_with(**changes)
 
 
 def test_layout_codec_rejects_duplicate_json_keys() -> None:
-    raw = '{"version":1,"plots":{"plot":{"grid_visible":true,"grid_visible":false}}}'
+    raw = '{"version":2,"plots":{"plot":{"grid_visible":true,"grid_visible":false}}}'
     with pytest.raises(LayoutFileError, match="Duplicate JSON object key"):
         decode_layout_document(raw)
 
 
-@pytest.mark.parametrize(
-    ("container_path", "field", "match"),
-    [
-        ((), "plots", "missing required field"),
-        (("plots", "plot"), "theme", "missing required field"),
-        (("plots", "plot"), "curve_palette", "missing required field"),
-        (("plots", "plot"), "curve_palette_reverse", "missing required field"),
-        (("plots", "plot", "axes", "x"), "mode", "missing required field"),
-        (("plots", "plot", "rendering"), "antialiasing", "missing required field"),
-        (("plots", "plot", "interaction"), "active_tool", "missing required field"),
-    ],
-)
-def test_layout_codec_requires_all_fixed_fields(
-    container_path: tuple[str, ...],
-    field: str,
-    match: str,
-) -> None:
+def test_layout_codec_rejects_other_versions() -> None:
     document = _document()
+    document["version"] = 1
+    with pytest.raises(LayoutFileError, match="version 2 is required"):
+        decode_layout_document(json.dumps(document))
+
+
+def _nested(document: dict[str, object], path: tuple[object, ...]) -> dict[str, object]:
     container: object = document
-    for key in container_path:
-        assert isinstance(container, dict)
-        container = container[key]
+    for key in path:
+        container = container[key]  # type: ignore[index]
     assert isinstance(container, dict)
-    del container[field]
-
-    with pytest.raises(LayoutFileError, match=match):
-        decode_layout_document(json.dumps(document))
+    return container
 
 
-@pytest.mark.parametrize(
-    "container_path",
-    [
-        (),
-        ("plots", "plot"),
-        ("plots", "plot", "axes", "x"),
-        ("plots", "plot", "rendering"),
-        ("plots", "plot", "interaction"),
-    ],
+_FIXED_CONTAINERS: tuple[tuple[object, ...], ...] = (
+    (),
+    ("plots", "plot"),
+    ("plots", "plot", "interaction_state"),
+    ("plots", "plot", "curves", 0),
+    ("plots", "plot", "curves", 0, "style"),
+    ("plots", "plot", "cursors", 0),
+    ("plots", "plot", "cursors", 0, "style"),
 )
-def test_layout_codec_rejects_unknown_fixed_fields(
-    container_path: tuple[str, ...],
-) -> None:
-    document = _document()
-    container: object = document
-    for key in container_path:
-        assert isinstance(container, dict)
-        container = container[key]
-    assert isinstance(container, dict)
-    container["unexpected"] = True
-
-    with pytest.raises(LayoutFileError, match="unknown field"):
-        decode_layout_document(json.dumps(document))
 
 
-def test_layout_codec_rejects_removed_plot_style_field() -> None:
-    document = _document()
-    document["plots"]["plot"]["plot_style"] = "light"  # type: ignore[index]
-
-    with pytest.raises(LayoutFileError, match="unknown field.*plot_style"):
-        decode_layout_document(json.dumps(document))
-
-
-def test_layout_codec_rejects_invalid_cursor_pairs_without_widget() -> None:
+def _complete_document() -> dict[str, object]:
     layout = _layout()
-    layout["cursors"] = [
-        _cursor("x", name="X"),
-        _cursor("y", name="Y", cursor_type="y", value=2.0),
-    ]
-    layout["cursor_pairs"] = [
-        _cursor_pair("bad", "x", "y"),
-    ]
-    with pytest.raises(LayoutFileError, match="same axis"):
-        decode_layout_document(json.dumps(_document(layout)))
+    layout["curves"] = [_curve("sensor")]
+    layout["cursors"] = [_cursor("cursor")]
+    return _document(layout)
+
+
+@pytest.mark.parametrize("container_path", _FIXED_CONTAINERS)
+def test_layout_codec_requires_all_fixed_fields(container_path: tuple[object, ...]) -> None:
+    document = _complete_document()
+    container = _nested(document, container_path)
+    del container[sorted(container)[0]]
+
+    with pytest.raises(LayoutFileError, match="missing required field"):
+        decode_layout_document(json.dumps(document))
+
+
+@pytest.mark.parametrize("container_path", _FIXED_CONTAINERS)
+def test_layout_codec_rejects_unknown_fixed_fields(container_path: tuple[object, ...]) -> None:
+    document = _complete_document()
+    _nested(document, container_path)["unexpected"] = True
+
+    with pytest.raises(LayoutFileError, match="unknown field.*unexpected"):
+        decode_layout_document(json.dumps(document))
 
 
 def _configure_runtime_state(plot: PyQtLabGraphWidget) -> None:
@@ -327,28 +360,42 @@ def test_plot_snapshot_restores_exact_runtime_state(qapp: QApplication) -> None:
     _dispose(qapp, plot)
 
 
+def test_layout_roundtrip_restores_saved_runtime_state(
+    qapp: QApplication,
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "layout.json"
+    source = PyQtLabGraphWidget(plot_identifier="plot", layout_path=path)
+    _configure_runtime_state(source)
+    source.set_curve_persistence("sensor", TracePersistenceConfig(history_length=4))
+    source.save_layout()
+    saved = PlotSnapshot.capture(source)
+
+    target = PyQtLabGraphWidget(plot_identifier="plot", layout_path=path)
+    target.plot("sensor", [0.0, 1.0], [1.0, 2.0])
+    assert target.load_layout()
+
+    assert PlotSnapshot.capture(target) == replace(saved, selected_cursor_keys=())
+    _dispose(qapp, target, source)
+
+
 def test_layout_load_is_atomic_and_emits_only_state_reset(
     qapp: QApplication,
     tmp_path: Path,
 ) -> None:
     path = tmp_path / "layout.json"
     layout = _layout(theme="dark", curve_palette="default-dark")
-    layout["curves"] = {
-        "sensor": {
-            "visible": False,
-            "persistence": None,
-            "style": {
-                "line_enabled": True,
-                "line_color": "#D55E00",
-                "line_width": 2.0,
-                "marker_symbol": "o",
-                "marker_size": 7,
-                "marker_outline_width": 1.0,
-                "marker_enabled": True,
-                "marker_filled": True,
-            },
-        }
-    }
+    layout["curves"] = [
+        _curve(
+            "sensor",
+            visible=False,
+            line_color="#D55E00",
+            line_width=2.0,
+            marker_symbol="o",
+            marker_size=7,
+            marker_filled=True,
+        )
+    ]
     _write(path, _document(layout))
     plot = PyQtLabGraphWidget(plot_identifier="plot", layout_path=path)
     plot.add_curve("sensor")
@@ -378,13 +425,7 @@ def test_failed_layout_application_restores_snapshot_and_emits_nothing(
 ) -> None:
     path = tmp_path / "layout.json"
     layout = _layout(theme="dark")
-    layout["curves"] = {
-        "sensor": {
-            "visible": False,
-            "style": CurveStyle(line_color="#D55E00").__dict__,
-            "persistence": None,
-        }
-    }
+    layout["curves"] = [_curve("sensor", visible=False, line_color="#D55E00")]
     _write(path, _document(layout))
     plot = PyQtLabGraphWidget(plot_identifier="plot", layout_path=path)
     _configure_runtime_state(plot)
@@ -497,13 +538,7 @@ def test_state_reset_refreshes_companion_projections(
 ) -> None:
     path = tmp_path / "layout.json"
     layout = _layout()
-    layout["curves"] = {
-        "sensor": {
-            "visible": False,
-            "style": CurveStyle().__dict__,
-            "persistence": None,
-        },
-    }
+    layout["curves"] = [_curve("sensor", visible=False)]
     layout["cursors"] = [
         _cursor("saved", name="Saved", cursor_type="y", value=2.0),
     ]
@@ -529,13 +564,7 @@ def test_layout_keeps_host_curves_and_replaces_cursor_state(
 ) -> None:
     path = tmp_path / "layout.json"
     layout = _layout()
-    layout["curves"] = {
-        "saved-only": {
-            "visible": False,
-            "style": CurveStyle().__dict__,
-            "persistence": None,
-        },
-    }
+    layout["curves"] = [_curve("saved-only", visible=False)]
     layout["cursors"] = [_cursor("saved", name="Saved", value=4.0, label_visible=True)]
     _write(path, _document(layout))
     plot = PyQtLabGraphWidget(plot_identifier="plot", layout_path=path)

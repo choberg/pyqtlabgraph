@@ -257,8 +257,10 @@ Configure views, axes, limits, and serialize settings:
   Applies a background/grid theme.
 * **`save_layout()`** / **`load_layout()`**
   Manually writes/restores layout state to/from the file set in `layout_path`.
-  Layout format version 1 requires the complete current field set and rejects
-  unknown fields before the widget changes. Booleans are not coerced, numeric
+  Layout format version 2 stores each plot as a flat object whose fields mirror
+  `PlotSnapshot` (for example `x_label`, `x_range`, `curves`, `cursors`, and
+  `cursor_pairs`). It requires the complete field set and rejects unknown
+  fields before the widget changes. Booleans are not coerced, numeric
   values must be finite, and invalid enums, styles, interaction combinations,
   duplicate keys, cursor targets, and cursor pairs are rejected. Application
   is atomic and resolves theme and curve-palette names through the widget's
@@ -272,8 +274,8 @@ Configure views, axes, limits, and serialize settings:
 * **`restore_snapshot(snapshot: PlotSnapshot)`**
   Atomically restores an exact layout-relevant runtime state. Use
   `PlotSnapshot.capture(plot)` to capture a rollback point. Runtime snapshots
-  are separate from persisted layout DTOs and include cursor order
-  and selection.
+  include cursor order and selection; persisted layouts store theme and palette
+  names, optional ranges, and no selection.
 * **`show_customize_dialog(curve_key: str = None)`**
   Launches the modeless Customize dialog. If `curve_key` is supplied, it opens directly on the tab editing that curve. Most edits preview immediately, while ranges preview explicitly. *Apply & Close* keeps the preview, *Save Layout* saves it without closing, and *Cancel* restores the opening or last-saved state.
 

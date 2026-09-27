@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -85,6 +86,24 @@ class CursorState:
     follow_target_visibility: bool = False
     label_visible: bool = False
 
+    def __post_init__(self) -> None:
+        if not self.key:
+            raise ValueError("Cursor key must not be empty.")
+        if not self.name:
+            raise ValueError("Cursor name must not be empty.")
+        if not isinstance(self.cursor_type, CursorType):
+            raise TypeError("Cursor cursor_type must be a CursorType.")
+        if not math.isfinite(self.value):
+            raise ValueError("Cursor value must be finite.")
+        if self.snap_target_curve_key is None:
+            if self.follow_target_visibility:
+                raise ValueError("Target visibility coupling requires a snap target.")
+            return
+        if self.cursor_type is not CursorType.X:
+            raise ValueError("Only X cursors support snapping.")
+        if not self.snap_target_curve_key:
+            raise ValueError("Snapping requires a target curve key.")
+
 
 @dataclass(frozen=True)
 class CursorPairState:
@@ -93,3 +112,11 @@ class CursorPairState:
     second_cursor_key: str
     measurement_visible: bool = True
     annotation_position: float = 0.08
+
+    def __post_init__(self) -> None:
+        if not self.key:
+            raise ValueError("Cursor pair key must not be empty.")
+        if self.first_cursor_key == self.second_cursor_key:
+            raise ValueError("Cursor pair requires two distinct cursors.")
+        if not 0.0 <= self.annotation_position <= 1.0:
+            raise ValueError("Cursor pair annotation_position must be between 0 and 1.")

@@ -239,7 +239,7 @@ consistent across supported platforms.
 │   ├── dialogs.py           # Modeless Customize dialog composition
 │   ├── customize_controls.py # Customize controls and curve editors
 │   ├── customize_session.py # Customize preview, save, and rollback session
-│   ├── layouts.py           # Layout DTOs, strict codec, storage, and reconciliation
+│   ├── layouts.py           # Layout model, strict type-driven codec, storage, and reconciliation
 │   ├── toolbar.py           # Toolbar buttons, export, and mode controllers
 │   ├── legend.py            # External interactive PyQtLabGraphLegend
 │   ├── axis.py              # SmartAxisItem tick formatting implementation
