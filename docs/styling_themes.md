@@ -129,6 +129,7 @@ Light and Dark QPalettes for deterministic interactive switching, without
 adding an application-theme dependency. Each demo exposes the same
 **View → Dark mode** action.
 
-The toolbar's packaged PNG masks automatically adapt to the active
+The toolbar's packaged SVG line icons (24 px grid, 2 px strokes) are rendered
+for the screen's pixel ratio and automatically adapt to the active
 `ButtonText` palette color. PyQtLabGraph does not detect the operating-system
 theme or impose an application-wide stylesheet.

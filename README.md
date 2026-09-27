@@ -248,7 +248,7 @@ consistent across supported platforms.
 │   ├── themes.py            # Background themes and color registries
 │   ├── style_registry.py     # Explicit appearance-value resolution
 │   ├── qt_styles.py         # Palette-aware native frame painting
-│   └── assets/              # PNG icon assets used by the toolbar
+│   └── assets/              # SVG icon assets used by the toolbar
 ├── docs/                    # Detailed user-facing documentation
 ├── tests/                   # Pytest, smoke, architecture, and wheel checks
 ├── examples/                # Source-checkout demos and examples
@@ -277,7 +277,7 @@ python3 -m build
 
 CI runs the same checks on Python 3.11, 3.12, and 3.13. It also installs the
 built wheel into a clean virtual environment and verifies public exports,
-version metadata, typing metadata, and runtime PNG assets.
+version metadata, typing metadata, and runtime SVG assets.
 
 ---
 

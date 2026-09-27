@@ -20,6 +20,7 @@ EXPECTED_EXPORTS = {
     "CurveStyle",
     "LayoutFileError",
     "PlotSnapshot",
+    "PyQtLabGraphCursors",
     "PyQtLabGraphCursorWidget",
     "PyQtLabGraphColorGradient",
     "PyQtLabGraphCurvePalette",
@@ -32,17 +33,16 @@ EXPECTED_EXPORTS = {
     "__version__",
 }
 EXPECTED_ASSETS = {
-    "autox.png",
-    "autoy.png",
-    "edit_params.png",
-    "reset_zoom.png",
-    "rolling.png",
-    "saveplot.png",
-    "x-zoom.png",
-    "y-zoom.png",
-    "zoom_area.png",
+    "autoscale_x.svg",
+    "autoscale_y.svg",
+    "customize.svg",
+    "rolling_x.svg",
+    "save.svg",
+    "show_all.svg",
+    "zoom_rect.svg",
+    "zoom_x.svg",
+    "zoom_y.svg",
 }
-PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
 
 def main() -> int:
@@ -61,7 +61,7 @@ def main() -> int:
     installed_assets = {entry.name for entry in assets.iterdir() if entry.is_file()}
     assert installed_assets == EXPECTED_ASSETS
     for filename in sorted(EXPECTED_ASSETS):
-        assert assets.joinpath(filename).read_bytes().startswith(PNG_SIGNATURE)
+        assert b"<svg" in assets.joinpath(filename).read_bytes()
 
     print("installed wheel verification ok")
     return 0

@@ -65,4 +65,4 @@ treating PySide6 and PyQtGraph as untyped integration boundaries.
 CI runs these checks with the behavioral and offscreen Qt suites on Python
 3.11, 3.12, and 3.13. It builds the source distribution and wheel, then
 installs the wheel into a clean environment to verify imports, public exports,
-version metadata, `py.typed`, and runtime PNG assets.
+version metadata, `py.typed`, and runtime SVG assets.

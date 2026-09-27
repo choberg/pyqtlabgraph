@@ -3,8 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable
 
-from PySide6.QtCore import QEvent, Qt
+from PySide6.QtCore import QEvent, QRectF, Qt
 from PySide6.QtGui import QAction, QColor, QIcon, QPainter, QPaintEvent, QPalette, QPixmap
+from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
@@ -55,24 +56,24 @@ class PyQtLabGraphToolbar(QToolBar):
         self.setMovable(False)
         self.setIconSize(QPixmap(_TOOLBAR_ICON_SIZE, _TOOLBAR_ICON_SIZE).size())
 
-        self.show_all_action = self._add_action("reset_zoom.png", "Show All", self.show_all)
-        self.zoom_action = self._add_action("zoom_area.png", "Zoom", self.zoom, checkable=True)
+        self.show_all_action = self._add_action("show_all.svg", "Show All", self.show_all)
+        self.zoom_action = self._add_action("zoom_rect.svg", "Zoom", self.zoom, checkable=True)
         self.addSeparator()
         self.x_zoom_action = self._add_action(
-            "x-zoom.png",
+            "zoom_x.svg",
             "X-Zoom",
             self.set_x_zoom_enabled,
             checkable=True,
         )
         self.y_zoom_action = self._add_action(
-            "y-zoom.png",
+            "zoom_y.svg",
             "Y-Zoom",
             self.set_y_zoom_enabled,
             checkable=True,
         )
         self.addSeparator()
         self.autoscale_x_action = self._add_action(
-            "autox.png",
+            "autoscale_x.svg",
             "Autoscale X",
             self._autoscale_x_toggled,
             checkable=True,
@@ -81,7 +82,7 @@ class PyQtLabGraphToolbar(QToolBar):
         self.autoscale_x_action.setChecked(True)
         self.autoscale_x_action.blockSignals(False)
         self.autoscale_y_action = self._add_action(
-            "autoy.png",
+            "autoscale_y.svg",
             "Autoscale Y",
             self._autoscale_y_toggled,
             checkable=True,
@@ -92,8 +93,8 @@ class PyQtLabGraphToolbar(QToolBar):
         self.rolling_button = self._create_rolling_button()
         self.addWidget(self.rolling_button)
         self.addSeparator()
-        self.customize_action = self._add_action("edit_params.png", "Customize", self.customize)
-        self.save_action = self._add_action("saveplot.png", "Save", self.save_figure)
+        self.customize_action = self._add_action("customize.svg", "Customize", self.customize)
+        self.save_action = self._add_action("save.svg", "Save", self.save_figure)
         self.plot.interaction_state_changed.connect(self.sync_state)
         self.plot.state_reset.connect(
             lambda: self.sync_state(self.plot.interaction_state)
@@ -132,7 +133,7 @@ class PyQtLabGraphToolbar(QToolBar):
         for action, icon_filename in self._themed_icon_actions:
             action.setIcon(self._themed_icon(icon_filename))
         if hasattr(self, "rolling_button"):
-            self.rolling_button.setIcon(self._themed_icon("rolling.png"))
+            self.rolling_button.setIcon(self._themed_icon("rolling_x.svg"))
 
     def event(self, event: QEvent) -> bool:
         handled = super().event(event)
@@ -194,7 +195,7 @@ class PyQtLabGraphToolbar(QToolBar):
         button.setObjectName("pyqtLabGraphRollingButton")
         button.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         button.setText("Rolling")
-        button.setIcon(self._themed_icon("rolling.png"))
+        button.setIcon(self._themed_icon("rolling_x.svg"))
         button.setToolTip("Rolling X range")
         button.setCheckable(True)
         button.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
@@ -255,20 +256,30 @@ class PyQtLabGraphToolbar(QToolBar):
 
     def _themed_icon(self, filename: str) -> QIcon:
         icon_color = self.palette().color(QPalette.ColorRole.ButtonText)
-        return self._recolored_png_icon(filename, icon_color)
+        ratios = {1.0, 2.0, self.devicePixelRatioF()}
+        return _recolored_svg_icon(filename, icon_color, _TOOLBAR_ICON_SIZE, ratios)
 
-    @staticmethod
-    def _recolored_png_icon(filename: str, color: QColor) -> QIcon:
-        icon_path = Path(__file__).resolve().parent / "assets" / filename
-        source = QPixmap(str(icon_path))
-        if source.isNull():
-            return QIcon()
-        recolored = QPixmap(source.size())
-        recolored.setDevicePixelRatio(source.devicePixelRatio())
-        recolored.fill(Qt.GlobalColor.transparent)
-        painter = QPainter(recolored)
-        painter.drawPixmap(0, 0, source)
+
+def _recolored_svg_icon(
+    filename: str,
+    color: QColor,
+    size: int,
+    device_pixel_ratios: set[float],
+) -> QIcon:
+    """Render a monochrome SVG mask in `color` for each device pixel ratio."""
+    renderer = QSvgRenderer(str(Path(__file__).resolve().parent / "assets" / filename))
+    if not renderer.isValid():
+        return QIcon()
+    icon = QIcon()
+    for ratio in sorted(device_pixel_ratios):
+        pixmap = QPixmap(round(size * ratio), round(size * ratio))
+        pixmap.setDevicePixelRatio(ratio)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        renderer.render(painter, QRectF(0.0, 0.0, size, size))
         painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-        painter.fillRect(recolored.rect(), color)
+        painter.fillRect(QRectF(0.0, 0.0, size, size), color)
         painter.end()
-        return QIcon(recolored)
+        icon.addPixmap(pixmap)
+    return icon

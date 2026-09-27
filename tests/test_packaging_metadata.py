@@ -31,7 +31,7 @@ FORBIDDEN_PACKAGE_DATA_PARTS = {
 }
 FORBIDDEN_PACKAGE_DATA_SUFFIXES = {
     ".layout.json",
-    ".svg",
+    ".png",
 }
 
 
@@ -48,7 +48,7 @@ def test_packaging_metadata() -> None:
         parts = set(Path(entry).parts)
         assert not (parts & FORBIDDEN_PACKAGE_DATA_PARTS), entry
         assert not any(entry.endswith(suffix) for suffix in FORBIDDEN_PACKAGE_DATA_SUFFIXES), entry
-    assert all(entry.endswith(".png") or entry == "py.typed" for entry in package_data)
+    assert all(entry.endswith(".svg") or entry == "py.typed" for entry in package_data)
 
     required_exports = CURSOR_PUBLIC_EXPORTS | STYLE_PUBLIC_EXPORTS
     missing_exports = {
