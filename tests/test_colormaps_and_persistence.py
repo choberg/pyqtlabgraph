@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 from dataclasses import FrozenInstanceError
 from pathlib import Path
 
@@ -23,12 +22,6 @@ from pyqtlabgraph import (
     customize_controls,
     dialogs,
 )
-
-
-@pytest.fixture(scope="session")
-def qapp() -> QApplication:
-    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-    return QApplication.instance() or QApplication([])
 
 
 def test_palette_and_gradient_values_are_validated_and_frozen() -> None:

@@ -1,13 +1,6 @@
 from __future__ import annotations
 
-import os
-import sys
-from pathlib import Path
-
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
-from cursor_smoke_helpers import container
+from cursor_helpers import container
 from PySide6.QtGui import QColor, QPalette
 from PySide6.QtWidgets import QApplication
 
@@ -19,7 +12,7 @@ from pyqtlabgraph import (
 )
 
 
-def main() -> None:
+def test_cursor_embedding_host_style() -> None:
     app = QApplication.instance() or QApplication([])
     cursor_container = container()
     plot = PyQtLabGraphWidget(plot_identifier="cursor-embedded")
@@ -64,8 +57,3 @@ def main() -> None:
     assert frameless_container.layout().itemAt(0).widget() is frameless
     cursor_container.close()
     app.processEvents()
-    print("cursor embedding and host-style smoke ok")
-
-
-if __name__ == "__main__":
-    main()

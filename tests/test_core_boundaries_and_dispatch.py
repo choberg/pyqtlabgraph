@@ -1,19 +1,12 @@
 from __future__ import annotations
 
 import inspect
-import os
 
 import numpy as np
 import pytest
 from PySide6.QtWidgets import QApplication
 
 from pyqtlabgraph import PyQtLabGraphWidget
-
-
-@pytest.fixture(scope="session")
-def qapp() -> QApplication:
-    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-    return QApplication.instance() or QApplication([])
 
 
 @pytest.mark.parametrize(

@@ -1,12 +1,5 @@
 from __future__ import annotations
 
-import os
-import sys
-from pathlib import Path
-
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 from PySide6.QtWidgets import QApplication, QVBoxLayout, QWidget
 
 from pyqtlabgraph import PyQtLabGraphWidget
@@ -18,7 +11,7 @@ def _container() -> QWidget:
     return widget
 
 
-def main() -> None:
+def test_cursor_refresh() -> None:
     _app = QApplication.instance() or QApplication([])
     graph = PyQtLabGraphWidget(
         plot_identifier="cursor-refresh",
@@ -52,9 +45,3 @@ def main() -> None:
         step_ratio=0.01,
     )
     assert provider_calls == 1
-
-    print("cursor refresh smoke ok")
-
-
-if __name__ == "__main__":
-    main()

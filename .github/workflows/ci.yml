@@ -34,9 +34,6 @@ jobs:
       - name: Run pytest
         run: python -m pytest -q
 
-      - name: Run smoke checks
-        run: python tests/run_smoke_checks.py
-
       - name: Run Ruff
         run: ruff check pyqtlabgraph tests examples
 

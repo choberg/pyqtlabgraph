@@ -271,7 +271,6 @@ Run the complete local verification suite after changes:
 
 ```bash
 python3 -m pytest -q
-python3 tests/run_smoke_checks.py
 ruff check pyqtlabgraph tests examples
 mypy pyqtlabgraph
 python3 -m build

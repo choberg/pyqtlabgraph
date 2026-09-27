@@ -1,20 +1,15 @@
 from __future__ import annotations
 
 import os
-import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
-
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "examples"))
 
 from demo_minimal import create_window
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QApplication
 
 
-def main() -> None:
+def test_minimal_demo() -> None:
     app = QApplication.instance() or QApplication([])
     previous_directory = Path.cwd()
     with TemporaryDirectory() as directory:
@@ -35,9 +30,3 @@ def main() -> None:
         assert window.graph.curve_palette.name == "default-dark"
         window.close()
         app.processEvents()
-
-    print("minimal demo smoke ok")
-
-
-if __name__ == "__main__":
-    main()

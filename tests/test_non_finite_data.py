@@ -1,22 +1,12 @@
 from __future__ import annotations
 
 import math
-import os
 
 import numpy as np
 import pytest
 from PySide6.QtWidgets import QApplication
 
 from pyqtlabgraph import PyQtLabGraphWidget
-
-
-@pytest.fixture(scope="session")
-def qapp() -> QApplication:
-    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-    app = QApplication.instance()
-    if app is None:
-        app = QApplication([])
-    return app
 
 
 def _assert_finite_ranges(plot: PyQtLabGraphWidget) -> None:

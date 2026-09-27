@@ -1,19 +1,11 @@
 from __future__ import annotations
 
-import os
-import sys
-from pathlib import Path
-
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "examples"))
-
 from demo_time_fft import TimeFftDemoWindow
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QApplication, QDialog, QPushButton, QWidget
 
 
-def main() -> None:
+def test_time_fft_demo() -> None:
     app = QApplication.instance() or QApplication([])
     window = TimeFftDemoWindow()
     required_widget_names = [
@@ -86,8 +78,3 @@ def main() -> None:
 
     window.close()
     app.processEvents()
-    print("time fft demo smoke ok")
-
-
-if __name__ == "__main__":
-    main()

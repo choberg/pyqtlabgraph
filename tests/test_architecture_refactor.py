@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 
 import numpy as np
 import pytest
@@ -19,12 +18,6 @@ from pyqtlabgraph import (
 )
 from pyqtlabgraph.cursor_manager import CursorManager
 from pyqtlabgraph.customize_session import CustomizeSession
-
-
-@pytest.fixture(scope="session")
-def qapp() -> QApplication:
-    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-    return QApplication.instance() or QApplication([])
 
 
 def test_cursor_domain_uses_canonical_snap_state_and_enum() -> None:

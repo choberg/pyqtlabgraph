@@ -1,15 +1,10 @@
 from __future__ import annotations
 
 import json
-import os
-import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
-from customize_smoke_helpers import child, graph, set_combo_data, show_with_callback
+from customize_helpers import child, graph, set_combo_data, show_with_callback
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -24,7 +19,7 @@ from PySide6.QtWidgets import (
 from pyqtlabgraph import dialogs
 
 
-def main() -> None:
+def test_customize_dialog_save() -> None:
     QApplication.instance() or QApplication([])
     with TemporaryDirectory() as directory:
         layout_path = Path(directory) / "customize.layout.json"
@@ -75,8 +70,3 @@ def main() -> None:
         dialogs.QMessageBox.critical = original_critical
     assert errors
     assert failing.x_label_text == original_label
-    print("customize dialog save smoke ok")
-
-
-if __name__ == "__main__":
-    main()

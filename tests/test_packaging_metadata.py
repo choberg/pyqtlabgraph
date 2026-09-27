@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 import re
-import sys
 import tomllib
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO_ROOT))
 
 import pyqtlabgraph  # noqa: E402
 
@@ -37,7 +35,7 @@ FORBIDDEN_PACKAGE_DATA_SUFFIXES = {
 }
 
 
-def main() -> int:
+def test_packaging_metadata() -> None:
     pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     dependencies = pyproject["project"]["dependencies"]
     dependency_names = {_dependency_name(dependency) for dependency in dependencies}
@@ -60,16 +58,9 @@ def main() -> int:
     }
     assert not missing_exports, f"Missing public exports: {sorted(missing_exports)}"
 
-    print("packaging metadata smoke ok")
-    return 0
-
 
 def _dependency_name(dependency: str) -> str:
     match = re.match(r"\s*([A-Za-z0-9_.-]+)", dependency)
     if match is None:
         raise AssertionError(f"Could not parse dependency name: {dependency!r}")
     return match.group(1)
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

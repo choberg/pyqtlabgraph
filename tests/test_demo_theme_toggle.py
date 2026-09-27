@@ -1,13 +1,5 @@
 from __future__ import annotations
 
-import os
-import sys
-from pathlib import Path
-
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "examples"))
-
 from _demo_theme import install_demo_theme_toggle
 from PySide6.QtCore import QPoint
 from PySide6.QtGui import QAction, QColor, QPalette
@@ -22,7 +14,7 @@ from pyqtlabgraph import (
 )
 
 
-def main() -> None:
+def test_demo_theme_toggle() -> None:
     app = QApplication.instance() or QApplication([])
     window = QMainWindow()
     central_widget = QWidget()
@@ -105,8 +97,3 @@ def main() -> None:
 
     window.close()
     app.processEvents()
-    print("demo theme toggle smoke ok")
-
-
-if __name__ == "__main__":
-    main()

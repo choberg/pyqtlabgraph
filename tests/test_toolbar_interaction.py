@@ -1,12 +1,5 @@
 from __future__ import annotations
 
-import os
-import sys
-from pathlib import Path
-
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 import pyqtgraph as pg
 from PySide6.QtCore import QPoint, QPointF, Qt
 from PySide6.QtGui import QColor, QPalette
@@ -80,7 +73,7 @@ def _cursor_center_color(plot: PyQtLabGraphWidget) -> QColor:
     return image.pixelColor(_ZOOM_CURSOR_CENTER, _ZOOM_CURSOR_CENTER)
 
 
-def main() -> None:
+def test_toolbar_interaction() -> None:
     app = QApplication.instance() or QApplication([])
     _assert_pixel_thin_cursor_rendering()
     plot = PyQtLabGraphWidget(plot_identifier="toolbar-interaction")
@@ -177,8 +170,3 @@ def main() -> None:
     assert frameless.contentsMargins().left() == 0
     assert not hasattr(frameless, "on_tool_requested")
     app.processEvents()
-    print("toolbar interaction smoke ok")
-
-
-if __name__ == "__main__":
-    main()

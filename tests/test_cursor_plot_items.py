@@ -1,15 +1,8 @@
 from __future__ import annotations
 
 import math
-import os
-import sys
-from pathlib import Path
 
 import numpy as np
-
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtWidgets import QApplication, QVBoxLayout, QWidget
 
@@ -70,7 +63,7 @@ def _assert_inside(inner: QRectF, outer: QRectF) -> None:
     assert inner.bottom() <= outer.bottom()
 
 
-def main() -> None:
+def test_cursor_plot_items() -> None:
     app = QApplication.instance() or QApplication([])
 
     graph = PyQtLabGraphWidget(
@@ -278,8 +271,3 @@ def main() -> None:
     assert time_graph._cursor_controller.presenter.pair_items[time_pair].label.toPlainText() == "Δt = 0.25 s   f = 4 Hz"
 
     app.processEvents()
-    print("cursor plot items smoke ok")
-
-
-if __name__ == "__main__":
-    main()

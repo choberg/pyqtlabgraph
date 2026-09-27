@@ -1,13 +1,6 @@
 from __future__ import annotations
 
-import os
-import sys
-from pathlib import Path
-
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
-from cursor_smoke_helpers import graph, select_rows
+from cursor_helpers import graph, select_rows
 from PySide6.QtCore import QMimeData, Qt
 from PySide6.QtWidgets import QApplication
 
@@ -19,7 +12,7 @@ def _action(menu, text: str):
     return next(action for action in menu.actions() if action.text() == text)
 
 
-def main() -> None:
+def test_cursor_pairing_drag_drop() -> None:
     QApplication.instance() or QApplication([])
     plot = graph("cursor-pairing-context")
     first = plot.add_cursor("x", key="first", value=1.5)
@@ -89,8 +82,3 @@ def main() -> None:
     assert not reorder_widget.model.canDropMimeData(
         foreign_mime, Qt.DropAction.MoveAction, 0, 0, reorder_widget.model.index(-1, -1)
     )
-    print("cursor pairing and drag-and-drop smoke ok")
-
-
-if __name__ == "__main__":
-    main()

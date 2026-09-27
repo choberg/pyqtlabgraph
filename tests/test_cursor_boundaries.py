@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import inspect
-import os
 
-import pytest
 from PySide6.QtCore import QCoreApplication, QEvent, QItemSelectionModel, Qt
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QApplication
@@ -20,12 +18,6 @@ from pyqtlabgraph.cursor_ui import (
     _CursorListItemRecord,
 )
 from pyqtlabgraph.cursor_widget import _CursorListView
-
-
-@pytest.fixture(scope="session")
-def qapp() -> QApplication:
-    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-    return QApplication.instance() or QApplication([])
 
 
 def _dispose(qapp: QApplication, *widgets: object) -> None:

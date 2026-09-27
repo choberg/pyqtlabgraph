@@ -1,19 +1,12 @@
 from __future__ import annotations
 
-import os
-import sys
-from pathlib import Path
-
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QVBoxLayout, QWidget
 
 from pyqtlabgraph import CurveStyle, PyQtLabGraphWidget
 
 
-def main() -> None:
+def test_adaptive_performance() -> None:
     app = QApplication.instance() or QApplication([])
 
     plot_container = QWidget()
@@ -107,8 +100,3 @@ def main() -> None:
     assert log_curve.item.opts["symbol"] == "s"
 
     app.processEvents()
-    print("adaptive performance smoke ok")
-
-
-if __name__ == "__main__":
-    main()

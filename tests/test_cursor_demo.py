@@ -1,13 +1,5 @@
 from __future__ import annotations
 
-import os
-import sys
-from pathlib import Path
-
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "examples"))
-
 from demo_cursor import create_window
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
@@ -28,7 +20,7 @@ def _simulate_drag(window, cursor_key: str, value: float) -> None:
     line.sigPositionChanged.emit(line)
 
 
-def main() -> None:
+def test_cursor_demo() -> None:
     app = QApplication.instance() or QApplication([])
     window = create_window()
     window.show()
@@ -122,8 +114,3 @@ def main() -> None:
 
     window.close()
     app.processEvents()
-    print("cursor demo smoke ok")
-
-
-if __name__ == "__main__":
-    main()

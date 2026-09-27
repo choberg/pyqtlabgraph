@@ -1,12 +1,6 @@
 from __future__ import annotations
 
-import os
-import sys
-from pathlib import Path
 from types import MethodType
-
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest
@@ -17,7 +11,7 @@ from pyqtlabgraph import PyQtLabGraphLegend, PyQtLabGraphWidget
 LEGEND_CLICK_DELAY_MS = 220
 
 
-def main() -> None:
+def test_legend_interaction() -> None:
     app = QApplication.instance() or QApplication([])
 
     plot_container = QWidget()
@@ -72,9 +66,3 @@ def main() -> None:
     assert customize_requests == ["sensor"]
     assert graph._curve_manager.curves["sensor"].visible is True
     assert graph._curve_manager.curves["sensor"].item.isVisible() is True
-
-    print("legend interaction smoke ok")
-
-
-if __name__ == "__main__":
-    main()

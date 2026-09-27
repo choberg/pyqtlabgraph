@@ -1,19 +1,12 @@
 from __future__ import annotations
 
-import os
-import sys
-from pathlib import Path
-
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 import numpy as np
 import pyqtgraph as pg
 from PySide6.QtGui import QColor, QPalette
 from PySide6.QtWidgets import QApplication, QFrame, QVBoxLayout, QWidget
 
 
-def main() -> None:
+def test_public_api_cleanup() -> None:
     pg.setConfigOptions(antialias=False)
     assert pg.getConfigOption("antialias") is False
 
@@ -119,8 +112,3 @@ def main() -> None:
     assert graph._curve_manager.curves["sensor"].item.opts["pen"].color().name().lower() == "#123456"
 
     app.processEvents()
-    print("public api cleanup smoke ok")
-
-
-if __name__ == "__main__":
-    main()

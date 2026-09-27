@@ -1,22 +1,15 @@
 from __future__ import annotations
 
 import math
-import os
-import sys
-from pathlib import Path
 
 import numpy as np
-
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
-from cursor_smoke_helpers import container, graph, select_rows
+from cursor_helpers import container, graph, select_rows
 from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 
-def main() -> None:
+def test_cursor_selection_keyboard() -> None:
     app = QApplication.instance() or QApplication([])
     plot = graph("cursor-selection-keyboard", cursor_container=container())
     plot.plot("sensor", np.array([0.0, 1.0, 3.0]), np.array([0.0, 10.0, 30.0]))
@@ -67,8 +60,3 @@ def main() -> None:
         QMessageBox.question = original_question
     assert peer_x not in {state.key for state in plot.cursor_states()}
     assert removed == [peer_x]
-    print("cursor selection and keyboard smoke ok")
-
-
-if __name__ == "__main__":
-    main()

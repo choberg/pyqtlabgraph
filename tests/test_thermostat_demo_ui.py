@@ -1,20 +1,14 @@
 from __future__ import annotations
 
-import os
-import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
-
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "examples"))
 
 from demo_thermostat import ThermostatDemoWindow
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QApplication, QPushButton, QWidget
 
 
-def main() -> None:
+def test_thermostat_demo_ui() -> None:
     app = QApplication.instance() or QApplication([])
     ui_path = Path(__file__).resolve().parents[1] / "examples" / "demo_thermostat.ui"
     with TemporaryDirectory() as directory:
@@ -43,9 +37,3 @@ def main() -> None:
 
         window.window.close()
         app.processEvents()
-
-    print("thermostat demo ui smoke ok")
-
-
-if __name__ == "__main__":
-    main()

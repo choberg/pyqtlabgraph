@@ -1,15 +1,7 @@
 from __future__ import annotations
 
-import os
-import sys
-from pathlib import Path
-
 import numpy as np
-
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
-from cursor_smoke_helpers import graph
+from cursor_helpers import graph
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QApplication, QCheckBox, QDialog, QLineEdit, QListView
@@ -25,7 +17,7 @@ def _record(widget: PyQtLabGraphCursorWidget, row: int):
     return widget.model.display_record(row)
 
 
-def main() -> None:
+def test_cursor_display_editing_settings() -> None:
     QApplication.instance() or QApplication([])
     plot = graph("cursor-display-editing-settings")
     plot.plot("sensor", np.array([1.0, 2.0, 3.0]), np.array([10.0, 20.0, 30.0]))
@@ -107,8 +99,3 @@ def main() -> None:
     assert _record(unit_widget, 0).edit_value_text == "0.0015"
     unit_plot.set_axis_labels("Elapsed", "Signal", "s", "A", x_mode="time")
     assert _record(unit_widget, 0).value_text == "0.0015 s"
-    print("cursor display, editing, and settings smoke ok")
-
-
-if __name__ == "__main__":
-    main()

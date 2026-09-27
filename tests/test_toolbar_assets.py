@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import ast
-import sys
 import tomllib
 from pathlib import Path
 
@@ -38,7 +37,7 @@ def _package_data_assets() -> set[str]:
     return {str(item) for item in package_data}
 
 
-def main() -> None:
+def test_toolbar_assets() -> None:
     toolbar_icons = _toolbar_icon_filenames()
     assert toolbar_icons, "Toolbar should reference packaged runtime icons."
     assert all(filename.endswith(".png") for filename in toolbar_icons)
@@ -63,9 +62,3 @@ def main() -> None:
     assert all(path.startswith("assets/") for path in package_assets)
     assert all(path.endswith(".png") for path in package_assets)
     assert not any("original_icons" in path or path.endswith(".svg") for path in package_assets)
-
-    print("toolbar assets smoke ok")
-
-
-if __name__ == "__main__":
-    sys.exit(main())

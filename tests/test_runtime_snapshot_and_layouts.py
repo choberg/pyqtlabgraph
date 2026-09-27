@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -29,12 +28,6 @@ from pyqtlabgraph.layouts import (
 )
 from pyqtlabgraph.runtime_state import PlotSnapshot
 from pyqtlabgraph.styles import CurveStyle
-
-
-@pytest.fixture(scope="session")
-def qapp() -> QApplication:
-    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-    return QApplication.instance() or QApplication([])
 
 
 def _dispose(qapp: QApplication, *widgets: QWidget) -> None:

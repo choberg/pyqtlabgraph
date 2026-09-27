@@ -1,13 +1,6 @@
 from __future__ import annotations
 
-import os
-import sys
-from pathlib import Path
-
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
-from customize_smoke_helpers import child, graph, group_sections, show_with_callback
+from customize_helpers import child, graph, group_sections, show_with_callback
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QApplication,
@@ -19,7 +12,7 @@ from PySide6.QtWidgets import (
 )
 
 
-def main() -> None:
+def test_customize_dialog_structure() -> None:
     QApplication.instance() or QApplication([])
     plot = graph("customize-structure")
     plot.plot("sensor", [0.0, 1.0], [1.0, 2.0])
@@ -123,13 +116,8 @@ def main() -> None:
 
     empty = graph("customize-empty")
     show_with_callback(empty, assert_empty)
-    print("customize dialog structure smoke ok")
 
 
 def assert_empty(dialog: QDialog) -> None:
     assert dialog.tabs.count() == 1
     dialog.reject()
-
-
-if __name__ == "__main__":
-    main()

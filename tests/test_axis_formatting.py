@@ -1,19 +1,12 @@
 from __future__ import annotations
 
-import os
-import sys
-from pathlib import Path
-
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 from PySide6.QtWidgets import QApplication, QVBoxLayout, QWidget
 
 from pyqtlabgraph import AxisMode, PyQtLabGraphWidget
 from pyqtlabgraph.axis import SmartAxisItem, format_relative_time, resolve_axis_mode
 
 
-def main() -> None:
+def test_axis_formatting() -> None:
     app = QApplication.instance() or QApplication([])
 
     axis = SmartAxisItem("bottom")
@@ -100,8 +93,3 @@ def main() -> None:
     assert graph.y_axis_mode == AxisMode.LINEAR
 
     app.processEvents()
-    print("axis formatting smoke ok")
-
-
-if __name__ == "__main__":
-    main()

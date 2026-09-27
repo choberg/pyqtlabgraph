@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import inspect
-import os
 from dataclasses import FrozenInstanceError
 
 import pytest
@@ -22,12 +21,6 @@ from pyqtlabgraph import (
 from pyqtlabgraph.colormaps import BUILTIN_CURVE_PALETTES
 from pyqtlabgraph.models import InteractionState, InteractionTool
 from pyqtlabgraph.themes import BUILTIN_THEMES
-
-
-@pytest.fixture(scope="session")
-def qapp() -> QApplication:
-    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-    return QApplication.instance() or QApplication([])
 
 
 def _custom_theme(name: str = "laboratory") -> PyQtLabGraphTheme:

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import os
-
 import pytest
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QApplication, QVBoxLayout, QWidget
@@ -11,16 +9,6 @@ from pyqtlabgraph import (
     PyQtLabGraphTheme,
     PyQtLabGraphWidget,
 )
-
-
-@pytest.fixture(scope="session")
-def qapp() -> QApplication:
-    # Ensure there is a QApplication running in offscreen mode
-    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-    app = QApplication.instance()
-    if app is None:
-        app = QApplication([])
-    return app
 
 
 def test_version() -> None:

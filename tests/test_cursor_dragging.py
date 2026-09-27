@@ -1,15 +1,8 @@
 from __future__ import annotations
 
 import math
-import os
-import sys
-from pathlib import Path
 
 import numpy as np
-
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 from PySide6.QtCore import QItemSelectionModel, Qt
 from PySide6.QtWidgets import QApplication, QVBoxLayout, QWidget
 
@@ -50,7 +43,7 @@ def _select_rows(graph: PyQtLabGraphWidget, *rows: int) -> None:
         selection.setCurrentIndex(first_index, QItemSelectionModel.SelectionFlag.NoUpdate)
 
 
-def main() -> None:
+def test_cursor_dragging() -> None:
     app = QApplication.instance() or QApplication([])
 
     graph = PyQtLabGraphWidget(
@@ -154,8 +147,3 @@ def main() -> None:
     assert math.isclose(_cursor_item(log_graph, log_x_key).value(), 2.0)
 
     app.processEvents()
-    print("cursor dragging smoke ok")
-
-
-if __name__ == "__main__":
-    main()

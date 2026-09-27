@@ -1,13 +1,6 @@
 from __future__ import annotations
 
-import os
-import sys
-from pathlib import Path
-
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
-from customize_smoke_helpers import child, graph, set_combo_data, show_with_callback
+from customize_helpers import child, graph, set_combo_data, show_with_callback
 from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import (
@@ -24,7 +17,7 @@ from PySide6.QtWidgets import (
 from pyqtlabgraph import AxisMode, CurveStyle
 
 
-def main() -> None:
+def test_customize_dialog_preview() -> None:
     app = QApplication.instance() or QApplication([])
     plot = graph("customize-preview")
     plot.plot("sensor", [0.0, 1.0], [1.0, 2.0], style=CurveStyle(line_color="#123456"))
@@ -106,8 +99,3 @@ def main() -> None:
     app.processEvents()
     assert plot.x_label_text == "Applied X"
     assert plot.curve_persistence("sensor").history_length == 6
-    print("customize dialog preview smoke ok")
-
-
-if __name__ == "__main__":
-    main()
