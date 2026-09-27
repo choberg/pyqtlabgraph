@@ -103,7 +103,7 @@ def test_toolbar_interaction() -> None:
     assert plot.interaction_state.active_tool is InteractionTool.RECT_ZOOM
     assert plot.native_view_box.state["mouseMode"] == pg.ViewBox.RectMode
     assert toolbar.zoom_action.isChecked()
-    plot_rect = plot.x_span_filter._plot_rect()
+    plot_rect = plot._x_span_filter._plot_rect()
     data_point = plot_rect.center()
     viewport = plot.native_plot_widget.viewport()
     QTest.mouseMove(viewport, data_point)
@@ -122,7 +122,7 @@ def test_toolbar_interaction() -> None:
 
     toolbar.x_zoom_action.trigger()
     assert plot.interaction_state.active_tool is InteractionTool.X_ZOOM
-    assert plot.x_span_filter.enabled
+    assert plot._x_span_filter.enabled
     assert not toolbar.zoom_action.isChecked()
     cursor_key = plot.cursors.add("x", value=0.5)
     app.processEvents()
@@ -151,7 +151,7 @@ def test_toolbar_interaction() -> None:
 
     toolbar.y_zoom_action.trigger()
     assert plot.interaction_state.active_tool is InteractionTool.Y_ZOOM
-    assert plot.y_span_filter.enabled
+    assert plot._y_span_filter.enabled
     assert not toolbar.x_zoom_action.isChecked()
 
     toolbar.autoscale_x_action.trigger()

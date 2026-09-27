@@ -48,19 +48,19 @@ def test_customize_dialog_preview() -> None:
         x_max.lineEdit().setFocus()
         QTest.keyClick(x_max.lineEdit(), Qt.Key.Key_Return)
         assert plot.get_x_range() == (10.0, 20.0)
-        assert plot.x_label_text == "Preview X"
+        assert plot.x_label == "Preview X"
         assert plot.theme.name == "dark"
         assert plot.curve_palette.name == "default-dark"
-        assert plot.grid_item.isVisible() is False
+        assert plot.grid_visible is False
         assert plot.curve_item("sensor").isVisible() is False
         dialog.reject()
 
     show_with_callback(plot, preview_and_cancel)
-    assert plot.x_label_text == "Before X"
-    assert plot.x_label_units == "s"
+    assert plot.x_label == "Before X"
+    assert plot.x_units == "s"
     assert plot.theme.name == "light"
     assert plot.curve_palette.name == "default-light"
-    assert plot.grid_item.isVisible() is True
+    assert plot.grid_visible is True
     assert plot._render_optimizer.antialiasing_enabled is True
     assert plot.get_x_range() == (-1.0, 3.0)
     assert plot.get_y_range() == (-2.0, 4.0)
@@ -77,7 +77,7 @@ def test_customize_dialog_preview() -> None:
 
     show_with_callback(plot, apply_and_close)
     app.processEvents()
-    assert plot.x_label_text == "Applied X"
+    assert plot.x_label == "Applied X"
     assert plot.get_y_range() == (-5.0, 5.0)
     assert plot.curve_persistence("sensor").history_length == 9
 
@@ -94,8 +94,8 @@ def test_customize_dialog_preview() -> None:
     child(close_dialog, QPushButton, "pyqtLabGraphApplyButton").click()
     assert plot.curve_persistence("sensor").history_length == 6
     child(close_dialog, QLineEdit, "pyqtLabGraphXLabelEdit").setText("Window-close preview")
-    assert plot.x_label_text == "Window-close preview"
+    assert plot.x_label == "Window-close preview"
     close_dialog.close()
     app.processEvents()
-    assert plot.x_label_text == "Applied X"
+    assert plot.x_label == "Applied X"
     assert plot.curve_persistence("sensor").history_length == 6

@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QDialog,
     QFileDialog,
     QFrame,
+    QMessageBox,
     QVBoxLayout,
     QWidget,
 )
@@ -112,9 +113,11 @@ class PyQtLabGraphWidget(QWidget):
         super().__init__(parent)
         if not plot_identifier.strip():
             raise ValueError("PyQtLabGraph plot_identifier must not be empty.")
-        self.plot_identifier = plot_identifier
-        self.layout_path = Path(layout_path) if layout_path is not None else None
-        self.rolling_window_size = rolling_window_size
+        self._plot_identifier = plot_identifier
+        self._layout_path = Path(layout_path) if layout_path is not None else None
+        if rolling_window_size <= 0.0:
+            raise ValueError("Rolling window size must be greater than 0.")
+        self._rolling_window_size = rolling_window_size
         self._style_registry = (
             style_registry if style_registry is not None else PyQtLabGraphStyleRegistry()
         )
@@ -144,25 +147,25 @@ class PyQtLabGraphWidget(QWidget):
         self.setObjectName("pyqtLabGraphWidget")
 
         # Use SmartAxisItem for bottom and left axes
-        self.bottom_axis = SmartAxisItem(orientation="bottom")
-        self.left_axis = SmartAxisItem(orientation="left")
-        self.bottom_axis.double_clicked.connect(self._show_axis_range_editor)
-        self.left_axis.double_clicked.connect(self._show_axis_range_editor)
+        self._bottom_axis = SmartAxisItem(orientation="bottom")
+        self._left_axis = SmartAxisItem(orientation="left")
+        self._bottom_axis.double_clicked.connect(self._show_axis_range_editor)
+        self._left_axis.double_clicked.connect(self._show_axis_range_editor)
 
         self._plot_widget = _PyQtLabGraphPlotWidget(
-            axisItems={"bottom": self.bottom_axis, "left": self.left_axis},
+            axisItems={"bottom": self._bottom_axis, "left": self._left_axis},
             viewBox=_PyQtLabGraphViewBox(),
         )
         self._plot_widget.setObjectName("pyqtLabGraphPlotWidget")
         self._plot_item = self._plot_widget.getPlotItem()
         self._view_box = self._plot_item.getViewBox()
-        self.x_span_filter = _AxisSpanZoomFilter(
+        self._x_span_filter = _AxisSpanZoomFilter(
             self._plot_widget,
             "x",
             self._apply_x_span_zoom,
             self,
         )
-        self.y_span_filter = _AxisSpanZoomFilter(
+        self._y_span_filter = _AxisSpanZoomFilter(
             self._plot_widget,
             "y",
             self._apply_y_span_zoom,
@@ -172,13 +175,13 @@ class PyQtLabGraphWidget(QWidget):
         self._customize_dialog: QDialog | None = None
 
         self._interaction_state = InteractionState()
-        self.applying_axis_scaling = False
-        self.x_label_text = "X"
-        self.y_label_text = "Y"
-        self.x_label_units: str | None = None
-        self.y_label_units: str | None = None
-        self.x_axis_mode = AxisMode.AUTO
-        self.y_axis_mode = AxisMode.AUTO
+        self._applying_axis_scaling = False
+        self._x_label = "X"
+        self._y_label = "Y"
+        self._x_units: str | None = None
+        self._y_units: str | None = None
+        self._x_mode = AxisMode.AUTO
+        self._y_mode = AxisMode.AUTO
         self._x_log = False
         self._y_log = False
 
@@ -195,7 +198,7 @@ class PyQtLabGraphWidget(QWidget):
             interaction_state_provider=lambda: self._interaction_state,
             x_log_provider=lambda: self._x_log,
             y_log_provider=lambda: self._y_log,
-            rolling_window_size_provider=lambda: self.rolling_window_size,
+            rolling_window_size_provider=lambda: self._rolling_window_size,
         )
         self._render_optimizer = RenderOptimizer(
             plot_widget=self._plot_widget,
@@ -205,7 +208,7 @@ class PyQtLabGraphWidget(QWidget):
             x_log_provider=lambda: self._x_log,
         )
         initial_theme = self._style_registry.resolve_theme(None)
-        self.grid_item = pg.GridItem(
+        self._grid_item = pg.GridItem(
             pen=pg.mkPen(initial_theme.grid, width=_GRID_LINE_WIDTH),
             textPen=None,
         )
@@ -213,7 +216,7 @@ class PyQtLabGraphWidget(QWidget):
             plot_widget=self._plot_widget,
             plot_item=self._plot_item,
             view_box=self._view_box,
-            grid_item=self.grid_item,
+            grid_item=self._grid_item,
             registry=self._style_registry,
             curves_provider=self._curve_manager.ordered_curves,
             adaptive_mode_provider=lambda: self._render_optimizer.active,
@@ -229,7 +232,7 @@ class PyQtLabGraphWidget(QWidget):
             x_range_provider=self._range_controller.get_x_range,
             y_range_provider=self._range_controller.get_y_range,
             axis_mode_provider=lambda cursor_type: (
-                self.x_axis_mode if cursor_type is CursorType.X else self.y_axis_mode
+                self._x_mode if cursor_type is CursorType.X else self._y_mode
             ),
             axis_format_provider=lambda cursor_type: self._cursor_axis_format(cursor_type),
             x_log_provider=lambda: self._x_log,
@@ -446,14 +449,50 @@ class PyQtLabGraphWidget(QWidget):
         self,
         cursor_type: CursorType,
     ) -> tuple[float, str, str | None]:
-        axis = self.bottom_axis if cursor_type is CursorType.X else self.left_axis
-        units = self.x_label_units if cursor_type is CursorType.X else self.y_label_units
+        axis = self._bottom_axis if cursor_type is CursorType.X else self._left_axis
+        units = self._x_units if cursor_type is CursorType.X else self._y_units
         return axis.autoSIPrefixScale, axis.labelUnitPrefix, units
 
     @property
     def cursors(self) -> PyQtLabGraphCursors:
         """Cursor and cursor-pair commands and state for this plot."""
         return self._cursors
+
+    @property
+    def plot_identifier(self) -> str:
+        return self._plot_identifier
+
+    @property
+    def layout_path(self) -> Path | None:
+        return self._layout_path
+
+    @property
+    def rolling_window_size(self) -> float:
+        return self._rolling_window_size
+
+    @property
+    def x_label(self) -> str:
+        return self._x_label
+
+    @property
+    def y_label(self) -> str:
+        return self._y_label
+
+    @property
+    def x_units(self) -> str | None:
+        return self._x_units
+
+    @property
+    def y_units(self) -> str | None:
+        return self._y_units
+
+    @property
+    def x_mode(self) -> AxisMode:
+        return self._x_mode
+
+    @property
+    def y_mode(self) -> AxisMode:
+        return self._y_mode
 
     @property
     def x_log(self) -> bool:
@@ -474,13 +513,13 @@ class PyQtLabGraphWidget(QWidget):
         if (self._x_log if is_x else self._y_log) == enabled:
             return
         with self._change_dispatcher.batch():
-            if enabled and is_x and self.x_axis_mode == AxisMode.TIME:
-                self.x_axis_mode = AxisMode.LINEAR
+            if enabled and is_x and self._x_mode == AxisMode.TIME:
+                self._x_mode = AxisMode.LINEAR
                 self._apply_axis_label(CursorType.X)
-            elif enabled and not is_x and self.y_axis_mode == AxisMode.TIME:
-                self.y_axis_mode = AxisMode.LINEAR
+            elif enabled and not is_x and self._y_mode == AxisMode.TIME:
+                self._y_mode = AxisMode.LINEAR
                 self._apply_axis_label(CursorType.Y)
-            self.applying_axis_scaling = True
+            self._applying_axis_scaling = True
             try:
                 minimum, maximum = self.get_x_range() if is_x else self.get_y_range()
                 if is_x:
@@ -502,7 +541,7 @@ class PyQtLabGraphWidget(QWidget):
                     else:
                         self._range_controller.set_y_range(*converted)
             finally:
-                self.applying_axis_scaling = False
+                self._applying_axis_scaling = False
             if self._render_optimizer.update_adaptive_performance(force=True):
                 self._reapply_curve_styles()
             self._cursors.refresh_presentation()
@@ -520,11 +559,11 @@ class PyQtLabGraphWidget(QWidget):
         self._set_axis_labels(x_label, y_label, x_units, y_units, x_mode, y_mode)
 
     def set_grid_visible(self, visible: bool) -> None:
-        self.grid_item.setVisible(visible)
+        self._grid_item.setVisible(visible)
 
     @property
     def grid_visible(self) -> bool:
-        return self.grid_item.isVisible()
+        return self._grid_item.isVisible()
 
     def set_antialiasing_enabled(self, enabled: bool) -> None:
         self._render_optimizer.set_antialiasing_enabled(enabled)
@@ -641,7 +680,7 @@ class PyQtLabGraphWidget(QWidget):
     def set_rolling_window_size(self, size: float) -> None:
         if size <= 0.0:
             raise ValueError("Rolling window size must be greater than 0.")
-        self.rolling_window_size = size
+        self._rolling_window_size = size
         if self._interaction_state.rolling_x:
             self.apply_axis_scaling()
 
@@ -721,10 +760,10 @@ class PyQtLabGraphWidget(QWidget):
         with self._change_dispatcher.batch():
             self._style_controller.set_theme(theme)
             self._set_axis_labels(
-                self.x_label_text,
-                self.y_label_text,
-                self.x_label_units,
-                self.y_label_units,
+                self._x_label,
+                self._y_label,
+                self._x_units,
+                self._y_units,
             )
             self._apply_zoom_tool_cursor()
             self._cursors.refresh_presentation()
@@ -753,7 +792,16 @@ class PyQtLabGraphWidget(QWidget):
         if self._customize_dialog is dialog:
             self._customize_dialog = None
 
+    def export_image(self, path: str | Path) -> None:
+        """Write the plot as an image; the format follows the file suffix."""
+        import pyqtgraph.exporters as exporters
+
+        target = Path(path)
+        if not exporters.ImageExporter(self._plot_item).export(str(target)):
+            raise OSError(f"Could not save the plot image to {target}.")
+
     def save_figure(self) -> None:
+        """Ask for a file name and export the plot, reporting failures in a dialog."""
         filename, _filter = QFileDialog.getSaveFileName(
             self,
             "Save plot",
@@ -763,12 +811,9 @@ class PyQtLabGraphWidget(QWidget):
         if not filename:
             return
         try:
-            import pyqtgraph.exporters as exporters
-
-            exporter = exporters.ImageExporter(self._plot_item)
-            exporter.export(filename)
+            self.export_image(filename)
         except (OSError, ValueError) as exc:
-            raise RuntimeError(f"Could not save PyQtGraph plot to {filename}: {exc}") from exc
+            QMessageBox.critical(self, "Save plot", str(exc))
 
     @property
     def curve_palette(self) -> PyQtLabGraphCurvePalette:
@@ -976,7 +1021,7 @@ class PyQtLabGraphWidget(QWidget):
         self._cursors.refresh_presentation()
 
     def load_layout(self, path: str | Path | None = None) -> bool:
-        layout = load_plot_layout(self._resolve_layout_path(path), self.plot_identifier)
+        layout = load_plot_layout(self._resolve_layout_path(path), self._plot_identifier)
         if layout is None:
             return False
         apply_plot_layout(self, layout)
@@ -993,7 +1038,7 @@ class PyQtLabGraphWidget(QWidget):
     ) -> None:
         save_plot_layout(
             self._resolve_layout_path(path),
-            self.plot_identifier,
+            self._plot_identifier,
             capture_plot_layout(
                 self,
                 include_x_range=include_x_range,
@@ -1007,13 +1052,13 @@ class PyQtLabGraphWidget(QWidget):
         self._plot_item.layout.setContentsMargins(*_PLOT_LAYOUT_MARGINS)
         self._plot_widget.setAntialiasing(self._render_optimizer.antialiasing_enabled)
         self._set_axis_labels(
-            self.x_label_text,
-            self.y_label_text,
-            self.x_label_units,
-            self.y_label_units,
+            self._x_label,
+            self._y_label,
+            self._x_units,
+            self._y_units,
         )
-        self.grid_item.setZValue(_GRID_Z_VALUE)
-        self._plot_item.addItem(self.grid_item, ignoreBounds=True)
+        self._grid_item.setZValue(_GRID_Z_VALUE)
+        self._plot_item.addItem(self._grid_item, ignoreBounds=True)
         self._plot_item.showGrid(x=False, y=False)
         self._plot_item.setMenuEnabled(False)
         self._plot_item.hideButtons()
@@ -1038,8 +1083,8 @@ class PyQtLabGraphWidget(QWidget):
     def _resolve_layout_path(self, path: str | Path | None) -> Path:
         if path is not None:
             return Path(path)
-        if self.layout_path is not None:
-            return self.layout_path
+        if self._layout_path is not None:
+            return self._layout_path
         raise RuntimeError(
             "No PyQtLabGraph layout path was provided. Pass layout_path to "
             "PyQtLabGraphWidget or call save_layout/load_layout with a path."
@@ -1047,8 +1092,8 @@ class PyQtLabGraphWidget(QWidget):
 
     def _apply_interaction_behavior(self) -> None:
         active_tool = self._interaction_state.active_tool
-        self.x_span_filter.set_enabled(active_tool == InteractionTool.X_ZOOM)
-        self.y_span_filter.set_enabled(active_tool == InteractionTool.Y_ZOOM)
+        self._x_span_filter.set_enabled(active_tool == InteractionTool.X_ZOOM)
+        self._y_span_filter.set_enabled(active_tool == InteractionTool.Y_ZOOM)
         if active_tool == InteractionTool.RECT_ZOOM:
             self._view_box.setMouseMode(pg.ViewBox.RectMode)
             self._style_controller.style_rect_zoom_selection()
@@ -1079,17 +1124,17 @@ class PyQtLabGraphWidget(QWidget):
         x_mode: str | AxisMode | None = None,
         y_mode: str | AxisMode | None = None,
     ) -> None:
-        self.x_label_text = x_label
-        self.y_label_text = y_label
-        self.x_label_units = x_units
-        self.y_label_units = y_units
+        self._x_label = x_label
+        self._y_label = y_label
+        self._x_units = x_units
+        self._y_units = y_units
         if x_mode is not None:
-            self.x_axis_mode = resolve_axis_mode(x_mode)
+            self._x_mode = resolve_axis_mode(x_mode)
         if y_mode is not None:
-            self.y_axis_mode = resolve_axis_mode(y_mode)
-        if self.x_axis_mode == AxisMode.TIME and self._x_log:
+            self._y_mode = resolve_axis_mode(y_mode)
+        if self._x_mode == AxisMode.TIME and self._x_log:
             self.set_x_log(False)
-        if self.y_axis_mode == AxisMode.TIME and self._y_log:
+        if self._y_mode == AxisMode.TIME and self._y_log:
             self.set_y_log(False)
 
         self._apply_axis_label(CursorType.X)
@@ -1099,20 +1144,20 @@ class PyQtLabGraphWidget(QWidget):
 
     def _apply_axis_label(self, axis: CursorType) -> None:
         if axis is CursorType.X:
-            self.bottom_axis.set_mode(self.x_axis_mode)
-            self.bottom_axis.setLabel(
-                self.x_label_text,
-                units=self.x_label_units,
+            self._bottom_axis.set_mode(self._x_mode)
+            self._bottom_axis.setLabel(
+                self._x_label,
+                units=self._x_units,
                 **{
                     "color": self._style_controller.host_axis_color_name(),
                     "margin-top": _AXIS_LABEL_TOP_MARGIN,
                 },
             )
         else:
-            self.left_axis.set_mode(self.y_axis_mode)
-            self.left_axis.setLabel(
-                self.y_label_text,
-                units=self.y_label_units,
+            self._left_axis.set_mode(self._y_mode)
+            self._left_axis.setLabel(
+                self._y_label,
+                units=self._y_units,
                 **{
                     "color": self._style_controller.host_axis_color_name(),
                     "margin-right": _AXIS_LABEL_RIGHT_MARGIN,
@@ -1120,7 +1165,7 @@ class PyQtLabGraphWidget(QWidget):
             )
 
     def _handle_view_range_changed(self, *_args: object) -> None:
-        if self.applying_axis_scaling or self._range_controller.applying_range:
+        if self._applying_axis_scaling or self._range_controller.applying_range:
             return
         with self._change_dispatcher.batch():
             self.request_manual_navigation()

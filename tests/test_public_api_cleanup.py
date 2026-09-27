@@ -94,17 +94,17 @@ def test_public_api_cleanup() -> None:
     assert graph.native_plot_widget.backgroundBrush().color().alpha() == 0
     assert graph.native_view_box.background.rect().right() > graph.native_view_box.rect().right()
     assert graph.native_view_box.background.rect().bottom() > graph.native_view_box.rect().bottom()
-    assert graph.bottom_axis.pen().color().name().lower() == "#445566"
-    assert graph.bottom_axis.tickPen().color().name().lower() == "#445566"
-    assert graph.bottom_axis.textPen().color().name().lower() == "#445566"
-    assert graph.left_axis.pen().color().name().lower() == "#445566"
+    assert graph._bottom_axis.pen().color().name().lower() == "#445566"
+    assert graph._bottom_axis.tickPen().color().name().lower() == "#445566"
+    assert graph._bottom_axis.textPen().color().name().lower() == "#445566"
+    assert graph._left_axis.pen().color().name().lower() == "#445566"
 
     graph.set_theme("dark-solarized")
     after_dark_solarized_style = graph.curve_style("sensor")
-    assert graph.bottom_axis.pen().color().name().lower() == "#445566"
-    assert graph.bottom_axis.tickPen().color().name().lower() == "#445566"
-    assert graph.bottom_axis.textPen().color().name().lower() == "#445566"
-    assert graph.left_axis.pen().color().name().lower() == "#445566"
+    assert graph._bottom_axis.pen().color().name().lower() == "#445566"
+    assert graph._bottom_axis.tickPen().color().name().lower() == "#445566"
+    assert graph._bottom_axis.textPen().color().name().lower() == "#445566"
+    assert graph._left_axis.pen().color().name().lower() == "#445566"
 
     assert after_dark_style == before_style
     assert after_light_solarized_style == before_style

@@ -244,6 +244,10 @@ Configure views, axes, limits, and serialize settings:
 * **`set_axis_labels(x_label: str, y_label: str, x_units: str = None, y_units: str = None, x_mode: AxisMode = None, y_mode: AxisMode = None)`**
   Updates axis titles, units, and tick representation modes (`AxisMode.AUTO`, `AxisMode.LINEAR`, `AxisMode.TIME`).
   `AxisMode.TIME` is mutually exclusive with logarithmic scaling on the same axis. Enabling time mode disables that axis' logarithmic scaling, and enabling logarithmic scaling switches a time axis back to linear numeric formatting.
+  The current values are available as the read-only properties `x_label`,
+  `y_label`, `x_units`, `y_units`, `x_mode`, and `y_mode`; `x_log`, `y_log`,
+  `grid_visible`, `plot_identifier`, `layout_path`, and `rolling_window_size`
+  are read-only as well and change only through their `set_...` methods.
 * **`get_x_range() -> tuple[float, float]`** / **`get_y_range() -> tuple[float, float]`**
   Gets active viewport limits.
 * **`apply_manual_x_limits(xmin: float, xmax: float)`** / **`apply_manual_y_limits(ymin: float, ymax: float)`**
@@ -258,6 +262,12 @@ Configure views, axes, limits, and serialize settings:
   Rescales both axes to fit all data.
 * **`set_theme(theme: str | PyQtLabGraphTheme)`**
   Applies a background/grid theme.
+* **`export_image(path)`**
+  Writes the plot as an image whose format follows the file suffix and raises
+  `OSError` when the file cannot be written.
+* **`save_figure()`**
+  Toolbar action: asks for a file name, calls `export_image()`, and reports
+  failures in a message box.
 * **`save_layout()`** / **`load_layout()`**
   Manually writes/restores layout state to/from the file set in `layout_path`.
   Layout format version 2 stores each plot as a flat object whose fields mirror

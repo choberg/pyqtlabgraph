@@ -178,12 +178,12 @@ def build_global_tab(
     parent: QWidget,
     tabs: QTabWidget,
 ) -> GlobalControls:
-    x_label = _line_edit(plot.x_label_text, "pyqtLabGraphXLabelEdit", parent)
-    x_units = _line_edit(plot.x_label_units or "", "pyqtLabGraphXUnitsEdit", parent)
-    y_label = _line_edit(plot.y_label_text, "pyqtLabGraphYLabelEdit", parent)
-    y_units = _line_edit(plot.y_label_units or "", "pyqtLabGraphYUnitsEdit", parent)
-    x_mode = _axis_mode_combo(parent, plot.x_axis_mode, "pyqtLabGraphXModeCombo")
-    y_mode = _axis_mode_combo(parent, plot.y_axis_mode, "pyqtLabGraphYModeCombo")
+    x_label = _line_edit(plot.x_label, "pyqtLabGraphXLabelEdit", parent)
+    x_units = _line_edit(plot.x_units or "", "pyqtLabGraphXUnitsEdit", parent)
+    y_label = _line_edit(plot.y_label, "pyqtLabGraphYLabelEdit", parent)
+    y_units = _line_edit(plot.y_units or "", "pyqtLabGraphYUnitsEdit", parent)
+    x_mode = _axis_mode_combo(parent, plot.x_mode, "pyqtLabGraphXModeCombo")
+    y_mode = _axis_mode_combo(parent, plot.y_mode, "pyqtLabGraphYModeCombo")
     grid = _check_box(plot.grid_visible, "pyqtLabGraphGridCheckbox", parent)
     grid.setToolTip("Shows or hides the plot grid.")
     x_log = _check_box(plot.x_log, "pyqtLabGraphXLogCheckbox", parent)

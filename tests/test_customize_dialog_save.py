@@ -49,12 +49,12 @@ def test_customize_dialog_save() -> None:
         assert saved["y_range"] == [-4.0, 4.0]
         assert saved["restore_view_state_on_load"] is False
         assert saved["curves"][0]["persistence"]["history_length"] == 5
-        assert plot.x_label_text == "Saved X"
+        assert plot.x_label == "Saved X"
         assert plot.theme.name == "dark"
         assert plot.get_y_range() == (-4.0, 4.0)
 
     failing = graph("customize-save-failure")
-    original_label = failing.x_label_text
+    original_label = failing.x_label
     original_critical = dialogs.QMessageBox.critical
     errors: list[str] = []
     dialogs.QMessageBox.critical = lambda _parent, _title, text: errors.append(str(text))
@@ -69,4 +69,4 @@ def test_customize_dialog_save() -> None:
     finally:
         dialogs.QMessageBox.critical = original_critical
     assert errors
-    assert failing.x_label_text == original_label
+    assert failing.x_label == original_label

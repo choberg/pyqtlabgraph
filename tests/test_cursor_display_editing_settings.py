@@ -92,7 +92,7 @@ def test_cursor_display_editing_settings() -> None:
     unit_plot = graph("cursor-display-units")
     unit_plot.set_axis_labels("Voltage", "Signal", "V", "A", x_mode="auto", y_mode="linear")
     unit_plot.apply_manual_x_limits(0.0, 0.002)
-    unit_plot.bottom_axis.updateAutoSIPrefix()
+    unit_plot._bottom_axis.updateAutoSIPrefix()
     unit_plot.cursors.add("x", value=0.0015)
     unit_widget = PyQtLabGraphCursorWidget(unit_plot)
     assert _record(unit_widget, 0).value_text == "1.5 mV"

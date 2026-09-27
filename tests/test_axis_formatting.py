@@ -75,21 +75,21 @@ def test_axis_formatting() -> None:
     graph.set_x_log(True)
     assert graph.x_log is True
     graph.set_axis_labels("Elapsed", "Value", "s", "V", x_mode=AxisMode.TIME)
-    assert graph.x_axis_mode == AxisMode.TIME
+    assert graph.x_mode == AxisMode.TIME
     assert graph.x_log is False
 
     graph.set_x_log(True)
     assert graph.x_log is True
-    assert graph.x_axis_mode == AxisMode.LINEAR
+    assert graph.x_mode == AxisMode.LINEAR
 
     graph.set_y_log(True)
     assert graph.y_log is True
     graph.set_axis_labels("Elapsed", "Value", "s", "V", y_mode=AxisMode.TIME)
-    assert graph.y_axis_mode == AxisMode.TIME
+    assert graph.y_mode == AxisMode.TIME
     assert graph.y_log is False
 
     graph.set_y_log(True)
     assert graph.y_log is True
-    assert graph.y_axis_mode == AxisMode.LINEAR
+    assert graph.y_mode == AxisMode.LINEAR
 
     app.processEvents()

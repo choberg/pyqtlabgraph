@@ -102,3 +102,28 @@ def test_logarithmic_axes(qapp: QApplication) -> None:
     widget2.restore_snapshot(snapshot)
     assert widget2.x_log
     assert widget2.y_log
+
+
+def test_export_image_writes_file_and_reports_failures(qapp: QApplication, tmp_path) -> None:
+    widget = PyQtLabGraphWidget(plot_identifier="export")
+    widget.resize(320, 240)
+    widget.plot("sensor", [0.0, 1.0], [1.0, 2.0])
+    target = tmp_path / "plot.png"
+
+    widget.export_image(target)
+    assert target.stat().st_size > 0
+
+    with pytest.raises(OSError, match="Could not save the plot image"):
+        widget.export_image(tmp_path / "missing-directory" / "plot.png")
+
+
+def test_widget_state_is_read_only(qapp: QApplication) -> None:
+    widget = PyQtLabGraphWidget(plot_identifier="read-only")
+    widget.set_axis_labels("Time", "Value", x_units="s")
+
+    assert (widget.x_label, widget.y_label, widget.x_units) == ("Time", "Value", "s")
+    for name in ("x_label", "x_units", "x_mode", "rolling_window_size", "plot_identifier"):
+        with pytest.raises(AttributeError):
+            setattr(widget, name, None)
+    with pytest.raises(ValueError, match="greater than 0"):
+        PyQtLabGraphWidget(plot_identifier="bad-window", rolling_window_size=0.0)
