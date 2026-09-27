@@ -290,7 +290,7 @@ Configure views, axes, limits, and serialize settings:
   include cursor order and selection; persisted layouts store theme and palette
   names, optional ranges, and no selection.
 * **`show_customize_dialog(curve_key: str = None)`**
-  Launches the modeless Customize dialog. If `curve_key` is supplied, it opens directly on the tab editing that curve. Most edits preview immediately, while ranges preview explicitly. *Apply & Close* keeps the preview, *Save Layout* saves it without closing, and *Cancel* restores the opening or last-saved state.
+  Launches the modeless Customize dialog. If `curve_key` is supplied, it opens directly on the tab editing that curve. Most edits preview immediately, while ranges preview explicitly. *Apply & Close* keeps the preview, *Save Layout* saves it without closing, and *Cancel* restores the opening or last-saved state. Zooming or panning in the plot while the dialog is open is kept by every button: the range fields are applied only when they were edited in the dialog, and *Cancel* reverts only a view the dialog itself set (or one whose log scaling it reverts).
 
 `interaction_state` returns an immutable `InteractionState`. Autoscale X and
 rolling X cannot be active together. Enabling a zoom tool disables both

@@ -378,6 +378,7 @@ class _CustomizeDialog(QDialog):
             self.session.save_layout(self.global_controls, self.curve_editors)
         except Exception as exc:
             QMessageBox.critical(self, "Save layout", str(exc))
+        self._set_range_controls(*self.session.sync_ranges_from_plot())
 
     def _apply(self) -> None:
         try:
@@ -385,6 +386,7 @@ class _CustomizeDialog(QDialog):
             self.session.capture_baseline()
         except Exception as exc:
             QMessageBox.critical(self, "Apply customization", str(exc))
+        self._set_range_controls(*self.session.sync_ranges_from_plot())
 
     def _finish(self, result: int) -> None:
         if result == int(QDialog.DialogCode.Accepted):
