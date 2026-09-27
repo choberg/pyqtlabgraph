@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QEvent, QObject, Qt
-from PySide6.QtGui import QAction, QColor, QIcon, QPainter, QPen, QPixmap
+from PySide6.QtGui import QAction, QColor, QIcon, QKeyEvent, QPainter, QPen, QPixmap, QShowEvent
 from PySide6.QtWidgets import (
     QCheckBox,
     QColorDialog,
@@ -137,7 +137,7 @@ class _CustomizeDialog(QDialog):
         self._install_range_return_handlers()
         self._preview_enabled = True
 
-    def showEvent(self, event: QEvent) -> None:
+    def showEvent(self, event: QShowEvent) -> None:
         if not event.spontaneous():
             self.session.capture_baseline()
         super().showEvent(event)
@@ -324,10 +324,11 @@ class _CustomizeDialog(QDialog):
             self.session.preview_y_range(self.global_controls)
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
-        if event.type() == QEvent.Type.KeyPress and event.key() in {
-            Qt.Key.Key_Return,
-            Qt.Key.Key_Enter,
-        }:
+        if (
+            event.type() == QEvent.Type.KeyPress
+            and isinstance(event, QKeyEvent)
+            and event.key() in {Qt.Key.Key_Return, Qt.Key.Key_Enter}
+        ):
             if watched in self._x_range_return_widgets:
                 self._preview_x_range()
                 return True

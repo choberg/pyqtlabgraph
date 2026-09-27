@@ -246,6 +246,7 @@ class _AxisSpanZoomFilter(QObject):
 
         if (
             event.type() == QEvent.Type.MouseButtonPress
+            and isinstance(event, QMouseEvent)
             and event.button() == Qt.MouseButton.LeftButton
         ):
             # The filter is installed on the complete graphics-view viewport,
@@ -259,13 +260,18 @@ class _AxisSpanZoomFilter(QObject):
             self.rubber_band.show()
             return True
 
-        if event.type() == QEvent.Type.MouseMove and self.rubber_band.isVisible():
+        if (
+            event.type() == QEvent.Type.MouseMove
+            and isinstance(event, QMouseEvent)
+            and self.rubber_band.isVisible()
+        ):
             current = self._clamp_to_plot_rect(event.position().toPoint())
             self.rubber_band.setGeometry(self._selection_rect(current))
             return True
 
         if (
             event.type() == QEvent.Type.MouseButtonRelease
+            and isinstance(event, QMouseEvent)
             and event.button() == Qt.MouseButton.LeftButton
         ):
             if not self.rubber_band.isVisible():

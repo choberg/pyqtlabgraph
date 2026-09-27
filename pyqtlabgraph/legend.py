@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from pyqtgraph.graphicsItems.ScatterPlotItem import renderSymbol
 from PySide6.QtCore import QPointF, Qt, QTimer
 from PySide6.QtGui import QBrush, QColor, QMouseEvent, QPainter, QPaintEvent, QPen
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QBoxLayout, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from .qt_styles import paint_host_frame
 
@@ -48,7 +48,7 @@ class PyQtLabGraphLegend(QWidget):
         self.items_by_key: dict[str, PyQtLabGraphLegendItem] = {}
         self.setObjectName("pyqtLabGraphLegend")
         if orientation == Qt.Orientation.Vertical:
-            self._layout = QVBoxLayout(self)
+            self._layout: QBoxLayout = QVBoxLayout(self)
         else:
             self._layout = QHBoxLayout(self)
         self._layout.setContentsMargins(*_LEGEND_LAYOUT_MARGINS)
@@ -65,7 +65,7 @@ class PyQtLabGraphLegend(QWidget):
     def refresh(self) -> None:
         while self._layout.count():
             item = self._layout.takeAt(0)
-            widget = item.widget()
+            widget = item.widget() if item is not None else None
             if widget is not None:
                 widget.setParent(None)
                 widget.deleteLater()

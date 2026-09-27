@@ -1,8 +1,18 @@
 from __future__ import annotations
 
 import math
+from typing import TypeAlias
 
-from PySide6.QtCore import QAbstractListModel, QModelIndex, QPointF, QRect, QRectF, QSize, Qt
+from PySide6.QtCore import (
+    QAbstractItemModel,
+    QModelIndex,
+    QPersistentModelIndex,
+    QPointF,
+    QRect,
+    QRectF,
+    QSize,
+    Qt,
+)
 from PySide6.QtGui import QColor, QIcon, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import QLineEdit, QStyle, QStyledItemDelegate, QStyleOptionViewItem, QWidget
 
@@ -29,6 +39,8 @@ from .cursor_ui import (
     _CursorListItemRecord,
 )
 
+_ModelIndex: TypeAlias = QModelIndex | QPersistentModelIndex
+
 _CURSOR_CARD_INSET_Y = 2
 _CURSOR_CARD_RADIUS = 4.0
 _CURSOR_PAIR_CARD_RADIUS = 4.0
@@ -54,7 +66,7 @@ _CURSOR_LINE_STYLE_LABELS = {
     "dash-dot": "Dash-dot",
 }
 class _CursorListDelegate(QStyledItemDelegate):
-    def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex) -> None:
+    def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: _ModelIndex) -> None:
         record = index.data(_CURSOR_DISPLAY_ROLE)
         if not isinstance(record, _CursorListItemRecord):
             super().paint(painter, option, index)
@@ -81,12 +93,12 @@ class _CursorListDelegate(QStyledItemDelegate):
 
         painter.restore()
 
-    def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
+    def sizeHint(self, option: QStyleOptionViewItem, index: _ModelIndex) -> QSize:
         record = index.data(_CURSOR_DISPLAY_ROLE)
         height = _cursor_item_height(record) if isinstance(record, _CursorListItemRecord) else _CURSOR_ROW_HEIGHT
         return QSize(option.rect.width(), height)
 
-    def createEditor(self, parent: QWidget, _option: QStyleOptionViewItem, index: QModelIndex) -> QWidget:
+    def createEditor(self, parent: QWidget, _option: QStyleOptionViewItem, index: _ModelIndex) -> QWidget:
         editor = QLineEdit(parent)
         model = index.model()
         edit_field = getattr(model, "edit_field", _CURSOR_EDIT_FIELD_VALUE)
@@ -98,16 +110,16 @@ class _CursorListDelegate(QStyledItemDelegate):
         editor.setFrame(False)
         return editor
 
-    def setEditorData(self, editor: QWidget, index: QModelIndex) -> None:
+    def setEditorData(self, editor: QWidget, index: _ModelIndex) -> None:
         if isinstance(editor, QLineEdit):
             editor.setText(str(index.data(Qt.ItemDataRole.EditRole) or ""))
             editor.selectAll()
 
-    def setModelData(self, editor: QWidget, model: QAbstractListModel, index: QModelIndex) -> None:
+    def setModelData(self, editor: QWidget, model: QAbstractItemModel, index: _ModelIndex) -> None:
         if isinstance(editor, QLineEdit):
             model.setData(index, editor.text(), Qt.ItemDataRole.EditRole)
 
-    def updateEditorGeometry(self, editor: QWidget, option: QStyleOptionViewItem, index: QModelIndex) -> None:
+    def updateEditorGeometry(self, editor: QWidget, option: QStyleOptionViewItem, index: _ModelIndex) -> None:
         model = index.model()
         edit_field = getattr(model, "edit_field", _CURSOR_EDIT_FIELD_VALUE)
         cursor_rect = (

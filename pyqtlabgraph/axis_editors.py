@@ -5,6 +5,7 @@ import re
 from typing import Callable
 
 from PySide6.QtCore import QEvent, QObject, QPoint, Qt
+from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QWidget
 
 _RANGE_EDITOR_DECIMALS = 3
@@ -95,7 +96,7 @@ class _AxisRangePopup(QWidget):
         self.minimum_edit.selectAll()
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
-        if event.type() == QEvent.Type.KeyPress:
+        if event.type() == QEvent.Type.KeyPress and isinstance(event, QKeyEvent):
             if event.key() in {Qt.Key.Key_Return, Qt.Key.Key_Enter}:
                 self._apply_and_close()
                 return True

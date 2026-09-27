@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import json
 import math
-from typing import TYPE_CHECKING
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, TypeAlias
 from uuid import uuid4
 
 from PySide6.QtCore import (
@@ -10,6 +11,7 @@ from PySide6.QtCore import (
     QMimeData,
     QModelIndex,
     QObject,
+    QPersistentModelIndex,
     QRect,
     QSize,
     Qt,
@@ -33,6 +35,8 @@ from .cursor_ui import (
 )
 from .models import CursorState, CursorType
 
+_ModelIndex: TypeAlias = QModelIndex | QPersistentModelIndex
+
 if TYPE_CHECKING:
     from .widget import PyQtLabGraphWidget
 
@@ -55,10 +59,10 @@ class _CursorListModel(QAbstractListModel):
             for block in self._row_blocks
         }
 
-    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
+    def rowCount(self, parent: _ModelIndex = QModelIndex()) -> int:
         return 0 if parent.isValid() else len(self._row_blocks)
 
-    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> object:
+    def data(self, index: _ModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> object:
         if not index.isValid():
             return None
 
@@ -91,7 +95,7 @@ class _CursorListModel(QAbstractListModel):
     def mimeTypes(self) -> list[str]:
         return [_CURSOR_MIME_TYPE]
 
-    def mimeData(self, indexes: list[QModelIndex]) -> QMimeData:
+    def mimeData(self, indexes: Sequence[QModelIndex]) -> QMimeData:
         mime_data = QMimeData()
         rows = sorted({index.row() for index in indexes if index.isValid()})
         cursor_keys = [
@@ -115,7 +119,7 @@ class _CursorListModel(QAbstractListModel):
         action: Qt.DropAction,
         row: int,
         column: int,
-        parent: QModelIndex,
+        parent: _ModelIndex,
     ) -> bool:
         return self._drop_operation(data, action, row, column, parent) is not None
 
@@ -125,7 +129,7 @@ class _CursorListModel(QAbstractListModel):
         action: Qt.DropAction,
         row: int,
         column: int,
-        parent: QModelIndex,
+        parent: _ModelIndex,
     ) -> bool:
         operation = self._drop_operation(data, action, row, column, parent)
         if operation is None:
@@ -140,7 +144,7 @@ class _CursorListModel(QAbstractListModel):
 
     def setData(
         self,
-        index: QModelIndex,
+        index: _ModelIndex,
         value: object,
         role: int = Qt.ItemDataRole.EditRole,
     ) -> bool:
@@ -175,7 +179,7 @@ class _CursorListModel(QAbstractListModel):
         self.dataChanged.emit(row_index, row_index, [Qt.ItemDataRole.DisplayRole, _CURSOR_DISPLAY_ROLE])
         return True
 
-    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
+    def flags(self, index: _ModelIndex) -> Qt.ItemFlag:
         if not index.isValid():
             return Qt.ItemFlag.ItemIsDropEnabled
         return (
@@ -286,7 +290,7 @@ class _CursorListModel(QAbstractListModel):
         action: Qt.DropAction,
         row: int,
         column: int,
-        parent: QModelIndex,
+        parent: _ModelIndex,
     ) -> _CursorDropOperation | None:
         source_keys = self._dragged_cursor_keys(data, action)
         if source_keys is None or column not in {-1, 0}:
@@ -314,7 +318,7 @@ class _CursorListModel(QAbstractListModel):
         if action != Qt.DropAction.MoveAction or not data.hasFormat(_CURSOR_MIME_TYPE):
             return None
         try:
-            payload = json.loads(bytes(data.data(_CURSOR_MIME_TYPE)).decode("utf-8"))
+            payload = json.loads(bytes(data.data(_CURSOR_MIME_TYPE).data()).decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError):
             return None
         if not isinstance(payload, dict) or payload.get("model_token") != self._model_token:
