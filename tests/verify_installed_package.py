@@ -20,6 +20,7 @@ EXPECTED_EXPORTS = {
     "CurveStyle",
     "LayoutFileError",
     "PlotSnapshot",
+    "PyQtLabGraphCursors",
     "PyQtLabGraphCursorWidget",
     "PyQtLabGraphColorGradient",
     "PyQtLabGraphCurvePalette",
