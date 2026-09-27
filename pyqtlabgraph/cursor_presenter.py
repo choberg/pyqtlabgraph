@@ -47,6 +47,7 @@ class CursorPlotPresenter:
         cursor_item.item.sigClicked.connect(
             lambda *_args, key=cursor_key: self.handle_cursor_clicked(key)
         )
+        cursor_item.label.clicked = lambda key=cursor_key: self.handle_cursor_clicked(key)
         self._plot_item.addItem(cursor_item.item, ignoreBounds=True)
         self._plot_item.addItem(cursor_item.label, ignoreBounds=True)
         self.cursor_items[cursor_key] = cursor_item

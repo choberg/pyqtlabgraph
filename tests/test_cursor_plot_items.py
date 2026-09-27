@@ -4,6 +4,7 @@ import math
 
 import numpy as np
 from PySide6.QtCore import QPointF, QRectF, Qt
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QApplication, QVBoxLayout, QWidget
 
 from pyqtlabgraph import CursorLineStyle, CursorStyle, PyQtLabGraphWidget
@@ -271,3 +272,56 @@ def test_cursor_plot_items() -> None:
     assert time_graph.cursors.presenter.pair_items[time_pair].label.toPlainText() == "Δt = 0.25 s   f = 4 Hz"
 
     app.processEvents()
+
+
+def test_selected_cursor_label_is_emphasized_and_tinted(qapp: QApplication) -> None:
+    graph = PyQtLabGraphWidget(plot_identifier="cursor-label-selection", theme="light")
+    graph.cursors.add("x", key="probe", value=0.5, label_visible=True,
+                      style=CursorStyle(line_color="#D55E00"))
+    label = _cursor_plot_item(graph, "probe").label
+    plain_fill = label.fill.color().name()
+    assert label.border.widthF() == 1.0
+
+    graph.cursors.set_selected_keys(["probe"])
+    tinted = label.fill.color()
+    assert label.border.widthF() == 2.0
+    assert tinted.name() != plain_fill
+    background = QColor(graph.theme.plot_background)
+    line = QColor("#D55E00")
+    for channel in ("red", "green", "blue"):
+        base, tint = getattr(background, channel)(), getattr(line, channel)()
+        assert abs(getattr(tinted, channel)() - (base + (tint - base) * 0.22)) <= 1
+
+    graph.cursors.set_selected_keys([])
+    assert label.border.widthF() == 1.0
+    assert label.fill.color().name() == plain_fill
+
+
+def test_clicking_a_cursor_label_selects_the_cursor(qapp: QApplication) -> None:
+    from PySide6.QtCore import QPoint
+    from PySide6.QtTest import QTest
+
+    from pyqtlabgraph import PyQtLabGraphCursorWidget
+
+    graph = PyQtLabGraphWidget(plot_identifier="cursor-label-click")
+    panel = PyQtLabGraphCursorWidget(graph)
+    graph.resize(640, 480)
+    graph.show()
+    graph.cursors.add("x", key="left", value=0.25, label_visible=True)
+    graph.cursors.add("x", key="right", value=0.75, label_visible=True)
+    qapp.processEvents()
+
+    plot_widget = graph.native_plot_widget
+    center = _label_scene_rect(graph, "right").center()
+    view_point = plot_widget.mapFromScene(center)
+    QTest.mouseClick(
+        plot_widget.viewport(),
+        Qt.MouseButton.LeftButton,
+        Qt.KeyboardModifier.NoModifier,
+        QPoint(view_point.x(), view_point.y()),
+    )
+    qapp.processEvents()
+
+    assert graph.cursors.selected_keys() == ["right"]
+    assert panel.selected_cursor_keys() == ["right"]
+    graph.close()

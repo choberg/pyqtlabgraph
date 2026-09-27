@@ -234,6 +234,9 @@ Cursor selection belongs to the plot. `cursors.selected_keys()` and
 `cursors.set_selected_keys(...)` expose that canonical state, while every
 attached cursor panel projects it through its Qt selection model. Selection
 changes made in one panel or on a plot cursor therefore synchronize all panels.
+Selected cursors are drawn with a thicker line, and their plot labels get a
+thicker border and a light tint of the cursor color. Clicking a cursor line or
+its plot label selects that cursor.
 
 ---
 

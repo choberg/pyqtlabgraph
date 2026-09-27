@@ -14,6 +14,9 @@ _CURSOR_LABEL_Z_VALUE = _CURSOR_Z_VALUE + 1
 _CURSOR_PAIR_Z_VALUE = _CURSOR_LABEL_Z_VALUE + 1
 _CURSOR_PAIR_LABEL_Z_VALUE = _CURSOR_PAIR_Z_VALUE + 1
 _LABEL_BACKGROUND_ALPHA = 235
+_SELECTED_LABEL_TINT = 0.22
+_LABEL_BORDER_WIDTH = 1.0
+_SELECTED_LABEL_BORDER_WIDTH = 2.0
 _PAIR_REGION_ALPHA = 14
 _PAIR_DRAG_HIT_WIDTH = 10
 
@@ -40,6 +43,22 @@ class _CursorInfiniteLine(pg.InfiniteLine):
     def mouseDragEvent(self, event: object) -> None:
         self.setCursor(self.movement_cursor)
         super().mouseDragEvent(event)
+
+
+class _CursorLabel(pg.TextItem):
+    """Cursor label that reports left clicks, e.g. to select its cursor."""
+
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        super().__init__(*args, **kwargs)
+        self.clicked: Callable[[], None] | None = None
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+
+    def mouseClickEvent(self, event: object) -> None:
+        if event.button() != Qt.MouseButton.LeftButton or self.clicked is None:  # type: ignore[attr-defined]
+            event.ignore()  # type: ignore[attr-defined]
+            return
+        event.accept()  # type: ignore[attr-defined]
+        self.clicked()
 
 
 class _DraggablePairLine(pg.PlotCurveItem):
@@ -98,7 +117,7 @@ class CursorPlotItem:
             ),
         )
         self.item.setZValue(_CURSOR_Z_VALUE)
-        self.label = pg.TextItem(
+        self.label = _CursorLabel(
             text=state.name,
             color=state.style.line_color,
             anchor=(0.0, 0.0),
@@ -135,10 +154,16 @@ class CursorPlotItem:
 
         self.label.setText(f"{state.name}: {text}")
         background = QColor(plot_background)
+        if selected:
+            background = _blend(background, QColor(state.style.line_color), _SELECTED_LABEL_TINT)
+        text_color = _contrast_color(background)
         background.setAlpha(_LABEL_BACKGROUND_ALPHA)
         self.label.fill = pg.mkBrush(background)
-        self.label.border = pg.mkPen(state.style.line_color, width=1.0)
-        self.label.setColor(_contrast_color(QColor(plot_background)))
+        self.label.border = pg.mkPen(
+            state.style.line_color,
+            width=_SELECTED_LABEL_BORDER_WIDTH if selected else _LABEL_BORDER_WIDTH,
+        )
+        self.label.setColor(text_color)
         self.label.update()
         self.label.setVisible(label_visible)
 
@@ -334,3 +359,11 @@ class CursorPairPlotItem:
 
 def _contrast_color(background: QColor) -> QColor:
     return QColor("#111111") if background.lightness() >= 128 else QColor("#f5f5f5")
+
+
+def _blend(base: QColor, tint: QColor, amount: float) -> QColor:
+    return QColor.fromRgbF(
+        base.redF() + (tint.redF() - base.redF()) * amount,
+        base.greenF() + (tint.greenF() - base.greenF()) * amount,
+        base.blueF() + (tint.blueF() - base.blueF()) * amount,
+    )
