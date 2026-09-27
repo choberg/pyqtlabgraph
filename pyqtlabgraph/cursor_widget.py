@@ -86,10 +86,20 @@ class _CursorListView(QListView):
             return
         super().keyPressEvent(event)
 
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._drag_start: QPoint | None = None
+
     def mousePressEvent(self, event) -> None:
         index = self.indexAt(event.position().toPoint())
+        self._drag_start = None
         if index.isValid():
             position = event.position().toPoint()
+            if event.button() == Qt.MouseButton.LeftButton:
+                # The custom selection handling below consumes the press, so
+                # QAbstractItemView never arms its own drag; mouseMoveEvent
+                # starts the drag instead.
+                self._drag_start = position
             cursor_key = self._cursor_key_at(index, position)
             record = index.data(_CURSOR_DISPLAY_ROLE)
             if (
@@ -106,7 +116,22 @@ class _CursorListView(QListView):
                 return
         super().mousePressEvent(event)
 
+    def mouseMoveEvent(self, event) -> None:
+        start = self._drag_start
+        if (
+            start is not None
+            and event.buttons() & Qt.MouseButton.LeftButton
+            and (event.position().toPoint() - start).manhattanLength()
+            >= QApplication.startDragDistance()
+        ):
+            self._drag_start = None
+            self.startDrag(Qt.DropAction.MoveAction)
+            event.accept()
+            return
+        super().mouseMoveEvent(event)
+
     def mouseReleaseEvent(self, event) -> None:
+        self._drag_start = None
         index = self.indexAt(event.position().toPoint())
         position = event.position().toPoint()
         if index.isValid():

@@ -82,3 +82,61 @@ def test_cursor_pairing_drag_drop() -> None:
     assert not reorder_widget.model.canDropMimeData(
         foreign_mime, Qt.DropAction.MoveAction, 0, 0, reorder_widget.model.index(-1, -1)
     )
+
+
+def _drag_row_onto_row(widget, source_row: int, target_row: int) -> None:  # type: ignore[no-untyped-def]
+    """Drive a real mouse drag in the list and deliver the drop onto a row."""
+    from PySide6.QtCore import QPoint, QPointF
+    from PySide6.QtGui import QDragEnterEvent, QDragMoveEvent, QDropEvent
+    from PySide6.QtTest import QTest
+
+    view = widget.list
+    dragged: list[object] = []
+    view.startDrag = lambda _actions: dragged.append(  # type: ignore[method-assign]
+        widget.model.mimeData(view.selectedIndexes())
+    )
+    source = view.visualRect(widget.model.index(source_row, 0))
+    target = view.visualRect(widget.model.index(target_row, 0))
+    start = QPoint(source.left() + 60, source.center().y())
+    QTest.mousePress(view.viewport(), Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, start)
+    QTest.mouseMove(view.viewport(), QPoint(start.x(), target.center().y()))
+    assert dragged, "A mouse drag on a cursor row must start a drag."
+
+    drop_point = QPointF(start.x(), target.center().y())
+    viewport = view.viewport()
+    for event_type in (QDragEnterEvent, QDragMoveEvent):
+        event = event_type(
+            drop_point.toPoint(),
+            Qt.DropAction.MoveAction,
+            dragged[0],
+            Qt.MouseButton.LeftButton,
+            Qt.KeyboardModifier.NoModifier,
+        )
+        QApplication.sendEvent(viewport, event)
+    drop = QDropEvent(
+        drop_point,
+        Qt.DropAction.MoveAction,
+        dragged[0],
+        Qt.MouseButton.LeftButton,
+        Qt.KeyboardModifier.NoModifier,
+    )
+    QApplication.sendEvent(viewport, drop)
+    QTest.mouseRelease(view.viewport(), Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, start)
+
+
+def test_mouse_drag_onto_cursor_row_creates_pair(qapp: QApplication) -> None:
+    plot = graph("cursor-mouse-drag-pair")
+    widget = PyQtLabGraphCursorWidget(plot)
+    widget.resize(420, 400)
+    widget.show()
+    qapp.processEvents()
+    first = plot.cursors.add("x", key="first", value=0.2)
+    second = plot.cursors.add("x", key="second", value=0.6)
+    qapp.processEvents()
+
+    _drag_row_onto_row(widget, 0, 1)
+
+    pair = plot.cursors.pair_for_cursor(first)
+    assert pair is not None
+    assert {pair.first_cursor_key, pair.second_cursor_key} == {first, second}
+    widget.close()
