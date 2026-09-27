@@ -41,7 +41,7 @@ class _CursorSettingsDialog(QDialog):
         super().__init__(parent)
         self.plot = plot
         self.cursor_key = cursor_key
-        self.state = plot.cursor_state(cursor_key)
+        self.state = plot.cursors.state(cursor_key)
         self.line_color = QColor(self.state.style.line_color)
         self.setObjectName("pyqtLabGraphCursorSettingsDialog")
         self.setWindowTitle(f"{self.state.name} settings")
@@ -150,15 +150,15 @@ class _CursorSettingsDialog(QDialog):
             line_width=self.line_width_spin.value(),
             line_style=CursorLineStyle(str(self.line_style_combo.currentData())),
         )
-        self.plot.set_cursor_name(self.cursor_key, name)
-        self.plot.set_cursor_visible(self.cursor_key, self.visible_checkbox.isChecked())
-        self.plot.set_cursor_label_visible(self.cursor_key, self.show_label_checkbox.isChecked())
-        self.plot.set_cursor_style(self.cursor_key, style)
+        self.plot.cursors.set_name(self.cursor_key, name)
+        self.plot.cursors.set_visible(self.cursor_key, self.visible_checkbox.isChecked())
+        self.plot.cursors.set_label_visible(self.cursor_key, self.show_label_checkbox.isChecked())
+        self.plot.cursors.set_style(self.cursor_key, style)
         if self.state.cursor_type is CursorType.X:
             snap_enabled = self.snap_checkbox.isChecked() and self.target_curve_combo.count() > 0
             target_curve_key = str(self.target_curve_combo.currentData()) if snap_enabled else None
-            self.plot.set_cursor_snap_target(self.cursor_key, target_curve_key)
-            self.plot.set_cursor_follow_target_visibility(
+            self.plot.cursors.set_snap_target(self.cursor_key, target_curve_key)
+            self.plot.cursors.set_follow_target_visibility(
                 self.cursor_key,
                 self.follow_visibility_checkbox.isChecked() and snap_enabled,
             )

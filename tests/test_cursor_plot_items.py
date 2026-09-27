@@ -16,12 +16,12 @@ def _container() -> QWidget:
 
 
 def _cursor_item(graph: PyQtLabGraphWidget, cursor_key: str):
-    cursor_plot_item = graph._cursor_controller.presenter.cursor_items[cursor_key]
+    cursor_plot_item = graph.cursors.presenter.cursor_items[cursor_key]
     return cursor_plot_item.item
 
 
 def _cursor_plot_item(graph: PyQtLabGraphWidget, cursor_key: str):
-    return graph._cursor_controller.presenter.cursor_items[cursor_key]
+    return graph.cursors.presenter.cursor_items[cursor_key]
 
 
 def _label_scene_rect(graph: PyQtLabGraphWidget, cursor_key: str) -> QRectF:
@@ -71,8 +71,8 @@ def test_cursor_plot_items() -> None:
     )
     graph.plot("sensor", np.array([1.0, 2.0, 3.0]), np.array([10.0, 20.0, 30.0]))
 
-    x_key = graph.add_cursor("x", value=2.0)
-    y_key = graph.add_cursor("y", value=20.0, label_visible=True)
+    x_key = graph.cursors.add("x", value=2.0)
+    y_key = graph.cursors.add("y", value=20.0, label_visible=True)
     x_line = _cursor_item(graph, x_key)
     y_line = _cursor_item(graph, y_key)
     y_label = _cursor_plot_item(graph, y_key).label
@@ -93,21 +93,21 @@ def test_cursor_plot_items() -> None:
     assert y_label.isVisible() is True
     assert y_label.toPlainText() == "Y Cursor 1: 20"
 
-    graph.add_cursor("x", key="outside_x", value=1000.0)
-    graph.add_cursor("y", key="outside_y", value=1000.0)
+    graph.cursors.add("x", key="outside_x", value=1000.0)
+    graph.cursors.add("y", key="outside_y", value=1000.0)
     graph.request_show_all()
     x_range = graph.get_x_range()
     y_range = graph.get_y_range()
     assert x_range[0] <= 1.0 and x_range[1] < 10.0
     assert y_range[0] <= 10.0 and y_range[1] < 100.0
 
-    graph.set_cursor_value(x_key, 3.0)
+    graph.cursors.set_value(x_key, 3.0)
     assert x_line.value() == 3.0
 
-    pair_x_a = graph.add_cursor("x", key="pair_x_a", value=1.0)
-    pair_x_b = graph.add_cursor("x", key="pair_x_b", value=2.0)
-    pair_key = graph.add_cursor_pair(pair_x_a, pair_x_b)
-    pair_item = graph._cursor_controller.presenter.pair_items[pair_key]
+    pair_x_a = graph.cursors.add("x", key="pair_x_a", value=1.0)
+    pair_x_b = graph.cursors.add("x", key="pair_x_b", value=2.0)
+    pair_key = graph.cursors.add_pair(pair_x_a, pair_x_b)
+    pair_item = graph.cursors.presenter.pair_items[pair_key]
     assert pair_item.line in graph.native_plot_item.items
     assert pair_item.region in graph.native_plot_item.items
     assert pair_item.region.isVisible() is True
@@ -116,28 +116,28 @@ def test_cursor_plot_items() -> None:
     assert pair_item.label.toPlainText() == "Δx = 1"
     assert pair_item.label.border.style() == Qt.PenStyle.NoPen
     assert pair_item.label.fill.style() == Qt.BrushStyle.NoBrush
-    graph.set_cursor_value(pair_x_b, 4.0)
+    graph.cursors.set_value(pair_x_b, 4.0)
     assert pair_item.label.toPlainText() == "Δx = 3"
-    graph.set_cursor_pair_measurement_visible(pair_key, False)
+    graph.cursors.set_pair_measurement_visible(pair_key, False)
     assert pair_item.line.isVisible() is False
     assert pair_item.region.isVisible() is False
-    graph.set_cursor_pair_measurement_visible(pair_key, True)
+    graph.cursors.set_pair_measurement_visible(pair_key, True)
     assert pair_item.line.isVisible() is True
-    graph.set_cursor_pair_annotation_position(pair_key, 0.5)
-    assert graph.cursor_pair_state(pair_key).annotation_position == 0.5
+    graph.cursors.set_pair_annotation_position(pair_key, 0.5)
+    assert graph.cursors.pair_state(pair_key).annotation_position == 0.5
     assert math.isclose(float(pair_item.line.yData[0]), graph.native_view_box.viewRect().center().y())
     scene_position = graph.native_view_box.mapViewToScene(QPointF(2.0, graph.native_view_box.viewRect().bottom()))
-    graph._cursor_controller.presenter.handle_pair_annotation_moved(pair_key, scene_position)
-    assert 0.97 <= graph.cursor_pair_state(pair_key).annotation_position <= 0.98
+    graph.cursors.presenter.handle_pair_annotation_moved(pair_key, scene_position)
+    assert 0.97 <= graph.cursors.pair_state(pair_key).annotation_position <= 0.98
 
-    pair_y_a = graph.add_cursor("y", key="pair_y_a", value=5.0)
-    pair_y_b = graph.add_cursor("y", key="pair_y_b", value=15.0)
-    pair_y_key = graph.add_cursor_pair(pair_y_a, pair_y_b)
-    pair_y_item = graph._cursor_controller.presenter.pair_items[pair_y_key]
+    pair_y_a = graph.cursors.add("y", key="pair_y_a", value=5.0)
+    pair_y_b = graph.cursors.add("y", key="pair_y_b", value=15.0)
+    pair_y_key = graph.cursors.add_pair(pair_y_a, pair_y_b)
+    pair_y_item = graph.cursors.presenter.pair_items[pair_y_key]
     assert pair_y_item.label.toPlainText() == "Δy = 10"
     assert pair_y_item.line.isVisible() is True
 
-    graph.set_cursor_style(
+    graph.cursors.set_style(
         x_key,
         CursorStyle(
             line_color="#abcdef",
@@ -151,15 +151,15 @@ def test_cursor_plot_items() -> None:
 
     graph.apply_manual_x_limits(0.0, 10.0)
     graph.apply_manual_y_limits(0.0, 40.0)
-    graph.set_cursor_value(x_key, 5.0)
+    graph.cursors.set_value(x_key, 5.0)
     x_label = _cursor_plot_item(graph, x_key).label
     assert x_label.isVisible() is False
-    graph.set_cursor_label_visible(x_key, True)
+    graph.cursors.set_label_visible(x_key, True)
     assert x_label.isVisible() is True
     assert x_label.toPlainText() == "X Cursor 1: 5"
     assert x_label.textItem.defaultTextColor().name().lower() == "#111111"
     assert x_label.border.color().name().lower() == "#abcdef"
-    graph.set_cursor_name(x_key, "Renamed X")
+    graph.cursors.set_name(x_key, "Renamed X")
     assert x_label.toPlainText() == "Renamed X: 5"
     graph.set_theme("dark")
     assert x_label.textItem.defaultTextColor().name().lower() == "#f5f5f5"
@@ -176,7 +176,7 @@ def test_cursor_plot_items() -> None:
     app.processEvents()
     assert _cursor_plot_item(graph, x_key).label.pos().y() != x_label_position.y()
 
-    graph.set_cursor_value(x_key, 9.95)
+    graph.cursors.set_value(x_key, 9.95)
     app.processEvents()
     edge_label_rect = _label_scene_rect(graph, x_key)
     _assert_inside(edge_label_rect, _view_scene_rect(graph))
@@ -188,9 +188,9 @@ def test_cursor_plot_items() -> None:
     overlap_graph.plot("sensor", np.array([0.0, 10.0]), np.array([0.0, 10.0]))
     overlap_graph.apply_manual_x_limits(0.0, 10.0)
     overlap_graph.apply_manual_y_limits(0.0, 10.0)
-    first_overlap_key = overlap_graph.add_cursor("x", value=5.0, name="First", label_visible=True)
-    second_overlap_key = overlap_graph.add_cursor("x", value=5.1, name="Second", label_visible=True)
-    y_overlap_key = overlap_graph.add_cursor("y", value=9.9, name="Horizontal", label_visible=True)
+    first_overlap_key = overlap_graph.cursors.add("x", value=5.0, name="First", label_visible=True)
+    second_overlap_key = overlap_graph.cursors.add("x", value=5.1, name="Second", label_visible=True)
+    y_overlap_key = overlap_graph.cursors.add("y", value=9.9, name="Horizontal", label_visible=True)
     app.processEvents()
     first_rect = _label_scene_rect(overlap_graph, first_overlap_key)
     second_rect = _label_scene_rect(overlap_graph, second_overlap_key)
@@ -203,7 +203,7 @@ def test_cursor_plot_items() -> None:
     _assert_inside(second_rect, _view_scene_rect(overlap_graph))
     _assert_inside(y_overlap_rect, _view_scene_rect(overlap_graph))
 
-    snap_key = graph.add_cursor(
+    snap_key = graph.cursors.add(
         "x",
         key="snap",
         value=2.8,
@@ -212,10 +212,10 @@ def test_cursor_plot_items() -> None:
     snap_line = _cursor_item(graph, snap_key)
     assert snap_line.value() == 3.0
     graph.set_data("sensor", np.array([4.0, 6.0]), np.array([40.0, 60.0]))
-    assert graph.cursor_state(snap_key).value == 4.0
+    assert graph.cursors.state(snap_key).value == 4.0
     assert snap_line.value() == 4.0
 
-    follow_key = graph.add_cursor(
+    follow_key = graph.cursors.add(
         "x",
         key="follow",
         value=4.0,
@@ -226,14 +226,14 @@ def test_cursor_plot_items() -> None:
     assert follow_line.isVisible() is True
     graph.set_curve_visible("sensor", False)
     assert follow_line.isVisible() is False
-    graph.set_cursor_label_visible(follow_key, True)
+    graph.cursors.set_label_visible(follow_key, True)
     assert _cursor_plot_item(graph, follow_key).label.isVisible() is False
     graph.set_curve_visible("sensor", True)
     assert follow_line.isVisible() is True
     assert _cursor_plot_item(graph, follow_key).label.isVisible() is True
 
-    graph.remove_cursor(y_key)
-    assert y_key not in graph._cursor_controller.presenter.cursor_items
+    graph.cursors.remove(y_key)
+    assert y_key not in graph.cursors.presenter.cursor_items
     assert y_line not in graph.native_plot_item.items
     assert y_label not in graph.native_plot_item.items
 
@@ -241,8 +241,8 @@ def test_cursor_plot_items() -> None:
         plot_identifier="cursor-log-plot-items",
     )
     log_graph.plot("positive", np.array([1.0, 10.0, 100.0]), np.array([1.0, 10.0, 100.0]))
-    log_x_key = log_graph.add_cursor("x", value=10.0, label_visible=True)
-    log_y_key = log_graph.add_cursor("y", value=10.0)
+    log_x_key = log_graph.cursors.add("x", value=10.0, label_visible=True)
+    log_y_key = log_graph.cursors.add("y", value=10.0)
     log_graph.set_x_log(True)
     log_graph.set_y_log(True)
     assert math.isclose(_cursor_item(log_graph, log_x_key).value(), 1.0)
@@ -251,10 +251,10 @@ def test_cursor_plot_items() -> None:
     assert _label_scene_rect(log_graph, log_x_key).left() > _x_line_scene_x(log_graph, 1.0)
     _assert_inside(_label_scene_rect(log_graph, log_x_key), _view_scene_rect(log_graph))
 
-    log_graph.set_cursor_value(log_x_key, -5.0)
+    log_graph.cursors.set_value(log_x_key, -5.0)
     assert _cursor_item(log_graph, log_x_key).isVisible() is False
     assert _cursor_plot_item(log_graph, log_x_key).label.isVisible() is False
-    log_graph.set_cursor_value(log_x_key, 10.0)
+    log_graph.cursors.set_value(log_x_key, 10.0)
     assert _cursor_item(log_graph, log_x_key).isVisible() is True
     assert math.isclose(_cursor_item(log_graph, log_x_key).value(), 1.0)
     assert _cursor_plot_item(log_graph, log_x_key).label.isVisible() is True
@@ -263,11 +263,11 @@ def test_cursor_plot_items() -> None:
         plot_identifier="cursor-time-pair",
     )
     time_graph.plot("time", np.array([0.0, 1.0]), np.array([0.0, 1.0]))
-    time_a = time_graph.add_cursor("x", value=0.0)
-    time_b = time_graph.add_cursor("x", value=0.25)
-    time_pair = time_graph.add_cursor_pair(time_a, time_b)
-    assert time_graph._cursor_controller.presenter.pair_items[time_pair].label.toPlainText() == "Δx = 0.25"
+    time_a = time_graph.cursors.add("x", value=0.0)
+    time_b = time_graph.cursors.add("x", value=0.25)
+    time_pair = time_graph.cursors.add_pair(time_a, time_b)
+    assert time_graph.cursors.presenter.pair_items[time_pair].label.toPlainText() == "Δx = 0.25"
     time_graph.set_axis_labels("Time", "Value", x_mode="time")
-    assert time_graph._cursor_controller.presenter.pair_items[time_pair].label.toPlainText() == "Δt = 0.25 s   f = 4 Hz"
+    assert time_graph.cursors.presenter.pair_items[time_pair].label.toPlainText() == "Δt = 0.25 s   f = 4 Hz"
 
     app.processEvents()

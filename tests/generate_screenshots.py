@@ -240,7 +240,7 @@ def generate():
 
     # 5. Cursor inspector with a paired X measurement
     cursor_window = create_cursor_demo_window(load_saved_layout=False)
-    cursor_window.graph.add_cursor_pair(
+    cursor_window.graph.cursors.add_pair(
         "free_x",
         "signal_snap",
         key="screenshot_pair",

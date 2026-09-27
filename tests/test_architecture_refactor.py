@@ -46,7 +46,7 @@ def test_customize_rollback_restores_cursor_with_visibility_coupling(
 ) -> None:
     plot = PyQtLabGraphWidget(plot_identifier="customize-cursor-rollback")
     plot.plot("sensor", [0.0, 1.0], [1.0, 2.0])
-    plot.add_cursor(
+    plot.cursors.add(
         "x",
         key="snap",
         value=0.8,
@@ -55,11 +55,11 @@ def test_customize_rollback_restores_cursor_with_visibility_coupling(
     )
     session = CustomizeSession(plot)
 
-    plot.set_cursor_follow_target_visibility("snap", False)
-    plot.set_cursor_snap_target("snap", None)
+    plot.cursors.set_follow_target_visibility("snap", False)
+    plot.cursors.set_snap_target("snap", None)
     session.rollback()
 
-    restored = plot.cursor_state("snap")
+    restored = plot.cursors.state("snap")
     assert restored.snap_target_curve_key == "sensor"
     assert restored.follow_target_visibility
 
@@ -106,8 +106,8 @@ def test_components_are_independent_and_signal_driven(qapp: QApplication) -> Non
 
     plot.add_curve("sensor")
     assert "sensor" in legend.items_by_key
-    key = plot.add_cursor("x")
-    plot.set_selected_cursor_keys([key])
+    key = plot.cursors.add("x")
+    plot.cursors.set_selected_keys([key])
     qapp.processEvents()
     assert first_panel.selected_cursor_keys() == [key]
     assert second_panel.selected_cursor_keys() == [key]
@@ -122,15 +122,15 @@ def test_layout_format_roundtrip_and_multi_plot_preservation(
     path = tmp_path / "layout.json"
     first = PyQtLabGraphWidget(plot_identifier="first", layout_path=path)
     first.plot("sensor", [0.0, 1.0], [2.0, 3.0])
-    snapped = first.add_cursor(
+    snapped = first.cursors.add(
         "x",
         key="snap",
         value=0.8,
         snap_target_curve_key="sensor",
         label_visible=True,
     )
-    peer = first.add_cursor("x", key="peer")
-    first.add_cursor_pair(snapped, peer, key="measurement", measurement_visible=False)
+    peer = first.cursors.add("x", key="peer")
+    first.cursors.add_pair(snapped, peer, key="measurement", measurement_visible=False)
     first.save_layout()
 
     second = PyQtLabGraphWidget(plot_identifier="second", layout_path=path)
@@ -143,14 +143,14 @@ def test_layout_format_roundtrip_and_multi_plot_preservation(
 
     restored = PyQtLabGraphWidget(plot_identifier="first", layout_path=path)
     restored.add_curve("sensor")
-    current_only = restored.add_cursor("y", key="current-only")
-    restored.set_selected_cursor_keys([current_only])
+    current_only = restored.cursors.add("y", key="current-only")
+    restored.cursors.set_selected_keys([current_only])
     assert restored.load_layout()
-    assert [state.key for state in restored.cursor_states()] == ["snap", "peer"]
-    assert restored.selected_cursor_keys() == []
-    assert restored.cursor_state("snap").snap_target_curve_key == "sensor"
-    assert restored.cursor_state("snap").label_visible
-    assert not restored.cursor_pair_state("measurement").measurement_visible
+    assert [state.key for state in restored.cursors.states()] == ["snap", "peer"]
+    assert restored.cursors.selected_keys() == []
+    assert restored.cursors.state("snap").snap_target_curve_key == "sensor"
+    assert restored.cursors.state("snap").label_visible
+    assert not restored.cursors.pair_state("measurement").measurement_visible
 
 
 def test_unsupported_version_and_structurally_invalid_entries_are_rejected(

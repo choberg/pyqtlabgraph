@@ -16,7 +16,7 @@ def _container() -> QWidget:
 
 
 def _cursor_item(graph: PyQtLabGraphWidget, cursor_key: str):
-    return graph._cursor_controller.presenter.cursor_items[cursor_key].item
+    return graph.cursors.presenter.cursor_items[cursor_key].item
 
 
 def _simulate_drag(graph: PyQtLabGraphWidget, cursor_key: str, value: float) -> None:
@@ -54,27 +54,27 @@ def test_cursor_dragging() -> None:
     moved_events: list[tuple[str, float]] = []
     graph.cursor_moved.connect(lambda key, value: moved_events.append((key, value)))
 
-    x_key = graph.add_cursor("x", value=1.0)
+    x_key = graph.cursors.add("x", value=1.0)
     _simulate_drag(graph, x_key, 2.5)
-    assert graph.cursor_state(x_key).value == 2.5
+    assert graph.cursors.state(x_key).value == 2.5
     assert moved_events[-1] == (x_key, 2.5)
 
-    y_key = graph.add_cursor("y", value=10.0)
+    y_key = graph.cursors.add("y", value=10.0)
     _simulate_drag(graph, y_key, 42.0)
-    assert graph.cursor_state(y_key).value == 42.0
+    assert graph.cursors.state(y_key).value == 42.0
     assert moved_events[-1] == (y_key, 42.0)
 
     moved_events.clear()
-    graph.set_cursor_value(x_key, 3.5)
+    graph.cursors.set_value(x_key, 3.5)
     assert moved_events == [(x_key, 3.5)]
 
-    snap_key = graph.add_cursor(
+    snap_key = graph.cursors.add(
         "x",
         value=1.0,
         snap_target_curve_key="sensor",
     )
     _simulate_drag(graph, snap_key, 4.6)
-    assert graph.cursor_state(snap_key).value == 5.0
+    assert graph.cursors.state(snap_key).value == 5.0
     assert _cursor_item(graph, snap_key).value() == 5.0
     assert moved_events[-1] == (snap_key, 5.0)
 
@@ -86,25 +86,25 @@ def test_cursor_dragging() -> None:
     group_cursor_container.layout().addWidget(group_graph._test_cursor_widget)
     group_graph.apply_manual_x_limits(0.0, 10.0)
     group_graph.apply_manual_y_limits(0.0, 10.0)
-    group_x = group_graph.add_cursor("x", key="group_x", value=1.0)
-    group_x_peer = group_graph.add_cursor("x", key="group_x_peer", value=3.0)
-    group_y = group_graph.add_cursor("y", key="group_y", value=5.0)
-    group_x_single = group_graph.add_cursor("x", key="group_x_single", value=8.0)
+    group_x = group_graph.cursors.add("x", key="group_x", value=1.0)
+    group_x_peer = group_graph.cursors.add("x", key="group_x_peer", value=3.0)
+    group_y = group_graph.cursors.add("y", key="group_y", value=5.0)
+    group_x_single = group_graph.cursors.add("x", key="group_x_single", value=8.0)
     _select_rows(group_graph, 0, 1, 2)
     assert group_graph._test_cursor_widget is not None
-    group_graph._cursor_controller.presenter.handle_cursor_clicked(group_x)
+    group_graph.cursors.presenter.handle_cursor_clicked(group_x)
     assert group_graph._test_cursor_widget.selected_cursor_keys() == [group_x, group_x_peer, group_y]
     _simulate_drag(group_graph, group_x, 2.0)
-    assert group_graph.cursor_state(group_x).value == 2.0
-    assert group_graph.cursor_state(group_x_peer).value == 4.0
-    assert group_graph.cursor_state(group_y).value == 5.0
+    assert group_graph.cursors.state(group_x).value == 2.0
+    assert group_graph.cursors.state(group_x_peer).value == 4.0
+    assert group_graph.cursors.state(group_y).value == 5.0
 
-    group_graph._cursor_controller.presenter.handle_cursor_clicked(group_x_single)
+    group_graph.cursors.presenter.handle_cursor_clicked(group_x_single)
     assert group_graph._test_cursor_widget.selected_cursor_keys() == [group_x_single]
     _simulate_drag(group_graph, group_x_single, 9.0)
-    assert group_graph.cursor_state(group_x_single).value == 9.0
-    assert group_graph.cursor_state(group_x).value == 2.0
-    assert group_graph.cursor_state(group_x_peer).value == 4.0
+    assert group_graph.cursors.state(group_x_single).value == 9.0
+    assert group_graph.cursors.state(group_x).value == 2.0
+    assert group_graph.cursors.state(group_x_peer).value == 4.0
 
     paired_container = _container()
     paired_graph = PyQtLabGraphWidget(
@@ -113,9 +113,9 @@ def test_cursor_dragging() -> None:
     paired_graph._test_cursor_widget = PyQtLabGraphCursorWidget(paired_graph)
     paired_container.layout().addWidget(paired_graph._test_cursor_widget)
     paired_graph.apply_manual_x_limits(0.0, 10.0)
-    paired_first = paired_graph.add_cursor("x", key="paired_first", value=2.0)
-    paired_second = paired_graph.add_cursor("x", key="paired_second", value=4.0)
-    paired_graph.add_cursor_pair(paired_first, paired_second)
+    paired_first = paired_graph.cursors.add("x", key="paired_first", value=2.0)
+    paired_second = paired_graph.cursors.add("x", key="paired_second", value=4.0)
+    paired_graph.cursors.add_pair(paired_first, paired_second)
     assert paired_graph._test_cursor_widget is not None
     paired_index = paired_graph._test_cursor_widget.model.index(0, 0)
     paired_graph._test_cursor_widget._select_group_for_index(
@@ -124,8 +124,8 @@ def test_cursor_dragging() -> None:
     )
     assert paired_graph._test_cursor_widget.selected_cursor_keys() == [paired_first, paired_second]
     _simulate_drag(paired_graph, paired_first, 3.0)
-    assert paired_graph.cursor_state(paired_first).value == 3.0
-    assert paired_graph.cursor_state(paired_second).value == 5.0
+    assert paired_graph.cursors.state(paired_first).value == 3.0
+    assert paired_graph.cursors.state(paired_second).value == 5.0
 
     log_graph = PyQtLabGraphWidget(
         plot_identifier="cursor-log-dragging",
@@ -134,16 +134,16 @@ def test_cursor_dragging() -> None:
     log_graph.set_x_log(True)
     log_graph.set_y_log(True)
 
-    log_x_key = log_graph.add_cursor("x", value=10.0)
+    log_x_key = log_graph.cursors.add("x", value=10.0)
     _simulate_drag(log_graph, log_x_key, 2.0)
-    assert math.isclose(log_graph.cursor_state(log_x_key).value, 100.0)
+    assert math.isclose(log_graph.cursors.state(log_x_key).value, 100.0)
 
-    log_y_key = log_graph.add_cursor("y", value=1.0)
+    log_y_key = log_graph.cursors.add("y", value=1.0)
     _simulate_drag(log_graph, log_y_key, 1.0)
-    assert math.isclose(log_graph.cursor_state(log_y_key).value, 10.0)
+    assert math.isclose(log_graph.cursors.state(log_y_key).value, 10.0)
 
     _simulate_drag(log_graph, log_x_key, float("nan"))
-    assert math.isclose(log_graph.cursor_state(log_x_key).value, 100.0)
+    assert math.isclose(log_graph.cursors.state(log_x_key).value, 100.0)
     assert math.isclose(_cursor_item(log_graph, log_x_key).value(), 2.0)
 
     app.processEvents()

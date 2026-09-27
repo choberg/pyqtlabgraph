@@ -11,7 +11,7 @@ def _record(window, row: int):
 
 
 def _simulate_drag(window, cursor_key: str, value: float) -> None:
-    line = window.graph._cursor_controller.presenter.cursor_items[cursor_key].item
+    line = window.graph.cursors.presenter.cursor_items[cursor_key].item
     line.blockSignals(True)
     try:
         line.setValue(value)
@@ -27,9 +27,9 @@ def test_cursor_demo() -> None:
     app.processEvents()
 
     assert len(window.cursor_keys) == 3
-    assert {state.key for state in window.graph.cursor_states()} == set(window.cursor_keys)
+    assert {state.key for state in window.graph.cursors.states()} == set(window.cursor_keys)
 
-    snap_state = window.graph.cursor_state("signal_snap")
+    snap_state = window.graph.cursors.state("signal_snap")
     assert snap_state.snap_target_curve_key is not None
     assert snap_state.snap_target_curve_key == "signal"
 
@@ -64,19 +64,19 @@ def test_cursor_demo() -> None:
 
     window.move_free_x_button.click()
     app.processEvents()
-    assert window.graph.cursor_state("free_x").value == 4.5
+    assert window.graph.cursors.state("free_x").value == 4.5
     assert _record(window, 0).value_text == "4.5 s"
     assert window.status_label.text() == "Last cursor move: Free X = 4.5"
 
     window.move_free_y_button.click()
     app.processEvents()
-    assert window.graph.cursor_state("free_y").value == -0.35
+    assert window.graph.cursors.state("free_y").value == -0.35
     assert _record(window, 1).value_text == "-0.35 V"
     assert window.status_label.text() == "Last cursor move: Free Y = -0.35"
 
     window.move_snap_button.click()
     app.processEvents()
-    snapped_value = window.graph.cursor_state("signal_snap").value
+    snapped_value = window.graph.cursors.state("signal_snap").value
     assert snapped_value != 8.12
     assert _record(window, 2).target_curve_text == "signal"
     assert _record(window, 2).target_value_text != ""
@@ -88,15 +88,15 @@ def test_cursor_demo() -> None:
         Qt.ItemDataRole.EditRole,
     )
     app.processEvents()
-    assert window.graph.cursor_state("free_x").value == 5.25
+    assert window.graph.cursors.state("free_x").value == 5.25
     assert _record(window, 0).value_text == "5.25 s"
     assert window.status_label.text() == "Last cursor move: Free X = 5.25"
 
     window.reset_button.click()
     app.processEvents()
-    assert window.graph.cursor_state("free_x").value == 3.0
-    assert window.graph.cursor_state("free_y").value == 0.5
-    assert window.graph.cursor_state("signal_snap").value != snapped_value
+    assert window.graph.cursors.state("free_x").value == 3.0
+    assert window.graph.cursors.state("free_y").value == 0.5
+    assert window.graph.cursors.state("signal_snap").value != snapped_value
 
     _simulate_drag(window, "free_x", 4.5)
     app.processEvents()
@@ -108,7 +108,7 @@ def test_cursor_demo() -> None:
 
     _simulate_drag(window, "signal_snap", 8.12)
     app.processEvents()
-    assert window.graph.cursor_state("signal_snap").value != 8.12
+    assert window.graph.cursors.state("signal_snap").value != 8.12
     assert _record(window, 2).target_curve_text == "signal"
     assert _record(window, 2).target_value_text != ""
 

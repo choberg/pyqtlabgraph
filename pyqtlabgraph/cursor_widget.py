@@ -215,15 +215,15 @@ class PyQtLabGraphCursorWidget(QWidget):
         self.list.pair_visibility_requested.connect(self._toggle_pair_visibility)
         self._configure_list_view()
         self.list.selectionModel().selectionChanged.connect(self._sync_selection_from_rows)
-        self.model.cursor_name_edit_requested.connect(self.plot.set_cursor_name)
-        self.model.cursor_value_edit_requested.connect(self.plot.set_cursor_value)
-        self.model.pair_requested.connect(self.plot.add_cursor_pair)
-        self.model.cursor_order_requested.connect(self.plot.set_cursor_order)
+        self.model.cursor_name_edit_requested.connect(self.plot.cursors.set_name)
+        self.model.cursor_value_edit_requested.connect(self.plot.cursors.set_value)
+        self.model.pair_requested.connect(self.plot.cursors.add_pair)
+        self.model.cursor_order_requested.connect(self.plot.cursors.set_order)
 
         self.add_x_action = QAction("X Cursor", self)
         self.add_y_action = QAction("Y Cursor", self)
-        self.add_x_action.triggered.connect(lambda: self.plot.add_cursor("x"))
-        self.add_y_action.triggered.connect(lambda: self.plot.add_cursor("y"))
+        self.add_x_action.triggered.connect(lambda: self.plot.cursors.add("x"))
+        self.add_y_action.triggered.connect(lambda: self.plot.cursors.add("y"))
 
         self.delete_action = QAction("Delete Selected", self)
         self.delete_action.triggered.connect(self.delete_selected_cursors)
@@ -305,7 +305,7 @@ class PyQtLabGraphCursorWidget(QWidget):
         self._sync_selection_from_plot()
 
     def _sync_selection_from_plot(self) -> None:
-        selected = self.plot.selected_cursor_keys()
+        selected = self.plot.cursors.selected_keys()
         selected_set = set(selected)
         selection_model = self.list.selectionModel()
         selection_model.blockSignals(True)
@@ -335,7 +335,7 @@ class PyQtLabGraphCursorWidget(QWidget):
         self.list.doItemsLayout()
 
     def refresh_all_display(self) -> None:
-        for state in self.plot.cursor_states():
+        for state in self.plot.cursors.states():
             self.model.refresh_cursor(state.key)
         self.list.doItemsLayout()
 
@@ -355,7 +355,7 @@ class PyQtLabGraphCursorWidget(QWidget):
         index = self.model.index(row, 0)
         self.model.set_active_cursor(row, cursor_key)
         selection_model = self.list.selectionModel()
-        if preserve_existing_selection and cursor_key in self.plot.selected_cursor_keys():
+        if preserve_existing_selection and cursor_key in self.plot.cursors.selected_keys():
             selection_model.setCurrentIndex(index, QItemSelectionModel.SelectionFlag.NoUpdate)
         else:
             self._request_selection([cursor_key])
@@ -378,12 +378,12 @@ class PyQtLabGraphCursorWidget(QWidget):
         if cursor_key is None:
             return False
 
-        state = self.plot.cursor_state(cursor_key)
+        state = self.plot.cursors.state(cursor_key)
         direction = _keyboard_nudge_direction(state.cursor_type, key)
         if direction is None:
             return False
 
-        self.plot.nudge_cursor_group(
+        self.plot.cursors.nudge_group(
             cursor_key,
             selected_cursor_keys=self._selected_cursor_keys(),
             direction=direction,
@@ -396,7 +396,7 @@ class PyQtLabGraphCursorWidget(QWidget):
 
     def copy_selected_rows(self) -> str:
         lines = []
-        selected_keys = set(self.plot.selected_cursor_keys())
+        selected_keys = set(self.plot.cursors.selected_keys())
         for row in self._selected_rows():
             item_record = self.model.display_item(row)
             for record in item_record.cursor_records:
@@ -421,7 +421,7 @@ class PyQtLabGraphCursorWidget(QWidget):
         if not cursor_keys or not self._confirm_delete_selected(len(cursor_keys)):
             return
         for cursor_key in cursor_keys:
-            self.plot.remove_cursor(cursor_key)
+            self.plot.cursors.remove(cursor_key)
 
     def edit_cursor_name(self, index: QModelIndex, cursor_key: str) -> None:
         if index.isValid():
@@ -457,7 +457,7 @@ class PyQtLabGraphCursorWidget(QWidget):
     def pair_selected_cursors(self) -> None:
         cursor_keys = self._pairable_selected_cursor_keys()
         if cursor_keys is not None:
-            self.plot.add_cursor_pair(*cursor_keys)
+            self.plot.cursors.add_pair(*cursor_keys)
 
     def _create_add_button(
         self,
@@ -481,12 +481,12 @@ class PyQtLabGraphCursorWidget(QWidget):
         cursor_key = self.model.active_cursor_key(index.row())
         if cursor_key is None:
             return
-        state = self.plot.cursor_state(cursor_key)
-        self.plot.set_cursor_visible(cursor_key, not state.visible)
+        state = self.plot.cursors.state(cursor_key)
+        self.plot.cursors.set_visible(cursor_key, not state.visible)
 
     def _toggle_pair_visibility(self, pair_key: str) -> None:
-        state = self.plot.cursor_pair_state(pair_key)
-        self.plot.set_cursor_pair_measurement_visible(pair_key, not state.measurement_visible)
+        state = self.plot.cursors.pair_state(pair_key)
+        self.plot.cursors.set_pair_measurement_visible(pair_key, not state.measurement_visible)
 
     def _configure_list_view(self) -> None:
         self.list.setAlternatingRowColors(False)
@@ -501,7 +501,7 @@ class PyQtLabGraphCursorWidget(QWidget):
         self.list.setMouseTracking(True)
 
     def _selected_cursor_keys(self) -> list[str]:
-        selected_keys = set(self.plot.selected_cursor_keys())
+        selected_keys = set(self.plot.cursors.selected_keys())
         return [
             cursor_key
             for cursor_key in self.model.cursor_keys()
@@ -517,11 +517,11 @@ class PyQtLabGraphCursorWidget(QWidget):
         if len(cursor_keys) != 2:
             return None
         first_key, second_key = cursor_keys
-        if self.plot.cursor_state(first_key).cursor_type is not self.plot.cursor_state(second_key).cursor_type:
+        if self.plot.cursors.state(first_key).cursor_type is not self.plot.cursors.state(second_key).cursor_type:
             return None
-        if self.plot.cursor_pair_for_cursor(first_key) is not None:
+        if self.plot.cursors.pair_for_cursor(first_key) is not None:
             return None
-        if self.plot.cursor_pair_for_cursor(second_key) is not None:
+        if self.plot.cursors.pair_for_cursor(second_key) is not None:
             return None
         return first_key, second_key
 
@@ -550,7 +550,7 @@ class PyQtLabGraphCursorWidget(QWidget):
         *,
         was_selected: bool,
     ) -> None:
-        selected_keys = set(self.plot.selected_cursor_keys())
+        selected_keys = set(self.plot.cursors.selected_keys())
         if modifiers & Qt.KeyboardModifier.ControlModifier:
             if was_selected:
                 selected_keys.discard(cursor_key)
@@ -567,7 +567,7 @@ class PyQtLabGraphCursorWidget(QWidget):
     ) -> None:
         block_keys = self.model.block_cursor_keys(index.row())
         group_keys = set(block_keys)
-        selected_keys = set(self.plot.selected_cursor_keys())
+        selected_keys = set(self.plot.cursors.selected_keys())
         if modifiers & Qt.KeyboardModifier.ControlModifier:
             if group_keys.issubset(selected_keys):
                 selected_keys.difference_update(group_keys)
@@ -593,7 +593,7 @@ class PyQtLabGraphCursorWidget(QWidget):
         )
 
     def _sync_selection_from_rows(self, selected, deselected) -> None:
-        selected_keys = set(self.plot.selected_cursor_keys())
+        selected_keys = set(self.plot.cursors.selected_keys())
         for index in deselected.indexes():
             selected_keys.difference_update(self.model.block_cursor_keys(index.row()))
         for index in selected.indexes():
@@ -606,9 +606,9 @@ class PyQtLabGraphCursorWidget(QWidget):
         )
 
     def _request_selection(self, cursor_keys: list[str]) -> None:
-        before = self.plot.selected_cursor_keys()
-        self.plot.set_selected_cursor_keys(cursor_keys)
-        if before != self.plot.selected_cursor_keys():
+        before = self.plot.cursors.selected_keys()
+        self.plot.cursors.set_selected_keys(cursor_keys)
+        if before != self.plot.cursors.selected_keys():
             self.selection_changed.emit()
 
     def _handle_cursor_pressed(
@@ -617,7 +617,7 @@ class PyQtLabGraphCursorWidget(QWidget):
         cursor_key: str,
         modifiers: Qt.KeyboardModifier,
     ) -> None:
-        was_selected = cursor_key in self.plot.selected_cursor_keys()
+        was_selected = cursor_key in self.plot.cursors.selected_keys()
         self._set_active_cursor_for_index(index, cursor_key)
         self._select_cursor_after_press(
             index,
@@ -702,8 +702,8 @@ class PyQtLabGraphCursorWidget(QWidget):
         return record.pair_key if _cursor_pair_footer_rect(self.list.visualRect(index), record).contains(position) else None
 
     def _set_cursor_color(self, cursor_key: str, color_name: str) -> None:
-        state = self.plot.cursor_state(cursor_key)
-        self.plot.set_cursor_style(
+        state = self.plot.cursors.state(cursor_key)
+        self.plot.cursors.set_style(
             cursor_key,
             CursorStyle(
                 line_color=color_name,
@@ -713,7 +713,7 @@ class PyQtLabGraphCursorWidget(QWidget):
         )
 
     def _choose_cursor_color(self, cursor_key: str) -> None:
-        state = self.plot.cursor_state(cursor_key)
+        state = self.plot.cursors.state(cursor_key)
         selected = QColorDialog.getColor(QColor(state.style.line_color), self, f"{state.name} line color")
         if selected.isValid():
             self._set_cursor_color(cursor_key, selected.name())

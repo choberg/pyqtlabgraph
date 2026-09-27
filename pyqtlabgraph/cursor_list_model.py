@@ -237,7 +237,7 @@ class _CursorListModel(QAbstractListModel):
         cursor_key = self.active_cursor_key(row)
         if cursor_key is None:
             raise IndexError(row)
-        return self._display_record(self.plot.cursor_state(cursor_key))
+        return self._display_record(self.plot.cursors.state(cursor_key))
 
     def display_item(self, row: int) -> _CursorListItemRecord:
         if not 0 <= row < len(self._row_blocks):
@@ -331,12 +331,12 @@ class _CursorListModel(QAbstractListModel):
     def _can_pair(self, source_key: str, target_key: str) -> bool:
         if source_key == target_key:
             return False
-        source_state = self.plot.cursor_state(source_key)
-        target_state = self.plot.cursor_state(target_key)
+        source_state = self.plot.cursors.state(source_key)
+        target_state = self.plot.cursors.state(target_key)
         return (
             source_state.cursor_type is target_state.cursor_type
-            and self.plot.cursor_pair_for_cursor(source_key) is None
-            and self.plot.cursor_pair_for_cursor(target_key) is None
+            and self.plot.cursors.pair_for_cursor(source_key) is None
+            and self.plot.cursors.pair_for_cursor(target_key) is None
         )
 
     def _reordered_cursor_keys(
@@ -376,11 +376,11 @@ class _CursorListModel(QAbstractListModel):
     def _current_blocks(self) -> list[tuple[str, ...]]:
         blocks: list[tuple[str, ...]] = []
         consumed: set[str] = set()
-        for state in self.plot.cursor_states():
+        for state in self.plot.cursors.states():
             cursor_key = state.key
             if cursor_key in consumed:
                 continue
-            pair_state = self.plot.cursor_pair_for_cursor(cursor_key)
+            pair_state = self.plot.cursors.pair_for_cursor(cursor_key)
             block: tuple[str, ...]
             if pair_state is None:
                 block = (cursor_key,)
@@ -396,16 +396,16 @@ class _CursorListModel(QAbstractListModel):
 
     def _display_item(self, block: tuple[str, ...]) -> _CursorListItemRecord:
         cursor_records = tuple(
-            self._display_record(self.plot.cursor_state(cursor_key))
+            self._display_record(self.plot.cursors.state(cursor_key))
             for cursor_key in block
         )
-        pair_state = self.plot.cursor_pair_for_cursor(block[0]) if len(block) == 2 else None
+        pair_state = self.plot.cursors.pair_for_cursor(block[0]) if len(block) == 2 else None
         if pair_state is None:
             pair_detail_text = ""
             measurement_label, measurement_value, measurement_secondary = "", "", ""
         else:
-            pair_detail_text = self.plot.cursor_pair_measurement_text(pair_state.key)
-            measurement_label, measurement_value, measurement_secondary = self.plot.cursor_pair_measurement_parts(
+            pair_detail_text = self.plot.cursors.pair_measurement_text(pair_state.key)
+            measurement_label, measurement_value, measurement_secondary = self.plot.cursors.pair_measurement_parts(
                 pair_state.key
             )
         return _CursorListItemRecord(
@@ -430,24 +430,24 @@ class _CursorListModel(QAbstractListModel):
         )
 
     def _display_record(self, state: CursorState) -> _CursorDisplayRecord:
-        target_value = self.plot.cursor_target_value(state.key)
+        target_value = self.plot.cursors.target_value(state.key)
         return _CursorDisplayRecord(
             key=state.key,
             name=state.name,
             type_label=state.cursor_type.value.upper(),
-            value_text=self.plot.format_cursor_value(state.cursor_type, state.value),
+            value_text=self.plot.cursors.format_value(state.cursor_type, state.value),
             edit_value_text=_format_number(state.value),
             target_curve_text=state.snap_target_curve_key or "",
             target_value_text=(
                 ""
                 if target_value is None
-                else self.plot.format_cursor_value(CursorType.Y, target_value)
+                else self.plot.cursors.format_value(CursorType.Y, target_value)
             ),
             color=QColor(state.style.line_color),
             visible=state.visible,
             show_label=state.label_visible,
             snap_enabled=state.snap_target_curve_key is not None,
-            selected=state.key in self.plot.selected_cursor_keys(),
+            selected=state.key in self.plot.cursors.selected_keys(),
         )
 
     def _tooltip_text(self, record: _CursorListItemRecord) -> str:

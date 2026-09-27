@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Mapping
 from dataclasses import replace
 from pathlib import Path
 from typing import overload
@@ -26,7 +26,7 @@ from .constants import (
     _AXIS_LABEL_TOP_MARGIN,
     _GRID_LINE_WIDTH,
 )
-from .cursor_controller import CursorController
+from .cursors import PyQtLabGraphCursors
 from .curve_manager import CurveManager
 from .dialogs import prepare_customize_dialog
 from .dispatch import PlotChangeDispatcher
@@ -42,9 +42,6 @@ from .layouts import (
     save_plot_layout,
 )
 from .models import (
-    CursorPairState,
-    CursorState,
-    CursorStyle,
     CursorType,
     InteractionState,
     InteractionTool,
@@ -209,7 +206,7 @@ class PyQtLabGraphWidget(QWidget):
         )
         self._view_box.sigResized.connect(self._style_controller.extend_view_box_background)
 
-        self._cursor_controller = CursorController(
+        self._cursors = PyQtLabGraphCursors(
             parent=self,
             plot_item=self._plot_item,
             view_box=self._view_box,
@@ -226,19 +223,19 @@ class PyQtLabGraphWidget(QWidget):
             y_log_provider=lambda: self._y_log,
             plot_background_provider=lambda: self.theme.plot_background,
         )
-        self._cursor_controller.cursor_added.connect(self.cursor_added.emit)
-        self._cursor_controller.cursor_removed.connect(self.cursor_removed.emit)
-        self._cursor_controller.cursor_moved.connect(self.cursor_moved.emit)
-        self._cursor_controller.cursor_changed.connect(self.cursor_changed.emit)
-        self._cursor_controller.cursor_pair_added.connect(self.cursor_pair_added.emit)
-        self._cursor_controller.cursor_pair_removed.connect(self.cursor_pair_removed.emit)
-        self._cursor_controller.cursor_pair_changed.connect(self.cursor_pair_changed.emit)
-        self._cursor_controller.cursor_order_changed.connect(self.cursor_order_changed.emit)
-        self._cursor_controller.selection_changed.connect(self.cursor_selection_changed.emit)
+        self._cursors.cursor_added.connect(self.cursor_added.emit)
+        self._cursors.cursor_removed.connect(self.cursor_removed.emit)
+        self._cursors.cursor_moved.connect(self.cursor_moved.emit)
+        self._cursors.cursor_changed.connect(self.cursor_changed.emit)
+        self._cursors.cursor_pair_added.connect(self.cursor_pair_added.emit)
+        self._cursors.cursor_pair_removed.connect(self.cursor_pair_removed.emit)
+        self._cursors.cursor_pair_changed.connect(self.cursor_pair_changed.emit)
+        self._cursors.cursor_order_changed.connect(self.cursor_order_changed.emit)
+        self._cursors.selection_changed.connect(self.cursor_selection_changed.emit)
         self._change_dispatcher.set_batch_participant(
-            self._cursor_controller.batch_changes,
-            discard_changes=self._cursor_controller.discard_batched_changes,
-            suppress_events=self._cursor_controller.suppress_batched_events,
+            self._cursors.batch_changes,
+            discard_changes=self._cursors.discard_batched_changes,
+            suppress_events=self._cursors.suppress_batched_events,
         )
         self._setup_plot()
         component: QWidget = self._plot_widget
@@ -254,7 +251,7 @@ class PyQtLabGraphWidget(QWidget):
         self._style_controller.set_theme(theme)
         self._range_controller._set_x_range(*_DEFAULT_X_RANGE)
         self._range_controller._set_y_range(*_DEFAULT_Y_RANGE)
-        self._cursor_controller.refresh_presentation()
+        self._cursors.refresh_presentation()
 
     def _publish_curve_changed(self, key: str) -> None:
         self._change_dispatcher.curve_changed(key)
@@ -279,10 +276,10 @@ class PyQtLabGraphWidget(QWidget):
         self._range_controller.apply_axis_scaling()
         if self._render_optimizer.update_adaptive_performance():
             self._reapply_curve_styles()
-        self._cursor_controller.refresh_presentation()
+        self._cursors.refresh_presentation()
 
     def _finish_curve_data_update(self, key: str, *, notify: bool) -> None:
-        self._cursor_controller.refresh_for_curve(key)
+        self._cursors.refresh_for_curve(key)
         self._finish_range_and_presentation_update()
         if notify:
             self._change_dispatcher.curve_data_changed(key)
@@ -416,7 +413,7 @@ class PyQtLabGraphWidget(QWidget):
         with self._change_dispatcher.batch():
             self._trace_persistence.remove(key)
             self._curve_manager.remove_curve(key)
-            self._cursor_controller.refresh_for_curve(key)
+            self._cursors.refresh_for_curve(key)
             self._finish_range_and_presentation_update()
             self._change_dispatcher.curve_removed(key)
 
@@ -442,125 +439,9 @@ class PyQtLabGraphWidget(QWidget):
         with self._change_dispatcher.batch():
             curve = self._curve_manager.get_curve(key)
             self._trace_persistence.update_curve(key, curve.style, curve.visible)
-            self._cursor_controller.handle_curve_visibility_changed(key)
+            self._cursors.handle_curve_visibility_changed(key)
             self._finish_range_and_presentation_update()
             self._publish_curve_changed(key)
-
-    def add_cursor(
-        self,
-        cursor_type: CursorType | str,
-        *,
-        key: str | None = None,
-        name: str | None = None,
-        value: float | None = None,
-        style: CursorStyle | None = None,
-        snap_target_curve_key: str | None = None,
-        follow_target_visibility: bool = False,
-        label_visible: bool = False,
-    ) -> str:
-        return self._cursor_controller.add_cursor(
-            cursor_type,
-            key=key,
-            name=name,
-            value=value,
-            style=style,
-            snap_target_curve_key=snap_target_curve_key,
-            follow_target_visibility=follow_target_visibility,
-            label_visible=label_visible,
-        )
-
-    def remove_cursor(self, cursor_key: str) -> None:
-        self._cursor_controller.remove_cursor(cursor_key)
-
-    def set_cursor_value(self, cursor_key: str, value: float) -> None:
-        self._cursor_controller.set_cursor_value(cursor_key, value)
-
-    def set_cursor_name(self, cursor_key: str, name: str) -> None:
-        self._cursor_controller.set_cursor_name(cursor_key, name)
-
-    def set_cursor_style(self, cursor_key: str, style: CursorStyle) -> None:
-        self._cursor_controller.set_cursor_style(cursor_key, style)
-
-    def set_cursor_snap_target(
-        self,
-        cursor_key: str,
-        target_curve_key: str | None,
-    ) -> None:
-        self._cursor_controller.set_cursor_snap_target(cursor_key, target_curve_key)
-
-    def set_cursor_label_visible(self, cursor_key: str, visible: bool) -> None:
-        self._cursor_controller.set_cursor_label_visible(cursor_key, visible)
-
-    def set_cursor_visible(self, cursor_key: str, visible: bool) -> None:
-        self._cursor_controller.set_cursor_visible(cursor_key, visible)
-
-    def set_cursor_follow_target_visibility(self, cursor_key: str, enabled: bool) -> None:
-        self._cursor_controller.set_cursor_follow_target_visibility(cursor_key, enabled)
-
-    def cursor_state(self, cursor_key: str) -> CursorState:
-        return self._cursor_controller.cursor_state(cursor_key)
-
-    def cursor_states(self) -> tuple[CursorState, ...]:
-        return self._cursor_controller.cursor_states()
-
-    def set_cursor_order(self, cursor_keys: Sequence[str]) -> None:
-        self._cursor_controller.set_cursor_order(cursor_keys)
-
-    def selected_cursor_keys(self) -> list[str]:
-        return self._cursor_controller.selected_cursor_keys()
-
-    def set_selected_cursor_keys(self, cursor_keys: Sequence[str]) -> None:
-        self._cursor_controller.set_selected_cursor_keys(cursor_keys)
-
-    def cursor_target_value(self, cursor_key: str) -> float | None:
-        return self._cursor_controller.cursor_target_value(cursor_key)
-
-    def cursor_effective_visible(self, cursor_key: str) -> bool:
-        return self._cursor_controller.cursor_effective_visible(cursor_key)
-
-    def add_cursor_pair(
-        self,
-        first_cursor_key: str,
-        second_cursor_key: str,
-        *,
-        key: str | None = None,
-        measurement_visible: bool = True,
-        annotation_position: float = 0.08,
-    ) -> str:
-        return self._cursor_controller.add_cursor_pair(
-            first_cursor_key,
-            second_cursor_key,
-            key=key,
-            measurement_visible=measurement_visible,
-            annotation_position=annotation_position,
-        )
-
-    def remove_cursor_pair(self, pair_key: str) -> None:
-        self._cursor_controller.remove_cursor_pair(pair_key)
-
-    def set_cursor_pair_measurement_visible(self, pair_key: str, visible: bool) -> None:
-        self._cursor_controller.set_cursor_pair_measurement_visible(pair_key, visible)
-
-    def set_cursor_pair_annotation_position(self, pair_key: str, position: float) -> None:
-        self._cursor_controller.set_cursor_pair_annotation_position(pair_key, position)
-
-    def cursor_pair_state(self, pair_key: str) -> CursorPairState:
-        return self._cursor_controller.cursor_pair_state(pair_key)
-
-    def cursor_pair_states(self) -> tuple[CursorPairState, ...]:
-        return self._cursor_controller.cursor_pair_states()
-
-    def cursor_pair_for_cursor(self, cursor_key: str) -> CursorPairState | None:
-        return self._cursor_controller.cursor_pair_for_cursor(cursor_key)
-
-    def cursor_pair_measurement_text(self, pair_key: str) -> str:
-        return self._cursor_controller.cursor_pair_measurement_text(pair_key)
-
-    def cursor_pair_measurement_parts(self, pair_key: str) -> tuple[str, str, str]:
-        return self._cursor_controller.cursor_pair_measurement_parts(pair_key)
-
-    def format_cursor_value(self, cursor_type: CursorType, value: float) -> str:
-        return self._cursor_controller.format_cursor_value(cursor_type, value)
 
     def _cursor_axis_format(
         self,
@@ -570,20 +451,10 @@ class PyQtLabGraphWidget(QWidget):
         units = self.x_label_units if cursor_type is CursorType.X else self.y_label_units
         return axis.autoSIPrefixScale, axis.labelUnitPrefix, units
 
-    def nudge_cursor_group(
-        self,
-        cursor_key: str,
-        *,
-        selected_cursor_keys: list[str],
-        direction: int,
-        step_ratio: float,
-    ) -> bool:
-        return self._cursor_controller.nudge_cursor_group(
-            cursor_key,
-            selected_cursor_keys=selected_cursor_keys,
-            direction=direction,
-            step_ratio=step_ratio,
-        )
+    @property
+    def cursors(self) -> PyQtLabGraphCursors:
+        """Cursor and cursor-pair commands and state for this plot."""
+        return self._cursors
 
     @property
     def x_log(self) -> bool:
@@ -635,7 +506,7 @@ class PyQtLabGraphWidget(QWidget):
                 self.applying_axis_scaling = False
             if self._render_optimizer.update_adaptive_performance(force=True):
                 self._reapply_curve_styles()
-            self._cursor_controller.refresh_presentation()
+            self._cursors.refresh_presentation()
             self._publish_presentation_changed()
 
     def set_axis_labels(
@@ -796,13 +667,13 @@ class PyQtLabGraphWidget(QWidget):
             self._range_controller.apply_manual_x_limits(xmin, xmax)
             if self._render_optimizer.update_adaptive_performance():
                 self._reapply_curve_styles()
-            self._cursor_controller.refresh_presentation()
+            self._cursors.refresh_presentation()
 
     def apply_manual_y_limits(self, ymin: float, ymax: float) -> None:
         with self._change_dispatcher.batch():
             self._replace_interaction_state(autoscale_y=False)
             self._range_controller.apply_manual_y_limits(ymin, ymax)
-            self._cursor_controller.refresh_presentation()
+            self._cursors.refresh_presentation()
 
     def _show_axis_range_editor(self, orientation: str, scene_pos: QPointF) -> None:
         if self._axis_range_popup is not None:
@@ -857,7 +728,7 @@ class PyQtLabGraphWidget(QWidget):
                 self.y_label_units,
             )
             self._apply_zoom_tool_cursor()
-            self._cursor_controller.refresh_presentation()
+            self._cursors.refresh_presentation()
             self._publish_presentation_changed()
 
     def apply_axis_scaling(self) -> None:
@@ -1072,10 +943,10 @@ class PyQtLabGraphWidget(QWidget):
             self.set_curve_style(curve.key, curve.style)
             self.set_curve_persistence(curve.key, curve.persistence)
 
-        for cursor in tuple(self.cursor_states()):
-            self.remove_cursor(cursor.key)
+        for cursor in tuple(self._cursors.states()):
+            self._cursors.remove(cursor.key)
         for cursor in snapshot.cursors:
-            self.add_cursor(
+            self._cursors.add(
                 cursor.cursor_type,
                 key=cursor.key,
                 name=cursor.name,
@@ -1086,24 +957,24 @@ class PyQtLabGraphWidget(QWidget):
                 label_visible=cursor.label_visible,
             )
             if not cursor.visible:
-                self.set_cursor_visible(cursor.key, False)
+                self._cursors.set_visible(cursor.key, False)
         for pair in snapshot.cursor_pairs:
-            self.add_cursor_pair(
+            self._cursors.add_pair(
                 pair.first_cursor_key,
                 pair.second_cursor_key,
                 key=pair.key,
                 measurement_visible=pair.measurement_visible,
                 annotation_position=pair.annotation_position,
             )
-        self.set_cursor_order([state.key for state in snapshot.cursors])
-        self.set_selected_cursor_keys(snapshot.selected_cursor_keys)
+        self._cursors.set_order([state.key for state in snapshot.cursors])
+        self._cursors.set_selected_keys(snapshot.selected_cursor_keys)
 
         self.apply_interaction_state(snapshot.interaction_state)
         self._range_controller.set_x_range(*snapshot.x_range)
         self._range_controller.set_y_range(*snapshot.y_range)
         if self._render_optimizer.update_adaptive_performance(force=True):
             self._reapply_curve_styles()
-        self._cursor_controller.refresh_presentation()
+        self._cursors.refresh_presentation()
 
     def load_layout(self, path: str | Path | None = None) -> bool:
         layout = load_plot_layout(self._resolve_layout_path(path), self.plot_identifier)
@@ -1224,7 +1095,7 @@ class PyQtLabGraphWidget(QWidget):
 
         self._apply_axis_label(CursorType.X)
         self._apply_axis_label(CursorType.Y)
-        self._cursor_controller.refresh_presentation()
+        self._cursors.refresh_presentation()
         self._publish_presentation_changed()
 
     def _apply_axis_label(self, axis: CursorType) -> None:
@@ -1256,7 +1127,7 @@ class PyQtLabGraphWidget(QWidget):
             self.request_manual_navigation()
             if self._render_optimizer.update_adaptive_performance():
                 self._reapply_curve_styles()
-            self._cursor_controller.refresh_presentation()
+            self._cursors.refresh_presentation()
             self._publish_presentation_changed()
 
     @staticmethod

@@ -9,7 +9,7 @@ from .cursor_plot_items import CursorPairPlotItem, CursorPlotItem
 from .models import CursorType
 
 if TYPE_CHECKING:
-    from .cursor_controller import CursorController
+    from .cursors import PyQtLabGraphCursors
 
 
 _CURSOR_LABEL_MARGIN_PX = 2.0
@@ -22,7 +22,7 @@ class CursorPlotPresenter:
     def __init__(
         self,
         *,
-        controller: CursorController,
+        controller: PyQtLabGraphCursors,
         plot_item: PlotItem,
         view_box: ViewBox,
         x_log_provider: Callable[[], bool],
@@ -39,7 +39,7 @@ class CursorPlotPresenter:
         self.pair_items: dict[str, CursorPairPlotItem] = {}
 
     def create_cursor(self, cursor_key: str) -> None:
-        state = self.controller.cursor_state(cursor_key)
+        state = self.controller.state(cursor_key)
         cursor_item = CursorPlotItem(state)
         cursor_item.item.sigPositionChanged.connect(
             lambda _line, key=cursor_key: self.handle_cursor_moved(key)
@@ -59,8 +59,8 @@ class CursorPlotPresenter:
             self._plot_item.removeItem(cursor_item.label)
 
     def create_pair(self, pair_key: str) -> None:
-        pair_state = self.controller.cursor_pair_state(pair_key)
-        first_state = self.controller.cursor_state(pair_state.first_cursor_key)
+        pair_state = self.controller.pair_state(pair_key)
+        first_state = self.controller.state(pair_state.first_cursor_key)
 
         def move_annotation(position: QPointF, key: str = pair_key) -> None:
             self.handle_pair_annotation_moved(key, position)
@@ -86,17 +86,17 @@ class CursorPlotPresenter:
         pair_item = self.pair_items.get(pair_key)
         if pair_item is None:
             return
-        pair_state = self.controller.cursor_pair_state(pair_key)
-        first_state = self.controller.cursor_state(pair_state.first_cursor_key)
-        second_state = self.controller.cursor_state(pair_state.second_cursor_key)
+        pair_state = self.controller.pair_state(pair_key)
+        first_state = self.controller.state(pair_state.first_cursor_key)
+        second_state = self.controller.state(pair_state.second_cursor_key)
         pair_item.update_from_pair(
             pair_state,
             first_state,
             second_state,
-            text=self.controller.cursor_pair_measurement_text(pair_key),
+            text=self.controller.pair_measurement_text(pair_key),
             effective_visible=(
-                self.controller.cursor_effective_visible(first_state.key)
-                and self.controller.cursor_effective_visible(second_state.key)
+                self.controller.effective_visible(first_state.key)
+                and self.controller.effective_visible(second_state.key)
             ),
             x_log=self._x_log_provider(),
             y_log=self._y_log_provider(),
@@ -106,15 +106,15 @@ class CursorPlotPresenter:
 
     def update_pair_for_cursor(self, cursor_key: str) -> None:
         try:
-            pair_state = self.controller.cursor_pair_for_cursor(cursor_key)
+            pair_state = self.controller.pair_for_cursor(cursor_key)
         except KeyError:
             return
         if pair_state is not None:
             self.update_pair(pair_state.key)
 
     def handle_pair_annotation_moved(self, pair_key: str, scene_position: QPointF) -> None:
-        pair_state = self.controller.cursor_pair_state(pair_key)
-        first_state = self.controller.cursor_state(pair_state.first_cursor_key)
+        pair_state = self.controller.pair_state(pair_key)
+        first_state = self.controller.state(pair_state.first_cursor_key)
         view_rect = self._view_box.viewRect()
         if view_rect.isNull():
             return
@@ -123,25 +123,25 @@ class CursorPlotPresenter:
             position = (view_position.y() - view_rect.top()) / view_rect.height()
         else:
             position = (view_position.x() - view_rect.left()) / view_rect.width()
-        self.controller.set_cursor_pair_annotation_position(
+        self.controller.set_pair_annotation_position(
             pair_key,
             min(0.98, max(0.02, position)),
         )
 
     def update_all_pairs(self) -> None:
-        for pair_state in self.controller.cursor_pair_states():
+        for pair_state in self.controller.pair_states():
             self.update_pair(pair_state.key)
 
     def update_cursor(self, cursor_key: str) -> None:
         cursor_item = self.cursor_items.get(cursor_key)
         if cursor_item is None:
             return
-        state = self.controller.cursor_state(cursor_key)
+        state = self.controller.state(cursor_key)
         cursor_item.update_from_state(
             state,
-            text=self.controller.format_cursor_value(state.cursor_type, state.value),
-            effective_visible=self.controller.cursor_effective_visible(cursor_key),
-            selected=cursor_key in set(self.controller.selected_cursor_keys()),
+            text=self.controller.format_value(state.cursor_type, state.value),
+            effective_visible=self.controller.effective_visible(cursor_key),
+            selected=cursor_key in set(self.controller.selected_keys()),
             x_log=self._x_log_provider(),
             y_log=self._y_log_provider(),
             plot_background=self._plot_background_provider(),
@@ -152,7 +152,7 @@ class CursorPlotPresenter:
         cursor_item = self.cursor_items.get(cursor_key)
         if cursor_item is None:
             return
-        state = self.controller.cursor_state(cursor_key)
+        state = self.controller.state(cursor_key)
         raw_value = cursor_item.raw_value_from_item(
             state,
             x_log=self._x_log_provider(),
@@ -161,12 +161,12 @@ class CursorPlotPresenter:
         if raw_value is None:
             self.update_cursor(cursor_key)
             return
-        selected = self.controller.selected_cursor_keys()
+        selected = self.controller.selected_keys()
         move_selected_peers = cursor_key in selected
         before_value = state.value
-        self.controller.set_cursor_value(cursor_key, raw_value)
+        self.controller.set_value(cursor_key, raw_value)
         if move_selected_peers:
-            after_value = self.controller.cursor_state(cursor_key).value
+            after_value = self.controller.state(cursor_key).value
             self.controller.move_selected_cursor_peers(
                 anchor_cursor_key=cursor_key,
                 selected_cursor_keys=selected,
@@ -175,19 +175,19 @@ class CursorPlotPresenter:
             )
 
     def handle_cursor_clicked(self, cursor_key: str) -> None:
-        if cursor_key not in self.controller.selected_cursor_keys():
-            self.controller.set_selected_cursor_keys([cursor_key])
+        if cursor_key not in self.controller.selected_keys():
+            self.controller.set_selected_keys([cursor_key])
 
     def update_all(self) -> None:
-        selected = set(self.controller.selected_cursor_keys())
-        for state in self.controller.cursor_states():
+        selected = set(self.controller.selected_keys())
+        for state in self.controller.states():
             cursor_item = self.cursor_items.get(state.key)
             if cursor_item is None:
                 continue
             cursor_item.update_from_state(
                 state,
-                text=self.controller.format_cursor_value(state.cursor_type, state.value),
-                effective_visible=self.controller.cursor_effective_visible(state.key),
+                text=self.controller.format_value(state.cursor_type, state.value),
+                effective_visible=self.controller.effective_visible(state.key),
                 selected=state.key in selected,
                 x_log=self._x_log_provider(),
                 y_log=self._y_log_provider(),
@@ -204,7 +204,7 @@ class CursorPlotPresenter:
         placed_rects: list[QRectF] = []
         x_middle = view_rect.center().x()
         y_middle = view_rect.center().y()
-        for state in self.controller.cursor_states():
+        for state in self.controller.states():
             cursor_item = self.cursor_items.get(state.key)
             if cursor_item is None or not cursor_item.label.isVisible():
                 continue

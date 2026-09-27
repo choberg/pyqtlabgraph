@@ -21,9 +21,9 @@ def test_cursor_display_editing_settings() -> None:
     QApplication.instance() or QApplication([])
     plot = graph("cursor-display-editing-settings")
     plot.plot("sensor", np.array([1.0, 2.0, 3.0]), np.array([10.0, 20.0, 30.0]))
-    free_x = plot.add_cursor("x", key="free_x", name="Free X", value=1.5)
-    free_y = plot.add_cursor("y", key="free_y", name="Free Y", value=20.0)
-    snap_x = plot.add_cursor(
+    free_x = plot.cursors.add("x", key="free_x", name="Free X", value=1.5)
+    free_y = plot.cursors.add("y", key="free_y", name="Free Y", value=20.0)
+    snap_x = plot.cursors.add(
         "x",
         key="snap_x",
         name="Snap X",
@@ -44,22 +44,22 @@ def test_cursor_display_editing_settings() -> None:
     moved: list[tuple[str, float]] = []
     plot.cursor_moved.connect(lambda key, value: moved.append((key, value)))
     assert widget.model.setData(widget.model.index(0, 0), "2.75", Qt.ItemDataRole.EditRole)
-    assert plot.cursor_state(free_x).value == 2.75
+    assert plot.cursors.state(free_x).value == 2.75
     assert _record(widget, 0).value_text == "2.75"
     assert moved[-1] == (free_x, 2.75)
     assert widget.model.setData(widget.model.index(2, 0), "1.6", Qt.ItemDataRole.EditRole)
-    assert plot.cursor_state(snap_x).value == 2.0
+    assert plot.cursors.state(snap_x).value == 2.0
     for invalid in ("abc", "nan", "inf"):
         assert not widget.model.setData(widget.model.index(0, 0), invalid, Qt.ItemDataRole.EditRole)
 
     widget.model.edit_field = _CURSOR_EDIT_FIELD_NAME
     assert widget.model.setData(widget.model.index(1, 0), "Inline Y", Qt.ItemDataRole.EditRole)
-    assert plot.cursor_state(free_y).name == "Inline Y"
+    assert plot.cursors.state(free_y).name == "Inline Y"
     widget.model.edit_field = _CURSOR_EDIT_FIELD_VALUE
     widget._set_cursor_color(free_y, "#e69f00")
-    assert plot.cursor_state(free_y).style.line_color == "#e69f00"
+    assert plot.cursors.state(free_y).style.line_color == "#e69f00"
     widget._toggle_cursor_visibility(widget.model.index(1, 0))
-    assert plot.cursor_state(free_y).visible is False
+    assert plot.cursors.state(free_y).visible is False
 
     original_show = QDialog.show
 
@@ -83,7 +83,7 @@ def test_cursor_display_editing_settings() -> None:
         widget.show_selected_cursor_settings()
     finally:
         QDialog.show = original_show
-    state = plot.cursor_state(free_x)
+    state = plot.cursors.state(free_x)
     assert state.name == "Edited X"
     assert state.visible is False
     assert state.label_visible is True
@@ -93,7 +93,7 @@ def test_cursor_display_editing_settings() -> None:
     unit_plot.set_axis_labels("Voltage", "Signal", "V", "A", x_mode="auto", y_mode="linear")
     unit_plot.apply_manual_x_limits(0.0, 0.002)
     unit_plot.bottom_axis.updateAutoSIPrefix()
-    unit_plot.add_cursor("x", value=0.0015)
+    unit_plot.cursors.add("x", value=0.0015)
     unit_widget = PyQtLabGraphCursorWidget(unit_plot)
     assert _record(unit_widget, 0).value_text == "1.5 mV"
     assert _record(unit_widget, 0).edit_value_text == "0.0015"

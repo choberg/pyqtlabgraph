@@ -170,8 +170,8 @@ plot.set_axis_labels(
 )
 
 # Add editable cursors; every cursor panel follows plot signals.
-plot.add_cursor("x", key="time_cursor", name="Time Cursor", value=2.0)
-plot.add_cursor("y", key="temperature_cursor", name="Temperature Cursor", value=23.0)
+plot.cursors.add("x", key="time_cursor", name="Time Cursor", value=2.0)
+plot.cursors.add("y", key="temperature_cursor", name="Temperature Cursor", value=23.0)
 
 window.resize(800, 600)
 window.show()

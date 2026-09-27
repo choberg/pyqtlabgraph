@@ -124,12 +124,12 @@ def test_toolbar_interaction() -> None:
     assert plot.interaction_state.active_tool is InteractionTool.X_ZOOM
     assert plot.x_span_filter.enabled
     assert not toolbar.zoom_action.isChecked()
-    cursor_key = plot.add_cursor("x", value=0.5)
+    cursor_key = plot.cursors.add("x", value=0.5)
     app.processEvents()
     cursor_scene_point = plot.native_view_box.mapViewToScene(QPointF(0.5, 0.5))
     cursor_viewport_point = plot.native_plot_widget.mapFromScene(cursor_scene_point)
     plot.request_tool(InteractionTool.X_ZOOM, False)
-    cursor_item = plot._cursor_controller.presenter.cursor_items[cursor_key].item
+    cursor_item = plot.cursors.presenter.cursor_items[cursor_key].item
     cursor_item.setCursor(Qt.CursorShape.SizeHorCursor)
     viewport.setCursor(cursor_item.cursor())
     assert viewport.cursor().shape() == Qt.CursorShape.SizeHorCursor

@@ -150,45 +150,48 @@ Read-only rendering state is exposed through `grid_visible`,
 
 ## Cursor Methods
 
-Use cursor methods to add movable X/Y reference lines and keep cursor state synchronized with the optional `PyQtLabGraphCursorWidget`.
+Cursor commands and state live on `plot.cursors`, a `PyQtLabGraphCursors`
+object owned by the plot. Use it to add movable X/Y reference lines and keep
+cursor state synchronized with the optional `PyQtLabGraphCursorWidget`. Cursor
+change signals (`cursor_added`, `cursor_moved`, ...) remain on the plot widget.
 
-* **`add_cursor(cursor_type: CursorType | str, key: str = None, name: str = None, value: float = None, style: CursorStyle = None, snap_target_curve_key: str = None, follow_target_visibility: bool = False, label_visible: bool = False) -> str`**
+* **`cursors.add(cursor_type: CursorType | str, key: str = None, name: str = None, value: float = None, style: CursorStyle = None, snap_target_curve_key: str = None, follow_target_visibility: bool = False, label_visible: bool = False) -> str`**
   Adds an X or Y cursor and returns its stable key. X cursors may snap to a target curve.
-* **`remove_cursor(cursor_key: str)`**
+* **`cursors.remove(cursor_key: str)`**
   Removes the cursor, its plot line, and its cursor widget row.
-* **`set_cursor_value(cursor_key: str, value: float)`**
+* **`cursors.set_value(cursor_key: str, value: float)`**
   Moves a cursor in raw data coordinates. Snapped X cursors normalize to the nearest real X value of their target curve.
-* **`set_cursor_name(cursor_key: str, name: str)`**
+* **`cursors.set_name(cursor_key: str, name: str)`**
   Updates the displayed cursor name. Empty names are rejected.
-* **`set_cursor_style(cursor_key: str, style: CursorStyle)`**
+* **`cursors.set_style(cursor_key: str, style: CursorStyle)`**
   Applies cursor line color, width, and line style.
-* **`set_cursor_visible(cursor_key: str, visible: bool)`**
+* **`cursors.set_visible(cursor_key: str, visible: bool)`**
   Shows or hides the cursor line without removing the cursor state.
-* **`set_cursor_label_visible(cursor_key: str, visible: bool)`**
+* **`cursors.set_label_visible(cursor_key: str, visible: bool)`**
   Stores whether a cursor label should be shown.
-* **`set_cursor_snap_target(cursor_key: str, target_curve_key: str | None)`**
+* **`cursors.set_snap_target(cursor_key: str, target_curve_key: str | None)`**
   Sets the snap curve explicitly; `None` makes the cursor free.
-* **`set_cursor_follow_target_visibility(cursor_key: str, enabled: bool)`**
+* **`cursors.set_follow_target_visibility(cursor_key: str, enabled: bool)`**
   Makes a cursor effectively hidden when its target curve is hidden.
-* **`cursor_state(cursor_key: str) -> CursorState`** / **`cursor_states() -> tuple[CursorState, ...]`**
+* **`cursors.state(cursor_key: str) -> CursorState`** / **`cursors.states() -> tuple[CursorState, ...]`**
   Returns immutable cursor state objects in display order.
-* **`set_cursor_order(cursor_keys: Sequence[str])`**
+* **`cursors.set_order(cursor_keys: Sequence[str])`**
   Sets the display order. Every current cursor key must occur exactly once, and cursor pairs must remain adjacent in pair order.
-* **`cursor_target_value(cursor_key: str) -> float | None`**
+* **`cursors.target_value(cursor_key: str) -> float | None`**
   Returns the target curve's Y value at a snapped X cursor position, or `None` when unavailable.
-* **`cursor_effective_visible(cursor_key: str) -> bool`**
+* **`cursors.effective_visible(cursor_key: str) -> bool`**
   Returns the cursor's actual visibility after follow-target visibility is applied.
-* **`add_cursor_pair(first_cursor_key: str, second_cursor_key: str, key: str = None, measurement_visible: bool = True, annotation_position: float = 0.08) -> str`**
+* **`cursors.add_pair(first_cursor_key: str, second_cursor_key: str, key: str = None, measurement_visible: bool = True, annotation_position: float = 0.08) -> str`**
   Groups two cursors on the same axis into a measurement pair and returns its stable key.
-* **`remove_cursor_pair(pair_key: str)`**
+* **`cursors.remove_pair(pair_key: str)`**
   Removes a cursor pair without removing either cursor.
-* **`set_cursor_pair_measurement_visible(pair_key: str, visible: bool)`**
+* **`cursors.set_pair_measurement_visible(pair_key: str, visible: bool)`**
   Shows or hides the pair's distance annotation in the plot.
-* **`set_cursor_pair_annotation_position(pair_key: str, position: float)`**
+* **`cursors.set_pair_annotation_position(pair_key: str, position: float)`**
   Sets the distance annotation's normalized orthogonal position within the plot area.
-* **`cursor_pair_state(pair_key: str) -> CursorPairState`** / **`cursor_pair_states() -> tuple[CursorPairState, ...]`**
+* **`cursors.pair_state(pair_key: str) -> CursorPairState`** / **`cursors.pair_states() -> tuple[CursorPairState, ...]`**
   Returns immutable cursor pair state objects in display order.
-* **`cursor_pair_measurement_text(pair_key: str) -> str`**
+* **`cursors.pair_measurement_text(pair_key: str) -> str`**
   Returns the formatted pair measurement text. X pairs on time axes also include the corresponding frequency.
 
 Cursor data models:
@@ -205,10 +208,10 @@ from pyqtlabgraph import CursorLineStyle, CursorStyle
 
 plot.plot("sensor", [0, 1, 2, 3], [10, 12, 11, 14], label="Sensor")
 
-free_x = plot.add_cursor("x", name="Free X", value=1.5)
-plot.add_cursor("y", name="Threshold", value=12.0)
+free_x = plot.cursors.add("x", name="Free X", value=1.5)
+plot.cursors.add("y", name="Threshold", value=12.0)
 
-snap_x = plot.add_cursor(
+snap_x = plot.cursors.add(
     "x",
     name="Sensor Sample",
     value=1.6,
@@ -221,14 +224,14 @@ snap_x = plot.add_cursor(
     follow_target_visibility=True,
 )
 
-plot.set_cursor_value(free_x, 2.25)
-plot.set_cursor_snap_target(snap_x, "sensor")
+plot.cursors.set_value(free_x, 2.25)
+plot.cursors.set_snap_target(snap_x, "sensor")
 ```
 
 If a cursor widget is embedded, users can edit cursor values directly and use its context menu to create, delete, or pair cursors, copy selected rows, and open a settings dialog for cursor name, visibility, labels, snapping, target curve, and line style. Two selected, unpaired cursors on the same axis can be paired from the context menu. Dragging between rows reorders the selected cursor blocks, while dragging one unpaired cursor onto another unpaired cursor of the same axis provides the same pairing operation. Each pair is rendered as one draggable group with two independently selectable cursor rows and a delta measurement bar. Clicking the group background selects both cursors for synchronous movement. The result eye and pair context menu control the distance annotation, whose orthogonal plot position can be dragged and is persisted in layouts.
 
-Cursor selection belongs to the plot. `selected_cursor_keys()` and
-`set_selected_cursor_keys(...)` expose that canonical state, while every
+Cursor selection belongs to the plot. `cursors.selected_keys()` and
+`cursors.set_selected_keys(...)` expose that canonical state, while every
 attached cursor panel projects it through its Qt selection model. Selection
 changes made in one panel or on a plot cursor therefore synchronize all panels.
 

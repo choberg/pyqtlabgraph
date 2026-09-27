@@ -78,9 +78,9 @@ class PlotSnapshot:
                 )
                 for key, _label in plot.curve_choices()
             ),
-            cursors=plot.cursor_states(),
-            cursor_pairs=plot.cursor_pair_states(),
-            selected_cursor_keys=tuple(plot.selected_cursor_keys()),
+            cursors=plot.cursors.states(),
+            cursor_pairs=plot.cursors.pair_states(),
+            selected_cursor_keys=tuple(plot.cursors.selected_keys()),
             x_range=plot.get_x_range(),
             y_range=plot.get_y_range(),
             interaction_state=plot.interaction_state,

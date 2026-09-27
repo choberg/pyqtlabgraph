@@ -15,16 +15,16 @@ def _action(menu, text: str):
 def test_cursor_pairing_drag_drop() -> None:
     QApplication.instance() or QApplication([])
     plot = graph("cursor-pairing-context")
-    first = plot.add_cursor("x", key="first", value=1.5)
-    second = plot.add_cursor("x", key="second", value=3.0)
-    y_cursor = plot.add_cursor("y", key="y_cursor", value=0.0)
+    first = plot.cursors.add("x", key="first", value=1.5)
+    second = plot.cursors.add("x", key="second", value=3.0)
+    y_cursor = plot.cursors.add("y", key="y_cursor", value=0.0)
     widget = PyQtLabGraphCursorWidget(plot)
 
     select_rows(widget, 0, 1)
     pair_action = _action(widget._create_cursor_menu(), "Pair Selected Cursors")
     assert pair_action.isEnabled()
     pair_action.trigger()
-    pair = plot.cursor_pair_states()[0]
+    pair = plot.cursors.pair_states()[0]
     assert (pair.first_cursor_key, pair.second_cursor_key) == (first, second)
     assert widget.model.rowCount() == 2
     display_item = widget.model.display_item(0)
@@ -36,35 +36,35 @@ def test_cursor_pairing_drag_drop() -> None:
         "Visible", "Copy Measurement", "Ungroup Pair",
     ]
     _action(pair_menu, "Visible").trigger()
-    assert plot.cursor_pair_state(pair.key).measurement_visible is False
-    assert plot.cursor_state(first).visible is True
+    assert plot.cursors.pair_state(pair.key).measurement_visible is False
+    assert plot.cursors.state(first).visible is True
     _action(widget._create_cursor_menu(pair_key=pair.key), "Ungroup Pair").trigger()
-    assert plot.cursor_pair_states() == ()
+    assert plot.cursors.pair_states() == ()
 
     select_rows(widget, 0, 2)
     mixed_action = _action(widget._create_cursor_menu(), "Pair Selected Cursors")
     assert not mixed_action.isEnabled()
-    assert y_cursor in {state.key for state in plot.cursor_states()}
+    assert y_cursor in {state.key for state in plot.cursors.states()}
 
     pair_mime = widget.model.mimeData([widget.model.index(0, 0)])
     assert widget.model.dropMimeData(
         pair_mime, Qt.DropAction.MoveAction, -1, 0, widget.model.index(1, 0)
     )
-    assert len(plot.cursor_pair_states()) == 1
+    assert len(plot.cursors.pair_states()) == 1
 
     reorder = graph("cursor-reorder-dnd")
     keys = [
-        reorder.add_cursor("x", key="a"),
-        reorder.add_cursor("y", key="b"),
-        reorder.add_cursor("x", key="c"),
-        reorder.add_cursor("y", key="d"),
+        reorder.cursors.add("x", key="a"),
+        reorder.cursors.add("y", key="b"),
+        reorder.cursors.add("x", key="c"),
+        reorder.cursors.add("y", key="d"),
     ]
     reorder_widget = PyQtLabGraphCursorWidget(reorder)
     move_c = reorder_widget.model.mimeData([reorder_widget.model.index(2, 0)])
     assert reorder_widget.model.dropMimeData(
         move_c, Qt.DropAction.MoveAction, 0, 0, reorder_widget.model.index(-1, -1)
     )
-    assert [state.key for state in reorder.cursor_states()] == [keys[2], keys[0], keys[1], keys[3]]
+    assert [state.key for state in reorder.cursors.states()] == [keys[2], keys[0], keys[1], keys[3]]
 
     cross_axis = reorder_widget.model.mimeData([reorder_widget.model.index(0, 0)])
     assert not reorder_widget.model.canDropMimeData(
@@ -76,7 +76,7 @@ def test_cursor_pairing_drag_drop() -> None:
         malformed, Qt.DropAction.MoveAction, 0, 0, reorder_widget.model.index(-1, -1)
     )
     foreign = graph("cursor-foreign-dnd")
-    foreign.add_cursor("x", key="foreign")
+    foreign.cursors.add("x", key="foreign")
     foreign_widget = PyQtLabGraphCursorWidget(foreign)
     foreign_mime = foreign_widget.model.mimeData([foreign_widget.model.index(0, 0)])
     assert not reorder_widget.model.canDropMimeData(

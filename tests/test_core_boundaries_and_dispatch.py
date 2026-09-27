@@ -97,7 +97,7 @@ def test_data_update_uses_the_central_order(
 
     monkeypatch.setattr(graph._curve_manager, "set_data", mutate)
     monkeypatch.setattr(
-        graph._cursor_controller,
+        graph.cursors,
         "refresh_for_curve",
         lambda _key: events.append("cursor-cache"),
     )
@@ -123,7 +123,7 @@ def test_data_update_uses_the_central_order(
         lambda _curve: events.append("style"),
     )
     monkeypatch.setattr(
-        graph._cursor_controller,
+        graph.cursors,
         "refresh_presentation",
         lambda: events.append("cursor-presentation"),
     )
@@ -172,7 +172,7 @@ def test_view_update_uses_the_central_order(
         lambda _curve: events.append("style"),
     )
     monkeypatch.setattr(
-        graph._cursor_controller,
+        graph.cursors,
         "refresh_presentation",
         lambda: events.append("cursor-presentation"),
     )
@@ -193,7 +193,7 @@ def test_dispatcher_coalesces_public_notifications(
     qapp: QApplication,
 ) -> None:
     graph = PyQtLabGraphWidget(plot_identifier="coalesced-notifications")
-    graph.add_cursor("x", key="cursor")
+    graph.cursors.add("x", key="cursor")
     events: list[str] = []
     graph.cursor_changed.connect(lambda key: events.append(f"cursor:{key}"))
     graph.curve_changed.connect(lambda key: events.append(f"curve:{key}"))
@@ -201,8 +201,8 @@ def test_dispatcher_coalesces_public_notifications(
     graph.presentation_changed.connect(lambda: events.append("presentation"))
 
     with graph._change_dispatcher.batch():
-        graph.set_cursor_name("cursor", "First")
-        graph.set_cursor_name("cursor", "Second")
+        graph.cursors.set_name("cursor", "First")
+        graph.cursors.set_name("cursor", "Second")
         graph._publish_curve_changed("sensor")
         graph._publish_curve_changed("sensor")
         graph._change_dispatcher.curve_data_changed("sensor")
@@ -222,14 +222,14 @@ def test_dispatcher_discards_notifications_after_a_failed_nested_batch(
     qapp: QApplication,
 ) -> None:
     graph = PyQtLabGraphWidget(plot_identifier="failed-batch-notifications")
-    graph.add_cursor("x", key="cursor")
+    graph.cursors.add("x", key="cursor")
     events: list[str] = []
     graph.curve_changed.connect(events.append)
     graph.cursor_changed.connect(events.append)
 
     with graph._change_dispatcher.batch():
         graph._publish_curve_changed("before-failure")
-        graph.set_cursor_name("cursor", "Pending")
+        graph.cursors.set_name("cursor", "Pending")
         try:
             with graph._change_dispatcher.batch():
                 graph._publish_curve_changed("failed")

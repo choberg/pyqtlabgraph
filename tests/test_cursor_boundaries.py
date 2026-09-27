@@ -8,7 +8,6 @@ from PySide6.QtWidgets import QApplication
 
 from pyqtlabgraph import PyQtLabGraphCursorWidget, PyQtLabGraphWidget
 from pyqtlabgraph.cursor_actions import _CursorActionController
-from pyqtlabgraph.cursor_controller import CursorController
 from pyqtlabgraph.cursor_delegate import _CursorListDelegate
 from pyqtlabgraph.cursor_list_model import _CursorListModel
 from pyqtlabgraph.cursor_presenter import CursorPlotPresenter
@@ -18,6 +17,7 @@ from pyqtlabgraph.cursor_ui import (
     _CursorListItemRecord,
 )
 from pyqtlabgraph.cursor_widget import _CursorListView
+from pyqtlabgraph.cursors import PyQtLabGraphCursors
 
 
 def _dispose(qapp: QApplication, *widgets: object) -> None:
@@ -30,17 +30,17 @@ def _dispose(qapp: QApplication, *widgets: object) -> None:
 
 def test_cursor_core_receives_explicit_dependencies(qapp: QApplication) -> None:
     plot = PyQtLabGraphWidget(plot_identifier="cursor-explicit-dependencies")
-    controller = plot._cursor_controller
+    controller = plot.cursors
     presenter = controller.presenter
 
-    assert isinstance(controller, CursorController)
+    assert isinstance(controller, PyQtLabGraphCursors)
     assert isinstance(presenter, CursorPlotPresenter)
     assert not hasattr(controller, "plot")
     assert not hasattr(presenter, "plot")
-    assert "PyQtLabGraphWidget" not in inspect.getsource(CursorController)
+    assert "PyQtLabGraphWidget" not in inspect.getsource(PyQtLabGraphCursors)
     assert "PyQtLabGraphWidget" not in inspect.getsource(CursorPlotPresenter)
     assert "self.plot" not in inspect.getsource(CursorPlotPresenter)
-    assert "._curve_manager" not in inspect.getsource(CursorController)
+    assert "._curve_manager" not in inspect.getsource(PyQtLabGraphCursors)
     _dispose(qapp, plot)
 
 
@@ -99,18 +99,18 @@ def test_plot_selection_is_the_only_panel_selection_authority(
     qapp: QApplication,
 ) -> None:
     plot = PyQtLabGraphWidget(plot_identifier="cursor-selection-authority")
-    first = plot.add_cursor("x", key="first")
-    second = plot.add_cursor("x", key="second")
+    first = plot.cursors.add("x", key="first")
+    second = plot.cursors.add("x", key="second")
     first_panel = PyQtLabGraphCursorWidget(plot)
     second_panel = PyQtLabGraphCursorWidget(plot)
 
     assert not hasattr(first_panel, "_selected_cursor_keys_state")
-    plot.set_selected_cursor_keys([first, second])
+    plot.cursors.set_selected_keys([first, second])
     qapp.processEvents()
     assert first_panel.selected_cursor_keys() == [first, second]
     assert second_panel.selected_cursor_keys() == [first, second]
 
-    plot.set_selected_cursor_keys([])
+    plot.cursors.set_selected_keys([])
     qapp.processEvents()
     assert first_panel.list.selectionModel().selectedIndexes() == []
     assert second_panel.list.selectionModel().selectedIndexes() == []
@@ -121,14 +121,14 @@ def test_plot_selection_is_the_only_panel_selection_authority(
         QItemSelectionModel.SelectionFlag.Select,
     )
     qapp.processEvents()
-    assert plot.selected_cursor_keys() == [first]
+    assert plot.cursors.selected_keys() == [first]
     assert second_panel.selected_cursor_keys() == [first]
     _dispose(qapp, first_panel, second_panel, plot)
 
 
 def test_context_actions_are_extracted(qapp: QApplication) -> None:
     plot = PyQtLabGraphWidget(plot_identifier="cursor-actions")
-    plot.add_cursor("x", key="cursor")
+    plot.cursors.add("x", key="cursor")
     panel = PyQtLabGraphCursorWidget(plot)
 
     assert isinstance(panel._actions, _CursorActionController)

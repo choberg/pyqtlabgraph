@@ -329,15 +329,15 @@ def _configure_runtime_state(plot: PyQtLabGraphWidget) -> None:
     plot.request_autoscale_y(False)
     plot.apply_manual_x_limits(2.0, 8.0)
     plot.apply_manual_y_limits(-3.0, 9.0)
-    first = plot.add_cursor("x", key="first", value=3.0, label_visible=True)
-    second = plot.add_cursor(
+    first = plot.cursors.add("x", key="first", value=3.0, label_visible=True)
+    second = plot.cursors.add(
         "x",
         key="second",
         value=6.0,
         style=CursorStyle(line_color="#D55E00"),
     )
-    plot.add_cursor_pair(first, second, key="delta", measurement_visible=False)
-    plot.set_selected_cursor_keys([second])
+    plot.cursors.add_pair(first, second, key="delta", measurement_visible=False)
+    plot.cursors.set_selected_keys([second])
 
 
 def test_plot_snapshot_restores_exact_runtime_state(qapp: QApplication) -> None:
@@ -350,9 +350,9 @@ def test_plot_snapshot_restores_exact_runtime_state(qapp: QApplication) -> None:
     plot.set_curve_visible("sensor", True)
     plot.set_axis_labels("Changed X", "Changed Y")
     plot.request_show_all()
-    plot.remove_cursor("first")
-    plot.add_cursor("y", key="replacement", value=7.0)
-    plot.set_selected_cursor_keys(["replacement"])
+    plot.cursors.remove("first")
+    plot.cursors.add("y", key="replacement", value=7.0)
+    plot.cursors.set_selected_keys(["replacement"])
 
     plot.restore_snapshot(before)
 
@@ -473,9 +473,9 @@ def test_contextual_layout_validation_precedes_widget_mutation(
     layout["cursor_pairs"] = [_cursor_pair("bad", "first", "second")]
     _write(path, _document(layout))
     plot = PyQtLabGraphWidget(plot_identifier="plot", layout_path=path)
-    first = plot.add_cursor("x", key="first")
-    second = plot.add_cursor("x", key="second")
-    plot.add_cursor_pair(first, second, key="current-pair")
+    first = plot.cursors.add("x", key="first")
+    second = plot.cursors.add("x", key="second")
+    plot.cursors.add_pair(first, second, key="current-pair")
     before = PlotSnapshot.capture(plot)
     mutations: list[str] = []
     original = plot.set_theme
@@ -571,14 +571,14 @@ def test_layout_keeps_host_curves_and_replaces_cursor_state(
     plot.add_curve("current-only")
     current_style = CurveStyle(line_color="#009E73")
     plot.set_curve_style("current-only", current_style)
-    current_cursor = plot.add_cursor("y", key="current-cursor", value=2.0)
-    plot.set_selected_cursor_keys([current_cursor])
+    current_cursor = plot.cursors.add("y", key="current-cursor", value=2.0)
+    plot.cursors.set_selected_keys([current_cursor])
 
     assert plot.load_layout()
 
     assert plot.curve_style("current-only") == current_style
-    assert [state.key for state in plot.cursor_states()] == ["saved"]
-    assert plot.selected_cursor_keys() == []
+    assert [state.key for state in plot.cursors.states()] == ["saved"]
+    assert plot.cursors.selected_keys() == []
     _dispose(qapp, plot)
 
 
@@ -598,7 +598,7 @@ def test_layout_rejects_missing_snap_target_without_mutation(
     _write(path, _document(layout))
     plot = PyQtLabGraphWidget(plot_identifier="plot", layout_path=path)
     plot.add_curve("current")
-    plot.add_cursor("y", key="current-cursor", value=2.0)
+    plot.cursors.add("y", key="current-cursor", value=2.0)
     before = PlotSnapshot.capture(plot)
     events: list[str] = []
     plot.state_reset.connect(lambda: events.append("reset"))
@@ -618,8 +618,8 @@ def test_customize_rollback_uses_runtime_snapshot(qapp: QApplication) -> None:
     before = PlotSnapshot.capture(plot)
 
     plot.set_theme("dark")
-    plot.remove_cursor("first")
-    plot.set_selected_cursor_keys([])
+    plot.cursors.remove("first")
+    plot.cursors.set_selected_keys([])
     session.rollback()
 
     assert isinstance(session.baseline, PlotSnapshot)

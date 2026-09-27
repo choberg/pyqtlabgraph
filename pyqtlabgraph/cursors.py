@@ -18,7 +18,7 @@ from .models import CursorPairState, CursorState, CursorStyle, CursorType
 _CURSOR_VALUE_COMPARE_REL_TOLERANCE = 1e-12
 
 
-class CursorController(QObject):
+class PyQtLabGraphCursors(QObject):
     """Coordinates cursor domain state and its plot/UI presentations."""
 
     cursor_added = Signal(str)
@@ -135,7 +135,7 @@ class CursorController(QObject):
             return
         getattr(self, signal_name).emit(*args)
 
-    def add_cursor(
+    def add(
         self,
         cursor_type: CursorType | str,
         *,
@@ -161,7 +161,7 @@ class CursorController(QObject):
         self._emit("cursor_added", cursor_key)
         return cursor_key
 
-    def remove_cursor(self, cursor_key: str) -> None:
+    def remove(self, cursor_key: str) -> None:
         removed_pair_keys = [
             pair_state.key
             for pair_state in self.manager.cursor_pair_states()
@@ -176,23 +176,23 @@ class CursorController(QObject):
         self._emit("cursor_removed", cursor_key)
         self._emit("selection_changed")
 
-    def set_cursor_value(self, cursor_key: str, value: float) -> None:
+    def set_value(self, cursor_key: str, value: float) -> None:
         self.manager.set_cursor_value(cursor_key, value)
         self._present_cursor(cursor_key)
         self._present_pair_for_cursor(cursor_key)
         self._emit("cursor_moved", cursor_key, self.manager.cursor_state(cursor_key).value)
 
-    def set_cursor_name(self, cursor_key: str, name: str) -> None:
+    def set_name(self, cursor_key: str, name: str) -> None:
         self.manager.set_cursor_name(cursor_key, name)
         self._present_cursor(cursor_key)
         self._emit("cursor_changed", cursor_key)
 
-    def set_cursor_style(self, cursor_key: str, style: CursorStyle) -> None:
+    def set_style(self, cursor_key: str, style: CursorStyle) -> None:
         self.manager.set_cursor_style(cursor_key, style)
         self._present_cursor(cursor_key)
         self._emit("cursor_changed", cursor_key)
 
-    def set_cursor_snap_target(
+    def set_snap_target(
         self,
         cursor_key: str,
         target_curve_key: str | None,
@@ -212,43 +212,43 @@ class CursorController(QObject):
         if after_value != before_value:
             self._emit("cursor_moved", cursor_key, after_value)
 
-    def set_cursor_label_visible(self, cursor_key: str, visible: bool) -> None:
+    def set_label_visible(self, cursor_key: str, visible: bool) -> None:
         self.manager.set_cursor_label_visible(cursor_key, visible)
         self._present_cursor(cursor_key)
         self._emit("cursor_changed", cursor_key)
 
-    def set_cursor_visible(self, cursor_key: str, visible: bool) -> None:
+    def set_visible(self, cursor_key: str, visible: bool) -> None:
         self.manager.set_cursor_visible(cursor_key, visible)
         self._present_cursor(cursor_key)
         self._present_pair_for_cursor(cursor_key)
         self._emit("cursor_changed", cursor_key)
 
-    def set_cursor_follow_target_visibility(self, cursor_key: str, enabled: bool) -> None:
+    def set_follow_target_visibility(self, cursor_key: str, enabled: bool) -> None:
         self.manager.set_cursor_follow_target_visibility(cursor_key, enabled)
         self._present_cursor(cursor_key)
         self._present_pair_for_cursor(cursor_key)
         self._emit("cursor_changed", cursor_key)
 
-    def cursor_state(self, cursor_key: str) -> CursorState:
+    def state(self, cursor_key: str) -> CursorState:
         return self.manager.cursor_state(cursor_key)
 
-    def cursor_states(self) -> tuple[CursorState, ...]:
+    def states(self) -> tuple[CursorState, ...]:
         return self.manager.cursor_states()
 
-    def set_cursor_order(self, cursor_keys: Sequence[str]) -> None:
+    def set_order(self, cursor_keys: Sequence[str]) -> None:
         if self.manager.set_cursor_order(cursor_keys):
             self._emit("cursor_order_changed")
 
-    def cursor_target_value(self, cursor_key: str) -> float | None:
+    def target_value(self, cursor_key: str) -> float | None:
         return self.manager.target_value(cursor_key)
 
-    def cursor_effective_visible(self, cursor_key: str) -> bool:
+    def effective_visible(self, cursor_key: str) -> bool:
         return self.manager.effective_visible(cursor_key)
 
     def curve_choices(self) -> tuple[tuple[str, str], ...]:
         return self._curve_choices_provider()
 
-    def add_cursor_pair(
+    def add_pair(
         self,
         first_cursor_key: str,
         second_cursor_key: str,
@@ -268,49 +268,49 @@ class CursorController(QObject):
         self._emit("cursor_pair_added", pair_key)
         return pair_key
 
-    def remove_cursor_pair(self, pair_key: str) -> None:
+    def remove_pair(self, pair_key: str) -> None:
         self.manager.remove_cursor_pair(pair_key)
         self.presenter.remove_pair(pair_key)
         self._emit("cursor_pair_removed", pair_key)
 
-    def set_cursor_pair_measurement_visible(self, pair_key: str, visible: bool) -> None:
+    def set_pair_measurement_visible(self, pair_key: str, visible: bool) -> None:
         self.manager.set_cursor_pair_measurement_visible(pair_key, visible)
         self._present_pair(pair_key)
         self._emit("cursor_pair_changed", pair_key)
 
-    def set_cursor_pair_annotation_position(self, pair_key: str, position: float) -> None:
+    def set_pair_annotation_position(self, pair_key: str, position: float) -> None:
         self.manager.set_cursor_pair_annotation_position(pair_key, position)
         self._present_pair(pair_key)
         self._emit("cursor_pair_changed", pair_key)
 
-    def cursor_pair_state(self, pair_key: str) -> CursorPairState:
+    def pair_state(self, pair_key: str) -> CursorPairState:
         return self.manager.cursor_pair_state(pair_key)
 
-    def cursor_pair_states(self) -> tuple[CursorPairState, ...]:
+    def pair_states(self) -> tuple[CursorPairState, ...]:
         return self.manager.cursor_pair_states()
 
-    def cursor_pair_for_cursor(self, cursor_key: str) -> CursorPairState | None:
+    def pair_for_cursor(self, cursor_key: str) -> CursorPairState | None:
         return self.manager.cursor_pair_for_cursor(cursor_key)
 
-    def cursor_pair_measurement_text(self, pair_key: str) -> str:
-        label, value, secondary = self.cursor_pair_measurement_parts(pair_key)
+    def pair_measurement_text(self, pair_key: str) -> str:
+        label, value, secondary = self.pair_measurement_parts(pair_key)
         text = f"{label} {value}"
         return f"{text}   {secondary}" if secondary else text
 
-    def cursor_pair_measurement_parts(self, pair_key: str) -> tuple[str, str, str]:
+    def pair_measurement_parts(self, pair_key: str) -> tuple[str, str, str]:
         pair_state = self.manager.cursor_pair_state(pair_key)
         first_state = self.manager.cursor_state(pair_state.first_cursor_key)
         second_state = self.manager.cursor_state(pair_state.second_cursor_key)
         delta = abs(second_state.value - first_state.value)
         axis_mode = self.cursor_axis_mode(first_state.cursor_type)
         axis_name = "t" if axis_mode is AxisMode.TIME else first_state.cursor_type.value
-        value_text = self.format_cursor_value(first_state.cursor_type, delta)
+        value_text = self.format_value(first_state.cursor_type, delta)
         secondary = ""
         if axis_mode is AxisMode.TIME and delta > 0.0:
             secondary = f"f = {pg.siFormat(1.0 / delta, suffix='Hz', precision=6)}"
         return f"Δ{axis_name} =", value_text, secondary
 
-    def format_cursor_value(self, cursor_type: CursorType, value: float) -> str:
+    def format_value(self, cursor_type: CursorType, value: float) -> str:
         if not math.isfinite(value):
             return ""
         axis_mode = self.cursor_axis_mode(cursor_type)
@@ -326,7 +326,7 @@ class CursorController(QObject):
     def cursor_axis_mode(self, cursor_type: CursorType) -> AxisMode:
         return self._axis_mode_provider(cursor_type)
 
-    def set_selected_cursor_keys(self, cursor_keys: Sequence[str]) -> None:
+    def set_selected_keys(self, cursor_keys: Sequence[str]) -> None:
         current_keys = {state.key for state in self.manager.cursor_states()}
         selected = [key for key in cursor_keys if key in current_keys]
         if selected == self._selected_cursor_keys:
@@ -335,10 +335,10 @@ class CursorController(QObject):
         self.presenter.update_all()
         self._emit("selection_changed")
 
-    def selected_cursor_keys(self) -> list[str]:
+    def selected_keys(self) -> list[str]:
         return list(self._selected_cursor_keys)
 
-    def nudge_cursor_group(
+    def nudge_group(
         self,
         cursor_key: str,
         *,
@@ -367,7 +367,7 @@ class CursorController(QObject):
             nudged_value = self._nudged_free_cursor_value(state, direction, step_ratio)
         if nudged_value is None or _values_close(nudged_value, state.value):
             return False
-        self.set_cursor_value(cursor_key, nudged_value)
+        self.set_value(cursor_key, nudged_value)
         return True
 
     def _nudged_free_cursor_value(
@@ -439,7 +439,7 @@ class CursorController(QObject):
             except KeyError:
                 continue
             if peer_state.cursor_type is cursor_type:
-                self.set_cursor_value(peer_key, peer_state.value + raw_delta)
+                self.set_value(peer_key, peer_state.value + raw_delta)
 
     def refresh_for_curve(self, curve_key: str) -> None:
         self.manager.invalidate_curve_data(curve_key)

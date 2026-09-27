@@ -107,19 +107,19 @@ class _CursorActionController:
         self._delete_action.setEnabled(True)
 
     def _add_cursor_actions(self, menu: QMenu, cursor_key: str) -> None:
-        state = self._plot.cursor_state(cursor_key)
+        state = self._plot.cursors.state(cursor_key)
         visible_action = menu.addAction("Visible")
         visible_action.setCheckable(True)
         visible_action.setChecked(state.visible)
         visible_action.triggered.connect(
-            lambda checked: self._plot.set_cursor_visible(cursor_key, checked)
+            lambda checked: self._plot.cursors.set_visible(cursor_key, checked)
         )
 
         label_action = menu.addAction("Show Label")
         label_action.setCheckable(True)
         label_action.setChecked(state.label_visible)
         label_action.triggered.connect(
-            lambda checked: self._plot.set_cursor_label_visible(cursor_key, checked)
+            lambda checked: self._plot.cursors.set_label_visible(cursor_key, checked)
         )
 
         snap_menu = menu.addMenu("Snap to Curve")
@@ -129,20 +129,20 @@ class _CursorActionController:
         off_action.setCheckable(True)
         off_action.setChecked(state.snap_target_curve_key is None)
         off_action.triggered.connect(
-            lambda _checked=False: self._plot.set_cursor_snap_target(cursor_key, None)
+            lambda _checked=False: self._plot.cursors.set_snap_target(cursor_key, None)
         )
         for curve_key, curve_label in curve_choices:
             target_action = snap_menu.addAction(curve_label)
             target_action.setCheckable(True)
             target_action.setChecked(state.snap_target_curve_key == curve_key)
             target_action.triggered.connect(
-                lambda _checked=False, target=curve_key: self._plot.set_cursor_snap_target(
+                lambda _checked=False, target=curve_key: self._plot.cursors.set_snap_target(
                     cursor_key,
                     target,
                 )
             )
 
-        pair_state = self._plot.cursor_pair_for_cursor(cursor_key)
+        pair_state = self._plot.cursors.pair_for_cursor(cursor_key)
         if pair_state is None:
             return
         menu.addSeparator()
@@ -150,24 +150,24 @@ class _CursorActionController:
         distance_action.setCheckable(True)
         distance_action.setChecked(pair_state.measurement_visible)
         distance_action.triggered.connect(
-            lambda checked: self._plot.set_cursor_pair_measurement_visible(
+            lambda checked: self._plot.cursors.set_pair_measurement_visible(
                 pair_state.key,
                 checked,
             )
         )
         ungroup_action = menu.addAction("Ungroup Pair")
         ungroup_action.triggered.connect(
-            lambda _checked=False: self._plot.remove_cursor_pair(pair_state.key)
+            lambda _checked=False: self._plot.cursors.remove_pair(pair_state.key)
         )
 
     def _create_pair_result_menu(self, pair_key: str) -> QMenu:
-        pair_state = self._plot.cursor_pair_state(pair_key)
+        pair_state = self._plot.cursors.pair_state(pair_key)
         menu = QMenu(self._owner)
         visible_action = menu.addAction("Visible")
         visible_action.setCheckable(True)
         visible_action.setChecked(pair_state.measurement_visible)
         visible_action.triggered.connect(
-            lambda checked: self._plot.set_cursor_pair_measurement_visible(
+            lambda checked: self._plot.cursors.set_pair_measurement_visible(
                 pair_key,
                 checked,
             )
@@ -175,13 +175,13 @@ class _CursorActionController:
         copy_action = menu.addAction("Copy Measurement")
         copy_action.triggered.connect(
             lambda _checked=False: QApplication.clipboard().setText(
-                self._plot.cursor_pair_measurement_text(pair_key)
+                self._plot.cursors.pair_measurement_text(pair_key)
             )
         )
         menu.addSeparator()
         ungroup_action = menu.addAction("Ungroup Pair")
         ungroup_action.triggered.connect(
-            lambda _checked=False: self._plot.remove_cursor_pair(pair_key)
+            lambda _checked=False: self._plot.cursors.remove_pair(pair_key)
         )
         return menu
 

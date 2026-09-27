@@ -85,14 +85,14 @@ def create_window(*, load_saved_layout: bool = True) -> QMainWindow:
     graph.plot("signal", x_values, sine_values, label="Signal")
     graph.plot("reference", x_values, reference_values, label="Reference")
 
-    x_cursor_key = graph.add_cursor(
+    x_cursor_key = graph.cursors.add(
         "x",
         key="free_x",
         name="Free X",
         value=_FREE_X_INITIAL_VALUE,
         style=CursorStyle(line_color="#0072B2", line_width=2.0),
     )
-    y_cursor_key = graph.add_cursor(
+    y_cursor_key = graph.cursors.add(
         "y",
         key="free_y",
         name="Free Y",
@@ -103,7 +103,7 @@ def create_window(*, load_saved_layout: bool = True) -> QMainWindow:
             line_style=CursorLineStyle.DASH,
         ),
     )
-    snap_cursor_key = graph.add_cursor(
+    snap_cursor_key = graph.cursors.add(
         "x",
         key="signal_snap",
         name="Signal Snap",
@@ -140,17 +140,17 @@ def create_window(*, load_saved_layout: bool = True) -> QMainWindow:
     controls_layout.addWidget(status_label)
 
     def update_status(cursor_key: str, value: float) -> None:
-        name = graph.cursor_state(cursor_key).name
+        name = graph.cursors.state(cursor_key).name
         status_label.setText(f"Last cursor move: {name} = {value:.6g}")
 
     def reset_cursors() -> None:
-        graph.set_cursor_value(x_cursor_key, _FREE_X_INITIAL_VALUE)
-        graph.set_cursor_value(y_cursor_key, _FREE_Y_INITIAL_VALUE)
-        graph.set_cursor_value(snap_cursor_key, _SNAP_INITIAL_VALUE)
+        graph.cursors.set_value(x_cursor_key, _FREE_X_INITIAL_VALUE)
+        graph.cursors.set_value(y_cursor_key, _FREE_Y_INITIAL_VALUE)
+        graph.cursors.set_value(snap_cursor_key, _SNAP_INITIAL_VALUE)
 
-    move_free_x_button.clicked.connect(lambda: graph.set_cursor_value(x_cursor_key, _FREE_X_DEMO_VALUE))
-    move_free_y_button.clicked.connect(lambda: graph.set_cursor_value(y_cursor_key, _FREE_Y_DEMO_VALUE))
-    move_snap_button.clicked.connect(lambda: graph.set_cursor_value(snap_cursor_key, _SNAP_DEMO_VALUE))
+    move_free_x_button.clicked.connect(lambda: graph.cursors.set_value(x_cursor_key, _FREE_X_DEMO_VALUE))
+    move_free_y_button.clicked.connect(lambda: graph.cursors.set_value(y_cursor_key, _FREE_Y_DEMO_VALUE))
+    move_snap_button.clicked.connect(lambda: graph.cursors.set_value(snap_cursor_key, _SNAP_DEMO_VALUE))
     reset_button.clicked.connect(reset_cursors)
     graph.cursor_moved.connect(update_status)
 

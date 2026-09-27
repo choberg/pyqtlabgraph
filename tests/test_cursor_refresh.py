@@ -18,14 +18,14 @@ def test_cursor_refresh() -> None:
     )
     graph.plot("signal", list(range(20)), list(range(20)))
     for index in range(5):
-        graph.add_cursor(
+        graph.cursors.add(
             "x",
             value=index + 0.2,
             snap_target_curve_key="signal",
         )
 
     provider_calls = 0
-    manager = graph._cursor_controller.manager
+    manager = graph.cursors.manager
     original_provider = manager._curve_data_provider
 
     def counted_provider(curve_key: str):  # type: ignore[no-untyped-def]
@@ -38,8 +38,8 @@ def test_cursor_refresh() -> None:
     graph.set_data("signal", list(range(30)), list(range(30)))
     assert provider_calls == 1
 
-    graph._cursor_controller.nudge_cursor_group(
-        graph.cursor_states()[0].key,
+    graph.cursors.nudge_group(
+        graph.cursors.states()[0].key,
         selected_cursor_keys=[],
         direction=1,
         step_ratio=0.01,

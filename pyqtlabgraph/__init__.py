@@ -10,6 +10,7 @@ from .colormaps import (
     PyQtLabGraphCurvePalette,
 )
 from .cursor_widget import PyQtLabGraphCursorWidget
+from .cursors import PyQtLabGraphCursors
 from .layouts import LayoutFileError
 from .legend import PyQtLabGraphLegend
 from .models import CursorLineStyle, CursorPairState, CursorState, CursorStyle, CursorType
@@ -46,6 +47,7 @@ __all__ = [
     "PyQtLabGraphColorGradient",
     "PyQtLabGraphStyleRegistry",
     "PyQtLabGraphTheme",
+    "PyQtLabGraphCursors",
     "PyQtLabGraphCursorWidget",
     "PyQtLabGraphLegend",
     "PyQtLabGraphToolbar",
