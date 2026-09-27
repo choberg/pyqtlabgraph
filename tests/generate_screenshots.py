@@ -6,11 +6,12 @@
 # ]
 # ///
 
+import os
 import sys
 from pathlib import Path
 
 import numpy as np
-from PySide6.QtCore import QPoint, Qt
+from PySide6.QtCore import QLocale, QPoint, Qt
 from PySide6.QtGui import QBrush, QColor, QFont, QPainter, QPen
 from PySide6.QtWidgets import QApplication, QDialog, QHBoxLayout, QMainWindow, QVBoxLayout, QWidget
 
@@ -29,6 +30,10 @@ from pyqtlabgraph import (
 
 
 def generate():
+    # Render at 2x so the README images stay sharp on HiDPI screens.
+    os.environ.setdefault("QT_SCALE_FACTOR", "2")
+    # Keep number formatting independent of the machine that renders the images.
+    QLocale.setDefault(QLocale(QLocale.Language.English, QLocale.Country.UnitedStates))
     app = QApplication(sys.argv)
     
     # Set up main window
@@ -66,7 +71,18 @@ def generate():
     
     plot.plot("sine", x, y_sine, label="Sensor A (Temp)")
     plot.plot("cosine", x, y_cosine, label="Sensor B (Pressure)")
-    plot.plot("noise", x, y_noise, label="Sensor C (Noise)")
+    plot.plot("noise", x[::4], y_noise[::4], label="Sensor C (Noise)")
+    # Palette changes recolor lines only, so these overrides survive theme switches.
+    for key in ("sine", "cosine"):
+        plot.set_curve_style(
+            key, plot.curve_style(key).with_overrides(line_width=2.0, marker_enabled=False)
+        )
+    plot.set_curve_style(
+        "noise",
+        plot.curve_style("noise").with_overrides(
+            line_enabled=False, marker_symbol="o", marker_size=5, marker_filled=True
+        ),
+    )
     
     plot.set_axis_labels("Time", "Measurement", "s", "V")
     apply_demo_theme(app, plot, dark_mode=True)
@@ -228,10 +244,10 @@ def generate():
         painter.setFont(font)
         painter.drawText(x, y, 32, 32, Qt.AlignmentFlag.AlignCenter, number)
 
-    # Place badges in top-left corners of the widgets
-    draw_badge("1", plot_pos.x() + 12, plot_pos.y() + 12)
-    draw_badge("2", legend_pos.x() + 12, legend_pos.y() + 12)
-    draw_badge("3", toolbar_pos.x() + 12, toolbar_pos.y() + 12)
+    # Place badges in the empty top-right corners so they hide no controls
+    draw_badge("1", plot_pos.x() + plot_w - 44, plot_pos.y() + 12)
+    draw_badge("2", legend_pos.x() + legend_w - 44, legend_pos.y() + legend_h - 44)
+    draw_badge("3", toolbar_pos.x() + toolbar_w - 44, toolbar_pos.y() + 12)
     
     painter.end()
     pixmap_labeled.save(str(docs_dir / "screenshot_layout_labeled.png"))
@@ -245,6 +261,7 @@ def generate():
         "signal_snap",
         key="screenshot_pair",
     )
+    cursor_window.graph.cursors.set_selected_keys(("signal_snap",))
     cursor_window.show()
     QApplication.processEvents()
     cursor_window.grab().save(str(docs_dir / "screenshot_cursor_widget.png"))
