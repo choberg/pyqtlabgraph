@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import (
@@ -11,7 +12,7 @@ from PySide6.QtCore import (
     Qt,
     Signal,
 )
-from PySide6.QtGui import QAction, QColor, QKeyEvent, QPaintEvent
+from PySide6.QtGui import QAction, QColor, QKeyEvent, QMouseEvent, QPaintEvent
 from PySide6.QtWidgets import (
     QApplication,
     QColorDialog,
@@ -88,50 +89,91 @@ class _CursorListView(QListView):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
+        # Set while a left-button press on a cursor row is handled by this view
+        # instead of QAbstractItemView; None once the drag started.
+        self._owned_press: bool = False
         self._drag_start: QPoint | None = None
+        self._deferred_press: Callable[[], None] | None = None
 
     def mousePressEvent(self, event) -> None:
         index = self.indexAt(event.position().toPoint())
+        self._owned_press = False
         self._drag_start = None
+        self._deferred_press = None
         if index.isValid():
             position = event.position().toPoint()
-            if event.button() == Qt.MouseButton.LeftButton:
-                # The custom selection handling below consumes the press, so
-                # QAbstractItemView never arms its own drag; mouseMoveEvent
-                # starts the drag instead.
-                self._drag_start = position
             cursor_key = self._cursor_key_at(index, position)
             record = index.data(_CURSOR_DISPLAY_ROLE)
+            modifiers = event.modifiers()
             if (
                 isinstance(record, _CursorListItemRecord)
                 and record.pair_key is not None
                 and cursor_key is None
             ):
-                self.pair_group_pressed.emit(index, event.modifiers())
+                self._own_press(event, position)
+                self._press(index, lambda: self.pair_group_pressed.emit(index, modifiers))
                 event.accept()
                 return
             if cursor_key is not None:
-                self.cursor_pressed.emit(index, cursor_key, event.modifiers())
+                self._own_press(event, position)
+                self._press(
+                    index,
+                    lambda: self.cursor_pressed.emit(index, cursor_key, modifiers),
+                    modifiers=modifiers,
+                )
                 event.accept()
                 return
         super().mousePressEvent(event)
 
-    def mouseMoveEvent(self, event) -> None:
-        start = self._drag_start
+    def _press(
+        self,
+        index: QModelIndex,
+        emit: Callable[[], None],
+        *,
+        modifiers: Qt.KeyboardModifier = Qt.KeyboardModifier.NoModifier,
+    ) -> None:
+        # Pressing a row of a multi-row selection without Ctrl collapses the
+        # selection only on release, so the whole selection can be dragged.
+        selection = self.selectionModel()
         if (
-            start is not None
-            and event.buttons() & Qt.MouseButton.LeftButton
-            and (event.position().toPoint() - start).manhattanLength()
-            >= QApplication.startDragDistance()
+            not modifiers & Qt.KeyboardModifier.ControlModifier
+            and selection.isRowSelected(index.row(), QModelIndex())
+            and len(selection.selectedRows()) > 1
         ):
-            self._drag_start = None
-            self.startDrag(Qt.DropAction.MoveAction)
+            self._deferred_press = emit
+        else:
+            emit()
+
+    def _own_press(self, event: QMouseEvent, position: QPoint) -> None:
+        # The selection handling consumes the press, so QAbstractItemView never
+        # sees it: it would neither arm a drag nor know the press position and
+        # would turn later moves into a drag selection. This view handles moves
+        # of an owned press itself and starts the drag.
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._owned_press = True
+            self._drag_start = position
+
+    def mouseMoveEvent(self, event) -> None:
+        if self._owned_press and event.buttons() & Qt.MouseButton.LeftButton:
+            start = self._drag_start
+            if (
+                start is not None
+                and (event.position().toPoint() - start).manhattanLength()
+                >= QApplication.startDragDistance()
+            ):
+                self._drag_start = None
+                self._deferred_press = None
+                self.startDrag(Qt.DropAction.MoveAction)
             event.accept()
             return
         super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event) -> None:
+        self._owned_press = False
         self._drag_start = None
+        deferred, self._deferred_press = self._deferred_press, None
+        if deferred is not None:
+            deferred()
         index = self.indexAt(event.position().toPoint())
         position = event.position().toPoint()
         if index.isValid():
